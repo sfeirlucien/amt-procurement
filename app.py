@@ -5,6 +5,10 @@ from openpyxl import Workbook, load_workbook
 from pathlib import Path
 import os, threading, time
 
+from flask import send_file
+import shutil
+import time
+
 # Try to use requests for live FX, fallback to static if missing
 try:
     import requests
@@ -16,8 +20,78 @@ except ImportError:
 app = Flask(__name__, static_url_path="/static", static_folder="static")
 app.secret_key = os.environ.get("SECRET_KEY", "change-me")
 
-from flask import send_file    # make sure this import is at the top
+#from flask import send_file    # make sure this import is at the top
 
+#-----for upload
+@app.get("/upload")
+def upload_page():
+    need = require_admin()
+    if need:
+        return need
+
+    # Simple phone-friendly upload form
+    return """
+    <!doctype html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>Upload Excel Backup</title>
+      <style>
+        body{font-family:Arial; margin:30px;}
+        .box{max-width:480px; margin:auto; padding:20px; border:1px solid #ddd; border-radius:10px;}
+        h2{margin-top:0;}
+        input,button{width:100%; padding:10px; margin-top:10px;}
+        button{background:#0ea5e9; color:white; border:none; border-radius:6px; font-size:16px;}
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <h2>Upload updated office_ops.xlsx</h2>
+        <form action="/api/upload_excel" method="post" enctype="multipart/form-data">
+          <input type="file" name="file" accept=".xlsx" required />
+          <button type="submit">Upload</button>
+        </form>
+        <p style="color:#666; font-size:14px;">
+          After upload, refresh the website.
+        </p>
+      </div>
+    </body>
+    </html>
+    """
+
+
+@app.post("/api/upload_excel")
+def upload_excel():
+    need = require_admin()
+    if need:
+        return need
+
+    f = request.files.get("file")
+    if not f:
+        return "No file selected", 400
+
+    # Optional safety: keep a timestamped backup
+    try:
+        if XLSX_PATH.exists():
+            ts = int(time.time())
+            backup_path = XLSX_PATH.with_name(f"office_ops_backup_{ts}.xlsx")
+            shutil.copy2(XLSX_PATH, backup_path)
+    except Exception:
+        pass
+
+    # Replace live Excel with uploaded one
+    f.save(XLSX_PATH)
+
+    # Ensure correct schema
+    _ensure_workbook()
+
+    return """
+    Upload successful ✅<br>
+    Go back to the website and refresh.
+    """
+
+
+#-----for backup
 @app.get("/backup")
 def download_backup():
     need = require_admin()
@@ -792,6 +866,7 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
