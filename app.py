@@ -55,6 +55,21 @@ def list_backups():
       </style>
     </head>
     <body>
+      <script>
+async function restoreBackup(name){
+  if(!confirm("Restore this backup? This will overwrite the live Excel.")) return;
+  const r = await fetch("/api/restore_backup/" + encodeURIComponent(name), {
+    method: "POST",
+    credentials: "same-origin"
+  });
+  if(r.ok){
+    alert("Restored ✅");
+    window.location.href = "/";
+  } else {
+    alert("Restore failed");
+  }
+}
+</script>
       <h2>Available Backups</h2>
       <ul>{items or "<li>No backups yet</li>"}</ul>
     </body>
@@ -946,6 +961,7 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
