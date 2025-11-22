@@ -22,6 +22,55 @@ app.secret_key = os.environ.get("SECRET_KEY", "change-me")
 
 #from flask import send_file    # make sure this import is at the top
 
+#----to download backups
+@app.get("/backups")
+def list_backups():
+    need = require_admin()
+    if need:
+        return need
+
+    backups = sorted(DATA_DIR.glob("office_ops_backup_*.xlsx"))
+    items = "".join(
+        f'<li><a href="/api/download_backup/{b.name}">{b.name}</a></li>'
+        for b in backups
+    )
+
+    return f"""
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>Excel Backups</title>
+      <style>
+        body{{font-family:Arial; margin:30px}}
+        a{{text-decoration:none}}
+      </style>
+    </head>
+    <body>
+      <h2>Available Backups</h2>
+      <ul>{items or "<li>No backups yet</li>"}</ul>
+    </body>
+    </html>
+    """
+
+
+@app.get("/api/download_backup/<filename>")
+def download_backup_file(filename):
+    need = require_admin()
+    if need:
+        return need
+
+    path = DATA_DIR / filename
+    if not path.exists() or not filename.startswith("office_ops_backup_"):
+        return "Not found", 404
+
+    return send_file(
+        path,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
 #-----for upload
 @app.get("/upload")
 def upload_page():
@@ -866,6 +915,7 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
