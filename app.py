@@ -16,6 +16,22 @@ except ImportError:
 app = Flask(__name__, static_url_path="/static", static_folder="static")
 app.secret_key = os.environ.get("SECRET_KEY", "change-me")
 
+from flask import send_file    # make sure this import is at the top
+
+@app.get("/backup")
+def download_backup():
+    need = require_admin()
+    if need:
+        return need
+
+    _ensure_workbook()
+    return send_file(
+        XLSX_PATH,
+        as_attachment=True,
+        download_name="office_ops.xlsx"
+    )
+
+
 # ===== Excel file location
 DATA_DIR = Path(os.environ.get("OPS_DATA_DIR", "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -776,5 +792,6 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
