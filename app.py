@@ -11,6 +11,22 @@ try:
 except ImportError:
     requests = None
 
+from flask import send_file
+
+@app.get("/backup")
+def download_backup():
+    # admin-only for safety
+    need = require_admin()
+    if need:
+        return need
+
+    _ensure_workbook()
+    return send_file(
+        XLSX_PATH,
+        as_attachment=True,
+        download_name="office_ops.xlsx"
+    )
+
 app = Flask(__name__, static_url_path="/static", static_folder="static")
 app.secret_key = os.environ.get("SECRET_KEY", "change-me")
 
@@ -774,3 +790,4 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
