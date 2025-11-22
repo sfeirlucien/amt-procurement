@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from openpyxl import Workbook, load_workbook
 from pathlib import Path
 import os, threading, time
-
+import shutil
 from flask import send_file
 import shutil
 import time
@@ -31,9 +31,18 @@ def list_backups():
 
     backups = sorted(DATA_DIR.glob("office_ops_backup_*.xlsx"))
     items = "".join(
-        f'<li><a href="/api/download_backup/{b.name}">{b.name}</a></li>'
-        for b in backups
-    )
+    f"""
+    <li style="margin-bottom:8px;">
+      <a href="/api/download_backup/{b.name}">{b.name}</a>
+      &nbsp; | &nbsp;
+      <button onclick="restoreBackup('{b.name}')" 
+              style="padding:4px 8px;border:1px solid #999;border-radius:6px;cursor:pointer;">
+        Restore
+      </button>
+    </li>
+    """
+    for b in backups
+)
 
     return f"""
     <html>
@@ -69,6 +78,28 @@ def download_backup_file(filename):
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+
+#------restore
+@app.post("/api/restore_backup/<filename>")
+def restore_backup(filename):
+    need = require_admin()
+    if need:
+        return need
+
+    path = DATA_DIR / filename
+
+    # Safety checks
+    if (not path.exists()) or (not filename.startswith("office_ops_backup_")) or (not filename.endswith(".xlsx")):
+        return "Not found", 404
+
+    # Replace live Excel with selected backup
+    shutil.copy2(path, XLSX_PATH)
+
+    # Ensure schema still OK
+    _ensure_workbook()
+
+    return jsonify({"ok": True, "restored": filename})
 
 
 #-----for upload
@@ -915,6 +946,7 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
