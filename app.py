@@ -32,12 +32,20 @@ def list_backups():
     backups = sorted(DATA_DIR.glob("office_ops_backup_*.xlsx"))
     items = "".join(
     f"""
-    <li style="margin-bottom:8px;">
+    <li style="margin-bottom:10px;">
       <a href="/api/download_backup/{b.name}">{b.name}</a>
       &nbsp; | &nbsp;
-      <button onclick="restoreBackup('{b.name}')" 
+
+      <button onclick="restoreBackup('{b.name}')"
               style="padding:4px 8px;border:1px solid #999;border-radius:6px;cursor:pointer;">
         Restore
+      </button>
+
+      &nbsp;
+
+      <button onclick="deleteBackup('{b.name}')"
+              style="padding:4px 8px;border:1px solid #e11d48;color:#e11d48;border-radius:6px;cursor:pointer;">
+        Delete
       </button>
     </li>
     """
@@ -45,37 +53,59 @@ def list_backups():
 )
 
     return f"""
-    <html>
-    <head>
-      <meta charset="utf-8"/>
-      <title>Excel Backups</title>
-      <style>
-        body{{font-family:Arial; margin:30px}}
-        a{{text-decoration:none}}
-      </style>
-    </head>
-    <body>
-      <script>
-async function restoreBackup(name){
-  if(!confirm("Restore this backup? This will overwrite the live Excel.")) return;
-  const r = await fetch("/api/restore_backup/" + encodeURIComponent(name), {
-    method: "POST",
-    credentials: "same-origin"
-  });
-  if(r.ok){
-    alert("Restored ✅");
-    window.location.href = "/";
-  } else {
-    alert("Restore failed");
-  }
-}
-</script>
-      <h2>Available Backups</h2>
-      <ul>{items or "<li>No backups yet</li>"}</ul>
-    </body>
-    </html>
-    """
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Excel Backups</title>
+  <style>
+    body{{{{font-family:Arial; margin:30px}}}}
+    a{{{{text-decoration:none}}}}
+  </style>
+</head>
+<body>
 
+  <h2>Available Backups</h2>
+  <ul>
+    {items or "<li>No backups yet</li>"}
+  </ul>
+
+  <script>
+  async function restoreBackup(name){{ 
+    if(!confirm("Restore this backup? This will overwrite the live Excel.")) return;
+
+    const r = await fetch("/api/restore_backup/" + encodeURIComponent(name), {{
+      method: "POST",
+      credentials: "same-origin"
+    }});
+
+    if(r.ok){{ 
+      alert("Restored ✅");
+      window.location.href = "/";
+    }} else {{
+      alert("Restore failed");
+    }}
+  }}
+
+  async function deleteBackup(name){{ 
+    if(!confirm("Delete this backup forever?")) return;
+
+    const r = await fetch("/api/delete_backup/" + encodeURIComponent(name), {{
+      method: "POST",
+      credentials: "same-origin"
+    }});
+
+    if(r.ok){{ 
+      alert("Deleted ❌");
+      window.location.reload();
+    }} else {{
+      alert("Delete failed");
+    }}
+  }}
+  </script>
+
+</body>
+</html>
+"""
 
 @app.get("/api/download_backup/<filename>")
 def download_backup_file(filename):
@@ -93,6 +123,22 @@ def download_backup_file(filename):
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+@app.post("/api/delete_backup/<filename>")
+def delete_backup(filename):
+    need = require_admin()
+    if need:
+        return need
+
+    path = DATA_DIR / filename
+
+    # Safety checks: only allow deleting backup files
+    if (not path.exists()) or (not filename.startswith("office_ops_backup_")) or (not filename.endswith(".xlsx")):
+        return "Not found", 404
+
+    path.unlink()  # delete the file
+
+    return jsonify({"ok": True, "deleted": filename})
 
 
 #------restore
@@ -961,6 +1007,7 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
