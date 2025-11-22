@@ -211,6 +211,90 @@
         </div>
       </div>
 
+      <div class="card" style="margin-top:12px;">
+  <h2>Paid Totals (Filters)</h2>
+
+  <div class="filter-row">
+    <div>
+      <label>Type
+        <select id="ovTypeFilter">
+          <option value="">All</option>
+          <option value="req">Requisitions</option>
+          <option value="land">Workshops (Landed Items)</option>
+        </select>
+      </label>
+    </div>
+
+    <div>
+      <label>Vessel
+        <select id="ovVesselFilter">
+          <option value="">All</option>
+        </select>
+      </label>
+    </div>
+
+    <div>
+      <label>Paid?
+        <select id="ovPaidFilter">
+          <option value="">All</option>
+          <option value="1">Paid</option>
+          <option value="0">Unpaid</option>
+        </select>
+      </label>
+    </div>
+
+    <div>
+      <label>Month
+        <select id="ovMonthFilter">
+          <option value="">All months</option>
+          <option value="1">Jan</option>
+          <option value="2">Feb</option>
+          <option value="3">Mar</option>
+          <option value="4">Apr</option>
+          <option value="5">May</option>
+          <option value="6">Jun</option>
+          <option value="7">Jul</option>
+          <option value="8">Aug</option>
+          <option value="9">Sep</option>
+          <option value="10">Oct</option>
+          <option value="11">Nov</option>
+          <option value="12">Dec</option>
+        </select>
+      </label>
+    </div>
+
+    <div>
+      <label>Year
+        <select id="ovYearFilter">
+          <option value="">All years</option>
+        </select>
+      </label>
+    </div>
+
+    <div style="align-self:flex-end;">
+      <button id="ovApplyTotalsBtn">Apply</button>
+      <button id="ovClearTotalsBtn" class="secondary" type="button">Clear</button>
+    </div>
+  </div>
+
+  <div class="summary-grid" style="margin-top:10px;">
+    <div class="summary-item">
+      <div class="summary-label">Total Paid (Selected Month)</div>
+      <div class="summary-value" id="ovPaidMonthTotal">0</div>
+    </div>
+
+    <div class="summary-item">
+      <div class="summary-label">Total Paid (Selected Year)</div>
+      <div class="summary-value" id="ovPaidYearTotal">0</div>
+    </div>
+
+    <div class="summary-item">
+      <div class="summary-label">Total Amount (Filter Result)</div>
+      <div class="summary-value" id="ovAllTotal">0</div>
+    </div>
+  </div>
+</div>
+
       <div class="flex-row">
         <div class="card flex-1">
           <h2>Recent Requisitions</h2>
@@ -831,6 +915,131 @@ async function refreshSession() {
     document.getElementById("showLoginBtn").onclick = () => {
       loginCard.classList.toggle("hidden");
     };
+    function parseDateSafe(d) {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+async function loadOverviewTotalsFilters() {
+  // ensure data exists
+  let reqs = allReqs;
+  let lands = allLandings;
+  if (!reqs.length) {
+    try { reqs = await apiFetch("/api/requisitions"); } catch { reqs = []; }
+  }
+  if (!lands.length) {
+    try { lands = await apiFetch("/api/landings"); } catch { lands = []; }
+  }
+
+  // Fill Vessel dropdown from both sheets
+  const vessels = new Set();
+  reqs.forEach(r => vessels.add((r.vessel || "").trim()));
+  lands.forEach(r => vessels.add((r.vessel || "").trim()));
+
+  const vesselSel = document.getElementById("ovVesselFilter");
+  vesselSel.innerHTML = `<option value="">All</option>` +
+    [...vessels].filter(v => v).sort().map(v => `<option value="${v}">${v}</option>`).join("");
+
+  // Fill Year dropdown from both sheets
+  const years = new Set();
+  reqs.forEach(r => {
+    const dt = parseDateSafe(r.date_ordered);
+    if (dt) years.add(dt.getFullYear());
+  });
+  lands.forEach(r => {
+    const dt = parseDateSafe(r.landed_date);
+    if (dt) years.add(dt.getFullYear());
+  });
+
+  const yearSel = document.getElementById("ovYearFilter");
+  yearSel.innerHTML = `<option value="">All years</option>` +
+    [...years].sort((a,b)=>b-a).map(y => `<option value="${y}">${y}</option>`).join("");
+
+  // First compute totals
+  updateOverviewPaidTotals(reqs, lands);
+}
+
+function updateOverviewPaidTotals(reqs, lands) {
+  const typeF = document.getElementById("ovTypeFilter").value;      // "", "req", "land"
+  const vesselF = document.getElementById("ovVesselFilter").value;  // vessel or ""
+  const paidF = document.getElementById("ovPaidFilter").value;      // "", "1", "0"
+  const monthF = document.getElementById("ovMonthFilter").value;    // "", "1".."12"
+  const yearF = document.getElementById("ovYearFilter").value;      // "", "2025"...
+
+  let filtered = [];
+
+  if (!typeF || typeF === "req") filtered = filtered.concat(reqs.map(r => ({
+    _type: "req",
+    vessel: r.vessel,
+    paid: Number(r.paid || 0),
+    amount: Number(r.total_amount || 0),
+    date: r.date_ordered
+  })));
+
+  if (!typeF || typeF === "land") filtered = filtered.concat(lands.map(r => ({
+    _type: "land",
+    vessel: r.vessel,
+    paid: Number(r.paid || 0),
+    amount: Number(r.amount || 0),
+    date: r.landed_date
+  })));
+
+  // Apply filters
+  filtered = filtered.filter(x => {
+    if (vesselF && (x.vessel || "") !== vesselF) return false;
+    if (paidF !== "" && String(x.paid) !== paidF) return false;
+
+    const dt = parseDateSafe(x.date);
+    if (!dt) return false;
+
+    if (yearF && String(dt.getFullYear()) !== yearF) return false;
+    if (monthF && String(dt.getMonth() + 1) !== monthF) return false;
+
+    return true;
+  });
+
+  // Totals for the filtered result
+  const allTotal = filtered.reduce((s,x)=>s+x.amount,0);
+
+  // Paid totals for month/year (based on your filters)
+  const paidOnly = filtered.filter(x => x.paid === 1);
+  const paidMonthTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
+
+  // Year total ignores month (but respects other filters)
+  let paidYearTotal = 0;
+  if (yearF) {
+    const yearPaid = paidOnly.filter(x => {
+      const dt = parseDateSafe(x.date);
+      return dt && String(dt.getFullYear()) === yearF;
+    });
+    paidYearTotal = yearPaid.reduce((s,x)=>s+x.amount,0);
+  } else {
+    // if no year selected, show paid total overall
+    paidYearTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
+  }
+
+  document.getElementById("ovAllTotal").textContent = allTotal.toFixed(2);
+  document.getElementById("ovPaidMonthTotal").textContent = paidMonthTotal.toFixed(2);
+  document.getElementById("ovPaidYearTotal").textContent = paidYearTotal.toFixed(2);
+}
+document.getElementById("ovApplyTotalsBtn").onclick = async () => {
+  let reqs = allReqs, lands = allLandings;
+  if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
+  if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
+  updateOverviewPaidTotals(reqs, lands);
+};
+
+document.getElementById("ovClearTotalsBtn").onclick = async () => {
+  document.getElementById("ovTypeFilter").value = "";
+  document.getElementById("ovVesselFilter").value = "";
+  document.getElementById("ovPaidFilter").value = "";
+  document.getElementById("ovMonthFilter").value = "";
+  document.getElementById("ovYearFilter").value = "";
+  await loadOverviewTotalsFilters();
+};
+
+    
   }
 
   await loadDirectoryOptions();
@@ -1932,8 +2141,10 @@ async function updateSummaryCounts() {
 (async function init() {
   await loadCurrencies();
   await refreshSession();   // Overview visible even if not logged in
+  await loadOverviewTotalsFilters();   // << ADD THIS
 })();
 </script>
 
 </body>
 </html>
+
