@@ -1,6 +1,6 @@
---only-binary=:all:
 Flask==3.0.0
-pandas==2.2.1
+Flask-Cors==4.0.0
+pandas==2.0.3
 openpyxl==3.1.2
 requests==2.31.0
 Werkzeug==3.0.1
