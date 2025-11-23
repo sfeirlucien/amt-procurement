@@ -14,11 +14,7 @@ import openpyxl
 from flask import Flask, jsonify, request, session, send_file
 from flask_cors import CORS
 
-from flask import send_from_directory
 
-@app.route("/")
-def serve_index():
-    return send_from_directory("static", "index.html")
 
 # --------------------------------------------
 # App INIT
@@ -30,6 +26,12 @@ CORS(app, supports_credentials=True)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAIN_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+
+from flask import send_from_directory
+
+@app.route("/")
+def serve_index():
+    return send_from_directory("static", "index.html")
 
 if not os.path.exists(BACKUP_DIR):
     os.makedirs(BACKUP_DIR)
@@ -970,5 +972,6 @@ def root():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
 
