@@ -867,7 +867,7 @@
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
+    credentials: "include",
     ...options
   });
   if (!res.ok) {
@@ -969,8 +969,42 @@ async function refreshSession() {
     document.getElementById("showLoginBtn").onclick = () => {
       loginCard.classList.toggle("hidden");
     };
+  }
 
+  // --- ADMIN TAB SHOW/HIDE ---
+  const isAdmin = currentUser && (currentUser.role || "").toLowerCase() === "admin";
 
+  const adminTab = document.getElementById("adminTab");
+  if (adminTab) {
+    if (isAdmin) adminTab.classList.remove("hidden");
+    else adminTab.classList.add("hidden");
+  }
+
+  // disable admin-only controls if not admin
+  ["catName","catAbbr","addCatBtn","cancelCatEditBtn",
+   "adminUsername","adminPassword","adminRole","saveUserBtn",
+   "vesselName","addVesselBtn","cancelVesselEditBtn"
+  ].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.disabled = !isAdmin;
+  });
+
+  // load data
+  await loadDirectoryOptions();
+  await loadCategories();
+  await loadVessels();
+  await loadDirectoryPage();
+  await loadUsersAdmin();
+  await loadAllRequisitions();
+  await loadAllLandings();
+  await loadOverviewRequisitions();
+  await loadOverviewLandings();
+  await loadDeliveredRequisitions();
+  await loadDeliveredLandings();
+  await fillCancelledTables();
+  await updateSummaryCounts();
+}
+ 
 async function loadOverviewTotalsFilters() {
   // ensure data exists
     // Fill Category dropdown from both sheets
