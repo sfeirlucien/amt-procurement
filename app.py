@@ -91,12 +91,8 @@ def hash_pw(pw: str) -> str:
 
 
 def ensure_db() -> None:
-    """
-    Create office_ops.xlsx and sheets if not exist.
-    Also create default admin if:
-      - users sheet is empty OR
-      - users sheet exists but all password_hash are empty/None.
-    """
+    """Create office_ops.xlsx and sheets if not exist.
+       Also ensure a valid default admin exists (repairs empty hash)."""
     if not os.path.exists(DB_FILE):
         wb = Workbook()
         if "Sheet" in wb.sheetnames:
@@ -106,8 +102,51 @@ def ensure_db() -> None:
             ws.append(headers)
         wb.save(DB_FILE)
 
-    # ensure at least one valid admin exists
-    users = read_rows("users")
+    wb = openpyxl.load_workbook(DB_FILE)
+    if "users" not in wb.sheetnames:
+        ws = wb.create_sheet("users")
+        ws.append(SHEETS["users"])
+        wb.save(DB_FILE)
+
+    ws = wb["users"]
+    headers = [c.value for c in ws[1]]
+
+    # Find admin row if exists
+    u_col = headers.index("username") + 1
+    p_col = headers.index("password_hash") + 1
+    r_col = headers.index("role") + 1
+    found_admin_row = None
+
+    for r_idx in range(2, ws.max_row + 1):
+        uname = ws.cell(r_idx, u_col).value
+        if uname == "admin":
+            found_admin_row = r_idx
+            break
+
+    default_hash = hash_pw(DEFAULT_ADMIN["password"])
+
+    if found_admin_row is None:
+        # No admin at all -> add one
+        ws.append([
+            DEFAULT_ADMIN["username"],
+            default_hash,
+            "admin",
+            now_iso()
+        ])
+        wb.save(DB_FILE)
+        return
+
+    # Admin exists -> repair missing/empty hash or wrong role
+    current_hash = ws.cell(found_admin_row, p_col).value
+    current_role = (ws.cell(found_admin_row, r_col).value or "").lower()
+
+    if not current_hash or str(current_hash).strip() == "" or current_hash == "None":
+        ws.cell(found_admin_row, p_col).value = default_hash
+
+    if current_role != "admin":
+        ws.cell(found_admin_row, r_col).value = "admin"
+
+    wb.save(DB_FILE)
 
     def has_valid_admin(us: List[Dict[str, Any]]) -> bool:
         for u in us:
