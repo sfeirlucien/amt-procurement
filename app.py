@@ -273,6 +273,8 @@ SHEETS = {
         "currency", "amount_original",
     ],
     "Categories":   ["id", "name", "abbr"],
+    "Vessels":      ["id", "name"],
+
 }
 
 FX_CACHE = {"timestamp": 0, "rates": {}}
@@ -410,7 +412,7 @@ def _ensure_workbook():
     ws.append(["admin", generate_password_hash("admin123"), "admin"])
 
     # Other sheets
-    for title in ["Directory", "Requisitions", "Landings", "Categories"]:
+    for title in ["Directory", "Requisitions", "Landings", "Categories", "Vessels"]:
         ws2 = wb.create_sheet(title)
         ws2.append(SHEETS[title])
 
@@ -628,6 +630,81 @@ def dir_delete(did):
         if idx:
             ws.delete_rows(idx); _save_wb(wb)
     return jsonify({"ok": True})
+
+# ===== Vessels (admin) =====
+@app.get("/api/vessels")
+def vessel_list():
+    with WB_LOCK:
+        wb = _open_wb(); ws = wb["Vessels"]; rows = _sheet_rows(ws)
+    out = []
+    for r in rows:
+        out.append({
+            "id": int(r.get("id") or 0),
+            "name": (r.get("name") or "").strip()
+        })
+    return jsonify(out)
+
+@app.post("/api/vessels")
+def vessel_add():
+    need = require_admin()
+    if need: return need
+    d = request.json or {}
+    name = (d.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "bad_request"}), 400
+
+    with WB_LOCK:
+        wb = _open_wb(); ws = wb["Vessels"]; rows = _sheet_rows(ws)
+        lower = name.lower()
+        if any((r.get("name") or "").strip().lower() == lower for r in rows):
+            return jsonify({"error": "duplicate_name"}), 400
+
+        new_id = _next_id(rows)
+        ws.append([new_id, name])
+        _save_wb(wb)
+
+    return jsonify({"ok": True})
+
+@app.patch("/api/vessels/<int:vid>")
+def vessel_update(vid):
+    need = require_admin()
+    if need: return need
+    d = request.json or {}
+    name = (d.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "bad_request"}), 400
+
+    with WB_LOCK:
+        wb = _open_wb(); ws = wb["Vessels"]; rows = _sheet_rows(ws)
+        idx = _find_row_index_by(ws, "id", vid)
+        if not idx:
+            return jsonify({"error": "not_found"}), 404
+
+        lower = name.lower()
+        for r in rows:
+            if int(r.get("id") or 0) == vid:
+                continue
+            if (r.get("name") or "").strip().lower() == lower:
+                return jsonify({"error": "duplicate_name"}), 400
+
+        headers = [c.value for c in ws[1]]
+        ws.cell(row=idx, column=headers.index("name")+1, value=name)
+        _save_wb(wb)
+
+    return jsonify({"ok": True})
+
+@app.delete("/api/vessels/<int:vid>")
+def vessel_delete(vid):
+    need = require_admin()
+    if need: return need
+    with WB_LOCK:
+        wb = _open_wb(); ws = wb["Vessels"]
+        idx = _find_row_index_by(ws, "id", vid)
+        if idx:
+            ws.delete_rows(idx)
+            _save_wb(wb)
+    return jsonify({"ok": True})
+
 
 # ===== Categories (admin) =====
 @app.get("/api/categories")
@@ -1007,6 +1084,7 @@ def root():
 if __name__ == "__main__":
     _ensure_workbook()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
