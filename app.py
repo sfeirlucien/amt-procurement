@@ -1,13 +1,11 @@
 from flask import Flask, request, jsonify, session, send_from_directory
-from flask_cors import CORS
 import pandas as pd
-import os, json, time
+import os, time
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = os.environ.get("APP_SECRET", "amt-procurement-secret")
-CORS(app, supports_credentials=True)
 
 DATA_FILE = os.environ.get("DATA_FILE", "data.xlsx")
 
@@ -15,13 +13,13 @@ SHEETS = {
     "Requisitions": [
         "id", "number", "vessel", "category", "supplier",
         "date_ordered", "expected",
-        "original_amount", "currency", "total_amount",  # total_amount in USD
+        "original_amount", "currency", "total_amount",
         "paid", "delivered", "status"
     ],
     "Landings": [
         "id", "vessel", "item", "workshop",
         "expected", "landed_date",
-        "amount_original", "currency", "amount",         # amount in USD
+        "amount_original", "currency", "amount",
         "paid", "delivered", "status"
     ],
     "Directory": ["id", "type", "name", "email", "phone", "address"],
@@ -95,10 +93,7 @@ def get_rates():
         return FX_CACHE["rates"]
 
     try:
-        r = requests.get(
-            "https://open.er-api.com/v6/latest/USD",
-            timeout=8
-        )
+        r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=8)
         data = r.json()
         rates = data.get("rates") or {"USD": 1.0}
         rates["USD"] = 1.0
@@ -164,7 +159,7 @@ def api_currencies():
     rates = get_rates()
     return jsonify({"currencies": sorted(list(rates.keys()))})
 
-# ===== Vessels (admin-managed master list) =====
+# ===== Vessels =====
 @app.get("/api/vessels")
 def vessels_list():
     rows = read_sheet("Vessels")
@@ -225,7 +220,7 @@ def vessels_delete(vid):
     write_sheet("Vessels", new_rows)
     return jsonify({"ok": True})
 
-# ===== Categories (admin) =====
+# ===== Categories =====
 @app.get("/api/categories")
 def cat_list():
     rows = read_sheet("Categories")
@@ -306,14 +301,11 @@ def dir_add_quick():
 
     rows = read_sheet("Directory")
     new_id = next_id(rows)
-    rows.append({
-        "id": new_id, "type": dtype, "name": name,
-        "email": email, "phone": phone, "address": address
-    })
+    rows.append({"id": new_id, "type": dtype, "name": name, "email": email, "phone": phone, "address": address})
     write_sheet("Directory", rows)
     return jsonify({"ok": True, "id": new_id})
 
-# ===== Users (admin) =====
+# ===== Users =====
 @app.get("/api/users")
 def users_list():
     err = require_admin()
@@ -337,11 +329,7 @@ def users_add():
     if any((r.get("username") or "").lower() == username.lower() for r in rows):
         return jsonify({"error": "duplicate_user"}), 400
 
-    rows.append({
-        "username": username,
-        "password_hash": generate_password_hash(password),
-        "role": role if role in ("admin", "user") else "user"
-    })
+    rows.append({"username": username, "password_hash": generate_password_hash(password), "role": role if role in ("admin","user") else "user"})
     write_sheet("Users", rows)
     return jsonify({"ok": True})
 
@@ -357,8 +345,7 @@ def users_delete(username):
 # ===== Requisitions =====
 @app.get("/api/requisitions")
 def req_list():
-    rows = read_sheet("Requisitions")
-    return jsonify(rows)
+    return jsonify(read_sheet("Requisitions"))
 
 @app.post("/api/requisitions")
 def req_add():
@@ -375,30 +362,17 @@ def req_add():
     currency = (data.get("currency") or "USD").upper()
     paid = 1 if data.get("paid") else 0
 
-    if not number:
-        return jsonify({"error": "bad_request"}), 400
-
     rows = read_sheet("Requisitions")
     if any((r.get("number") or "").lower() == number.lower() for r in rows):
         return jsonify({"error": "duplicate_number"}), 400
 
     usd = to_usd(amount, currency)
-
     new_id = next_id(rows)
     rows.append({
-        "id": new_id,
-        "number": number,
-        "vessel": vessel,
-        "category": category,
-        "supplier": supplier,
-        "date_ordered": date_ordered,
-        "expected": expected,
-        "original_amount": float(amount),
-        "currency": currency,
-        "total_amount": float(usd),
-        "paid": paid,
-        "delivered": 0,
-        "status": "open"
+        "id": new_id, "number": number, "vessel": vessel, "category": category, "supplier": supplier,
+        "date_ordered": date_ordered, "expected": expected,
+        "original_amount": float(amount), "currency": currency, "total_amount": float(usd),
+        "paid": paid, "delivered": 0, "status": "open"
     })
     write_sheet("Requisitions", rows)
     return jsonify({"ok": True, "id": new_id})
@@ -414,15 +388,10 @@ def req_edit(rid):
     if not row:
         return jsonify({"error": "not_found"}), 404
 
-    # update allowed fields
     for k in ["number","vessel","category","supplier","date_ordered","expected","status"]:
-        if k in data:
-            row[k] = data[k]
-
-    if "paid" in data:
-        row["paid"] = 1 if data["paid"] else 0
-    if "delivered" in data:
-        row["delivered"] = 1 if data["delivered"] else 0
+        if k in data: row[k] = data[k]
+    if "paid" in data: row["paid"] = 1 if data["paid"] else 0
+    if "delivered" in data: row["delivered"] = 1 if data["delivered"] else 0
 
     if "amount" in data or "currency" in data:
         amount = data.get("amount", row.get("original_amount"))
@@ -458,8 +427,7 @@ def req_delete(rid):
 # ===== Landings =====
 @app.get("/api/landings")
 def land_list():
-    rows = read_sheet("Landings")
-    return jsonify(rows)
+    return jsonify(read_sheet("Landings"))
 
 @app.post("/api/landings")
 def land_add():
@@ -480,18 +448,10 @@ def land_add():
     usd = to_usd(amount, currency)
 
     rows.append({
-        "id": new_id,
-        "vessel": vessel,
-        "item": item,
-        "workshop": workshop,
-        "expected": expected,
-        "landed_date": landed_date,
-        "amount_original": float(amount),
-        "currency": currency,
-        "amount": float(usd),
-        "paid": paid,
-        "delivered": 0,
-        "status": "open"
+        "id": new_id, "vessel": vessel, "item": item, "workshop": workshop,
+        "expected": expected, "landed_date": landed_date,
+        "amount_original": float(amount), "currency": currency, "amount": float(usd),
+        "paid": paid, "delivered": 0, "status": "open"
     })
     write_sheet("Landings", rows)
     return jsonify({"ok": True, "id": new_id})
@@ -508,13 +468,9 @@ def land_edit(lid):
         return jsonify({"error": "not_found"}), 404
 
     for k in ["vessel","item","workshop","expected","landed_date","status"]:
-        if k in data:
-            row[k] = data[k]
-
-    if "paid" in data:
-        row["paid"] = 1 if data["paid"] else 0
-    if "delivered" in data:
-        row["delivered"] = 1 if data["delivered"] else 0
+        if k in data: row[k] = data[k]
+    if "paid" in data: row["paid"] = 1 if data["paid"] else 0
+    if "delivered" in data: row["delivered"] = 1 if data["delivered"] else 0
 
     if "amount" in data or "currency" in data:
         amount = data.get("amount", row.get("amount_original"))
