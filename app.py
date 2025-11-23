@@ -16,14 +16,16 @@ Features:
 import os
 import json
 import hashlib
+import shutil
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import requests
 import openpyxl
 from openpyxl import Workbook
-from flask import Flask, jsonify, request, session, send_from_directory
+from flask import Flask, jsonify, request, session, send_from_directory, send_file
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 
 
 # -------------------------------------------------
@@ -46,6 +48,9 @@ ROLES = {"admin", "user", "viewer", "finance"}
 
 FX_CACHE_FILE = os.path.join(BASE_DIR, "fx_cache.json")
 FX_CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
+
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+ALLOWED_UPLOAD_EXT = {".xlsx"}
 
 
 SHEETS: Dict[str, List[str]] = {
@@ -92,7 +97,6 @@ def ensure_db() -> None:
     Ensure default admin exists.
     IMPORTANT: do NOT call read_rows/get_wb inside this function.
     """
-    # 1) Create file if missing
     if not os.path.exists(DB_FILE):
         wb = Workbook()
         if "Sheet" in wb.sheetnames:
@@ -102,10 +106,8 @@ def ensure_db() -> None:
             ws.append(headers)
         wb.save(DB_FILE)
 
-    # 2) Load workbook directly (no get_wb)
     wb = openpyxl.load_workbook(DB_FILE)
 
-    # 3) Ensure all sheets exist with headers
     for sname, headers in SHEETS.items():
         if sname not in wb.sheetnames:
             ws = wb.create_sheet(sname)
@@ -117,12 +119,10 @@ def ensure_db() -> None:
             else:
                 first_row = [c.value for c in ws[1]]
                 if first_row != headers:
-                    # overwrite headers to correct order
                     ws.delete_rows(1)
                     ws.insert_rows(1)
                     ws.append(headers)
 
-    # 4) Ensure admin user exists AND has a valid hash
     ws = wb["users"]
     headers = [c.value for c in ws[1]]
     u_col = headers.index("username") + 1
@@ -140,7 +140,6 @@ def ensure_db() -> None:
     if admin_row is None:
         ws.append(["admin", default_hash, "admin", now_iso()])
     else:
-        # repair missing hash/role
         cur_hash = ws.cell(admin_row, p_col).value
         cur_role = (ws.cell(admin_row, r_col).value or "").lower()
         if not cur_hash or str(cur_hash).strip() == "" or cur_hash == "None":
@@ -149,6 +148,9 @@ def ensure_db() -> None:
             ws.cell(admin_row, r_col).value = "admin"
 
     wb.save(DB_FILE)
+
+    # ensure backup folder exists
+    os.makedirs(BACKUP_DIR, exist_ok=True)
 
 
 def get_wb() -> Workbook:
@@ -331,6 +333,50 @@ def to_usd(amount: float, currency: str) -> float:
 
 
 # -------------------------------------------------
+# Backup helpers
+# -------------------------------------------------
+def make_backup_filename() -> str:
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    return f"office_ops_backup_{ts}.xlsx"
+
+
+def create_backup_file() -> str:
+    ensure_db()
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    name = make_backup_filename()
+    path = os.path.join(BACKUP_DIR, name)
+    shutil.copy2(DB_FILE, path)
+    log_action("backup_create", name)
+    return path
+
+
+def list_backup_files() -> List[Dict[str, Any]]:
+    ensure_db()
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    out = []
+    for fn in sorted(os.listdir(BACKUP_DIR), reverse=True):
+        if not fn.lower().endswith(".xlsx"):
+            continue
+        fp = os.path.join(BACKUP_DIR, fn)
+        st = os.stat(fp)
+        out.append({
+            "name": fn,
+            "size": st.st_size,
+            "created_at": datetime.utcfromtimestamp(st.st_mtime).isoformat(timespec="seconds") + "Z"
+        })
+    return out
+
+
+def restore_backup(name: str) -> bool:
+    fp = os.path.join(BACKUP_DIR, name)
+    if not os.path.exists(fp):
+        return False
+    shutil.copy2(fp, DB_FILE)
+    log_action("backup_restore", name)
+    return True
+
+
+# -------------------------------------------------
 # Static / health
 # -------------------------------------------------
 @app.get("/")
@@ -396,6 +442,92 @@ def api_currencies():
 @app.get("/api/fx")
 def api_fx():
     return jsonify({"base": "USD", "rates": fetch_fx_rates("USD")})
+
+
+# -------------------------------------------------
+# Backup routes (ADMIN ONLY)
+# -------------------------------------------------
+@app.get("/api/backup")
+def download_new_backup():
+    guard = require_admin()
+    if guard:
+        return guard
+    path = create_backup_file()
+    return send_file(path, as_attachment=True, download_name=os.path.basename(path))
+
+
+@app.get("/api/backups")
+def api_list_backups():
+    guard = require_admin()
+    if guard:
+        return guard
+    return jsonify(list_backup_files())
+
+
+@app.get("/api/backups/<name>/download")
+def api_download_backup(name: str):
+    guard = require_admin()
+    if guard:
+        return guard
+    fp = os.path.join(BACKUP_DIR, name)
+    if not os.path.exists(fp):
+        return jsonify({"error": "not_found"}), 404
+    return send_file(fp, as_attachment=True, download_name=name)
+
+
+@app.post("/api/backups/<name>/restore")
+def api_restore_backup(name: str):
+    guard = require_admin()
+    if guard:
+        return guard
+    if not restore_backup(name):
+        return jsonify({"error": "not_found"}), 404
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/backups/<name>")
+def api_delete_backup(name: str):
+    guard = require_admin()
+    if guard:
+        return guard
+    fp = os.path.join(BACKUP_DIR, name)
+    if not os.path.exists(fp):
+        return jsonify({"error": "not_found"}), 404
+    os.remove(fp)
+    log_action("backup_delete", name)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/upload")
+def upload_overwrite_db():
+    guard = require_admin()
+    if guard:
+        return guard
+
+    if "file" not in request.files:
+        return jsonify({"error": "missing_file"}), 400
+
+    file = request.files["file"]
+    filename = secure_filename(file.filename or "")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_UPLOAD_EXT:
+        return jsonify({"error": "invalid_file_type"}), 400
+
+    tmp_path = os.path.join(BASE_DIR, f"_upload_tmp{ext}")
+    file.save(tmp_path)
+
+    # basic validation: can open it
+    try:
+        openpyxl.load_workbook(tmp_path)
+    except Exception:
+        os.remove(tmp_path)
+        return jsonify({"error": "corrupt_excel"}), 400
+
+    shutil.copy2(tmp_path, DB_FILE)
+    os.remove(tmp_path)
+    log_action("db_upload_overwrite", filename)
+    ensure_db()
+    return jsonify({"ok": True})
 
 
 # -------------------------------------------------
@@ -643,10 +775,15 @@ def add_directory_quick():
 def list_requisitions():
     rows = read_rows("requisitions")
     for r in rows:
+        # normalize numeric fields
         r["amount_usd"] = float(r.get("amount_usd") or 0)
         r["amount_original"] = float(r.get("amount_original") or 0)
         r["paid"] = int(r.get("paid") or 0)
         r["delivered"] = int(r.get("delivered") or 0)
+
+        # ✅ aliases so frontend works (NO HTML change)
+        r["total_amount"] = r["amount_usd"]
+        r["original_amount"] = r["amount_original"]
     return jsonify(rows)
 
 
@@ -663,7 +800,7 @@ def add_requisition():
     supplier = (data.get("supplier") or "").strip()
     date_ordered = data.get("date_ordered") or ""
     expected = data.get("expected") or ""
-    amount = float(data.get("amount") or 0)
+    amount = float(data.get("amount") or data.get("total_amount") or 0)
     currency = (data.get("currency") or "USD").strip().upper()
     paid = 1 if data.get("paid") else 0
     delivered = 1 if data.get("delivered") else 0
@@ -742,8 +879,8 @@ def edit_requisition(rid: int):
     if "delivered" in data:
         updates["delivered"] = 1 if data["delivered"] else 0
 
-    if "amount" in data or "currency" in data:
-        amount_new = float(data.get("amount") or row.get("amount_original") or 0)
+    if "amount" in data or "total_amount" in data or "currency" in data:
+        amount_new = float(data.get("amount") or data.get("total_amount") or row.get("amount_original") or 0)
         currency_new = (data.get("currency") or row.get("currency") or "USD").upper()
         updates["amount_original"] = amount_new
         updates["currency"] = currency_new
@@ -803,6 +940,10 @@ def list_landings():
         r["amount_original"] = float(r.get("amount_original") or 0)
         r["paid"] = int(r.get("paid") or 0)
         r["delivered"] = int(r.get("delivered") or 0)
+
+        # ✅ aliases for frontend
+        r["amount"] = r["amount_usd"]
+        r["original_amount"] = r["amount_original"]
     return jsonify(rows)
 
 
