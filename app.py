@@ -1,18 +1,17 @@
 # ============================================
-# AMT PROCUREMENT - FINAL BACKEND (PART 1/6)
+# AMT PROCUREMENT - FINAL BACKEND (CORRECTED)
 # Excel-based Database + Backups + Authentication
 # ============================================
-
 
 import os
 import json
 import hashlib
 import requests
 from datetime import datetime
-import openpyxl
-from flask import Flask, jsonify, request, session, send_file
-from flask_cors import CORS
 
+import openpyxl
+from flask import Flask, jsonify, request, session, send_file, send_from_directory
+from flask_cors import CORS
 
 
 # --------------------------------------------
@@ -20,17 +19,13 @@ from flask_cors import CORS
 # --------------------------------------------
 app = Flask(__name__)
 app.secret_key = "SECRET_KEY_987654321"
+
+# IMPORTANT for login/session with frontend hosted elsewhere
 CORS(app, supports_credentials=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAIN_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
-
-from flask import send_from_directory
-
-@app.route("/")
-def serve_index():
-    return send_from_directory("static", "index.html")
 
 if not os.path.exists(BACKUP_DIR):
     os.makedirs(BACKUP_DIR)
@@ -39,7 +34,6 @@ if not os.path.exists(BACKUP_DIR):
 # --------------------------------------------
 # Helpers
 # --------------------------------------------
-
 def load_wb():
     """Load workbook."""
     return openpyxl.load_workbook(MAIN_FILE)
@@ -79,10 +73,10 @@ def delete_backup(filename):
 
 
 # --------------------------------------------
-# Hash password
+# Hash password (SHA256)
 # --------------------------------------------
-def hash_pw(pw):
-    return hashlib.sha256(pw.encode()).hexdigest()
+def hash_pw(pw: str) -> str:
+    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 
 
 # --------------------------------------------
@@ -95,37 +89,64 @@ def require_admin():
     return require_login() and session.get("role") == "admin"
 
 
+# --------------------------------------------
+# Serve Frontend
+# --------------------------------------------
+@app.route("/")
+def serve_index():
+    return send_from_directory("static", "index.html")
+
+
+@app.route("/api/health")
+def api_health():
+    return jsonify({"message": "AMT Procurement Backend Running"})
+
+
 # ============================================
 # PART 2 — LOGIN + USERS API
 # ============================================
 
 @app.route("/api/login", methods=["POST"])
 def login():
-    data = request.json
+    data = request.json or {}
     username = data.get("username", "").strip()
     password = data.get("password", "")
 
+    if not username or not password:
+        return jsonify({"error": "missing_fields"}), 400
+
     wb = load_wb()
+
+    if "Users" not in wb.sheetnames:
+        return jsonify({"error": "users_sheet_missing"}), 500
+
     ws = wb["Users"]
 
-for row in ws.iter_rows(min_row=2, values_only=True):
-    u, pw_hash, role = row
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or len(row) < 3:
+            continue
 
-    # Compare SHA256 hashes
-    if u == username and pw_hash == hash_pw(password):
-        session["username"] = username
-        session["role"] = role
-        return jsonify({"success": True})
+        u, pw_hash, role = row
 
+        if not u or not pw_hash:
+            continue
+
+        # ✅ Correct SHA256 compare
+        if u.strip() == username and str(pw_hash).strip() == hash_pw(password):
+            session["username"] = username
+            session["role"] = role or "user"
+            return jsonify({"success": True})
 
     return jsonify({"error": "invalid_credentials"}), 400
+
+
 @app.route("/api/session")
 def session_info():
     if not require_login():
         return jsonify({})
     return jsonify({
         "username": session["username"],
-        "role": session["role"]
+        "role": session.get("role", "user")
     })
 
 
@@ -148,8 +169,11 @@ def list_users_api():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or len(row) < 3:
+            continue
         username, pw_hash, role = row
-        out.append({"username": username, "role": role})
+        if username:
+            out.append({"username": username, "role": role})
 
     return jsonify(out)
 
@@ -162,7 +186,7 @@ def add_user():
     if not require_admin():
         return jsonify({"error": "admin_required"}), 403
 
-    data = request.json
+    data = request.json or {}
     username = data.get("username", "").strip()
     password = data.get("password", "")
     role = data.get("role", "user")
@@ -175,10 +199,10 @@ def add_user():
 
     # Check duplicate
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[0] == username:
+        if row and row[0] == username:
             return jsonify({"error": "duplicate"}), 400
 
-    # Insert
+    # Insert SHA256 hash
     ws.append([username, hash_pw(password), role])
     save_wb(wb)
     make_backup()
@@ -213,11 +237,6 @@ def delete_user(username):
 
 @app.route("/api/directory")
 def get_directory():
-    """
-    Returns full directory, or filtered by type:
-    /api/directory?type=supplier
-    /api/directory?type=workshop
-    """
     wb = load_wb()
     ws = wb["Directory"]
 
@@ -225,6 +244,8 @@ def get_directory():
 
     results = []
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or len(row) < 6:
+            continue
         id_, type_, name, email, phone, address = row
 
         if filter_type and type_ != filter_type:
@@ -244,13 +265,10 @@ def get_directory():
 
 @app.route("/api/directory/quick", methods=["POST"])
 def quick_add_directory():
-    """
-    Add new Supplier or Workshop from popup.
-    """
     if not require_login():
         return jsonify({"error": "login_required"}), 403
 
-    data = request.json
+    data = request.json or {}
     type_ = data.get("type")
     name = data.get("name", "").strip()
     email = data.get("email", "")
@@ -263,14 +281,12 @@ def quick_add_directory():
     wb = load_wb()
     ws = wb["Directory"]
 
-    # Auto ID = max existing ID + 1
     max_id = 0
     for r in ws.iter_rows(min_row=2, values_only=True):
-        if r[0] and r[0] > max_id:
+        if r and r[0] and r[0] > max_id:
             max_id = r[0]
 
     new_id = max_id + 1
-
     ws.append([new_id, type_, name, email, phone, address])
 
     save_wb(wb)
@@ -279,14 +295,10 @@ def quick_add_directory():
     return jsonify({"success": True})
 
 
-
 # ============================================
 # PART 4 — VESSELS + CATEGORIES
 # ============================================
 
-# ---------------------------
-# LIST VESSELS
-# ---------------------------
 @app.route("/api/vessels")
 def list_vessels():
     wb = load_wb()
@@ -294,57 +306,49 @@ def list_vessels():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or len(row) < 2:
+            continue
         id_, name = row
         out.append({"id": id_, "name": name})
 
     return jsonify(out)
 
 
-# ---------------------------
-# ADD VESSEL
-# ---------------------------
 @app.route("/api/vessels", methods=["POST"])
 def add_vessel():
     if not require_admin():
         return jsonify({"error": "admin_required"}), 403
 
-    data = request.json
+    data = request.json or {}
     name = data.get("name", "").strip()
-
     if not name:
         return jsonify({"error": "missing_name"}), 400
 
     wb = load_wb()
     ws = wb["Vessels"]
 
-    # Prevent duplicates
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[1] == name:
+        if row and row[1] == name:
             return jsonify({"error": "duplicate_name"}), 400
 
     max_id = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[0] and row[0] > max_id:
+        if row and row[0] and row[0] > max_id:
             max_id = row[0]
 
     ws.append([max_id + 1, name])
     save_wb(wb)
     make_backup()
-
     return jsonify({"success": True})
 
 
-# ---------------------------
-# EDIT VESSEL
-# ---------------------------
 @app.route("/api/vessels/<int:id_>", methods=["PATCH"])
 def edit_vessel(id_):
     if not require_admin():
         return jsonify({"error": "admin_required"}), 403
 
-    data = request.json
+    data = request.json or {}
     new_name = data.get("name", "").strip()
-
     if not new_name:
         return jsonify({"error": "missing_name"}), 400
 
@@ -361,9 +365,6 @@ def edit_vessel(id_):
     return jsonify({"error": "not_found"}), 404
 
 
-# ---------------------------
-# DELETE VESSEL
-# ---------------------------
 @app.route("/api/vessels/<int:id_>", methods=["DELETE"])
 def delete_vessel(id_):
     if not require_admin():
@@ -393,6 +394,8 @@ def list_categories():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or len(row) < 3:
+            continue
         id_, name, abbr = row
         out.append({"id": id_, "name": name, "abbr": abbr})
 
@@ -404,7 +407,7 @@ def add_category():
     if not require_admin():
         return jsonify({"error": "admin_required"}), 403
 
-    data = request.json
+    data = request.json or {}
     name = data.get("name", "").strip()
     abbr = data.get("abbr", "").strip()
 
@@ -414,20 +417,18 @@ def add_category():
     wb = load_wb()
     ws = wb["Categories"]
 
-    # Prevent abbreviation duplicates
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[2] == abbr:
+        if row and row[2] == abbr:
             return jsonify({"error": "duplicate_abbr"}), 400
 
     max_id = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[0] and row[0] > max_id:
+        if row and row[0] and row[0] > max_id:
             max_id = row[0]
 
     ws.append([max_id + 1, name, abbr])
     save_wb(wb)
     make_backup()
-
     return jsonify({"success": True})
 
 
@@ -436,7 +437,7 @@ def edit_category(id_):
     if not require_admin():
         return jsonify({"error": "admin_required"}), 403
 
-    data = request.json
+    data = request.json or {}
     new_name = data.get("name", "").strip()
     new_abbr = data.get("abbr", "").strip()
 
@@ -476,28 +477,18 @@ def delete_category(id_):
 # PART 5 — REQUISITIONS MODULE
 # ============================================
 
-# ------------------------------
-# Currency Conversion
-# ------------------------------
 def convert_to_usd(amount, currency):
-    """
-    Convert any currency → USD.
-    Uses exchangerate.host API (free, no key needed).
-    """
+    """Convert any currency → USD using exchangerate.host API."""
     if currency.upper() == "USD":
         return amount
-
     try:
         url = f"https://api.exchangerate.host/convert?from={currency}&to=USD&amount={amount}"
-        res = requests.get(url).json()
+        res = requests.get(url, timeout=10).json()
         return float(res.get("result", amount))
     except:
         return amount
 
 
-# ------------------------------
-# LIST ALL REQUISITIONS
-# ------------------------------
 @app.route("/api/requisitions")
 def list_requisitions():
     wb = load_wb()
@@ -505,6 +496,8 @@ def list_requisitions():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row:
+            continue
         (
             id_, number, vessel, supplier, date_ord,
             expected, total_usd, paid, category,
@@ -530,9 +523,6 @@ def list_requisitions():
     return jsonify(out)
 
 
-# ------------------------------
-# LIST DELIVERED REQUISITIONS
-# ------------------------------
 @app.route("/api/requisitions/delivered")
 def list_requisitions_delivered():
     wb = load_wb()
@@ -540,7 +530,7 @@ def list_requisitions_delivered():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[9] == 1:  # delivered column
+        if row and row[9] == 1:
             id_, number, vessel, supplier, date_ord, exp, tot, paid, cat, deliv, status, cur, orig = row
             out.append({
                 "id": id_,
@@ -561,9 +551,6 @@ def list_requisitions_delivered():
     return jsonify(out)
 
 
-# ------------------------------
-# LIST CANCELLED REQUISITIONS
-# ------------------------------
 @app.route("/api/requisitions/cancelled")
 def list_requisitions_cancelled():
     wb = load_wb()
@@ -571,7 +558,7 @@ def list_requisitions_cancelled():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[10] == "cancelled":
+        if row and row[10] == "cancelled":
             id_, number, vessel, supplier, date_ord, exp, tot, paid, cat, deliv, status, cur, orig = row
             out.append({
                 "id": id_,
@@ -592,15 +579,12 @@ def list_requisitions_cancelled():
     return jsonify(out)
 
 
-# ------------------------------
-# ADD REQUISITION
-# ------------------------------
 @app.route("/api/requisitions", methods=["POST"])
 def add_requisition():
     if not require_login():
         return jsonify({"error": "login_required"}), 403
 
-    d = request.json
+    d = request.json or {}
     number = d.get("number", "").strip()
     vessel = d.get("vessel", "")
     supplier = d.get("supplier", "")
@@ -617,10 +601,9 @@ def add_requisition():
     wb = load_wb()
     ws = wb["Requisitions"]
 
-    # Compute next ID
     max_id = 0
     for r in ws.iter_rows(min_row=2, values_only=True):
-        if r[0] and r[0] > max_id:
+        if r and r[0] and r[0] > max_id:
             max_id = r[0]
 
     ws.append([
@@ -631,20 +614,15 @@ def add_requisition():
 
     save_wb(wb)
     make_backup()
-
     return jsonify({"success": True})
 
 
-# ------------------------------
-# EDIT REQUISITION
-# ------------------------------
 @app.route("/api/requisitions/<int:id_>", methods=["PATCH"])
 def edit_requisition(id_):
     if not require_login():
         return jsonify({"error": "login_required"}), 403
 
-    d = request.json
-
+    d = request.json or {}
     wb = load_wb()
     ws = wb["Requisitions"]
 
@@ -666,7 +644,6 @@ def edit_requisition(id_):
 
             total_usd = convert_to_usd(original_amount, currency)
 
-            # Update cells
             row[1].value = number
             row[2].value = vessel
             row[3].value = supplier
@@ -687,9 +664,6 @@ def edit_requisition(id_):
     return jsonify({"error": "not_found"}), 404
 
 
-# ------------------------------
-# CANCEL / DELETE REQUISITION
-# ------------------------------
 @app.route("/api/requisitions/<int:id_>", methods=["DELETE"])
 def cancel_requisition(id_):
     if not require_login():
@@ -708,16 +682,10 @@ def cancel_requisition(id_):
     return jsonify({"error": "not_found"}), 404
 
 
-
-
 # ============================================
-# PART 6 — LANDINGS MODULE + BACKUPS API
+# PART 6 — LANDINGS + BACKUPS API
 # ============================================
 
-
-# -----------------------------------
-# LIST ALL LANDINGS
-# -----------------------------------
 @app.route("/api/landings")
 def list_landings():
     wb = load_wb()
@@ -748,9 +716,6 @@ def list_landings():
     return jsonify(out)
 
 
-# -----------------------------------
-# LIST DELIVERED LANDINGS
-# -----------------------------------
 @app.route("/api/landings/delivered")
 def list_landings_delivered():
     wb = load_wb()
@@ -758,7 +723,7 @@ def list_landings_delivered():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[9] == 1:   # delivered column
+        if row and row[9] == 1:
             (
                 id_, vessel, item, workshop, amount_usd,
                 paid, expected, landed_date, status,
@@ -783,9 +748,6 @@ def list_landings_delivered():
     return jsonify(out)
 
 
-# -----------------------------------
-# LIST CANCELLED LANDINGS
-# -----------------------------------
 @app.route("/api/landings/cancelled")
 def list_landings_cancelled():
     wb = load_wb()
@@ -793,12 +755,13 @@ def list_landings_cancelled():
 
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[8] == "cancelled":
+        if row and row[8] == "cancelled":
             (
                 id_, vessel, item, workshop, amount_usd,
                 paid, expected, landed_date, status,
                 delivered, currency, original_amount
             ) = row
+
             out.append({
                 "id": id_,
                 "vessel": vessel,
@@ -817,15 +780,12 @@ def list_landings_cancelled():
     return jsonify(out)
 
 
-# -----------------------------------
-# ADD LANDING
-# -----------------------------------
 @app.route("/api/landings", methods=["POST"])
 def add_landing():
     if not require_login():
         return jsonify({"error": "login_required"}), 403
 
-    d = request.json
+    d = request.json or {}
     vessel = d.get("vessel", "")
     item = d.get("description", "")
     workshop = d.get("workshop", "")
@@ -844,7 +804,7 @@ def add_landing():
 
     max_id = 0
     for r in ws.iter_rows(min_row=2, values_only=True):
-        if r[0] and r[0] > max_id:
+        if r and r[0] and r[0] > max_id:
             max_id = r[0]
 
     ws.append([
@@ -855,19 +815,15 @@ def add_landing():
 
     save_wb(wb)
     make_backup()
-
     return jsonify({"success": True})
 
 
-# -----------------------------------
-# EDIT LANDING
-# -----------------------------------
 @app.route("/api/landings/<int:id_>", methods=["PATCH"])
 def edit_landing(id_):
     if not require_login():
         return jsonify({"error": "login_required"}), 403
 
-    d = request.json
+    d = request.json or {}
     wb = load_wb()
     ws = wb["Landings"]
 
@@ -908,9 +864,6 @@ def edit_landing(id_):
     return jsonify({"error": "not_found"}), 404
 
 
-# -----------------------------------
-# CANCEL LANDING
-# -----------------------------------
 @app.route("/api/landings/<int:id_>", methods=["DELETE"])
 def cancel_landing(id_):
     if not require_login():
@@ -963,17 +916,7 @@ def api_backups_delete(filename):
 
 
 # ============================================
-# RENDER APP RUNNER
+# RUNNER
 # ============================================
-@app.route("/")
-def root():
-    return jsonify({"message": "AMT Procurement Backend Running"})
-
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-
-
-
-
-
