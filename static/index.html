@@ -932,6 +932,11 @@ async function loadCurrencies() {
   if (!reqCurSel.value) reqCurSel.value = "USD";
   if (!landCurSel.value) landCurSel.value = "USD";
 }
+function parseDateSafe(d) {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt;
+}
 
 /* ========= Session / Header / Login ========== */
 async function refreshSession() {
@@ -964,11 +969,7 @@ async function refreshSession() {
     document.getElementById("showLoginBtn").onclick = () => {
       loginCard.classList.toggle("hidden");
     };
-    function parseDateSafe(d) {
-  if (!d) return null;
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? null : dt;
-}
+
 
 async function loadOverviewTotalsFilters() {
   // ensure data exists
@@ -2417,6 +2418,7 @@ async function updateSummaryCounts() {
 
 </body>
 </html>
+
 
 
 
