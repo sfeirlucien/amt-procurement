@@ -14,6 +14,12 @@ import openpyxl
 from flask import Flask, jsonify, request, session, send_file
 from flask_cors import CORS
 
+from flask import send_from_directory
+
+@app.route("/")
+def serve_index():
+    return send_from_directory("static", "index.html")
+
 # --------------------------------------------
 # App INIT
 # --------------------------------------------
@@ -964,4 +970,5 @@ def root():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
