@@ -2,1575 +2,1069 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AMT Procurement</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" type="image/png" href="static/ICON.jpg">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
-    header { background:#1f2937; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:20px; }
-    header .user-info { font-size:14px; display:flex; align-items:center; gap:8px;}
-    .tabs { display:flex; background:#111827; flex-wrap:wrap; }
-    .tab { padding:10px 16px; color:#9ca3af; cursor:pointer; font-size:14px; user-select:none; }
-    .tab.active { background:#1f2937; color:#fff; }
-    .container { padding:16px; max-width:1200px; margin:0 auto; }
-    .card { background:#fff; padding:16px; margin-bottom:16px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-    .card h2 { margin-top:0; font-size:18px; }
-    .flex-row { display:flex; gap:16px; flex-wrap:wrap; }
-    .flex-1 { flex:1 1 0; min-width:260px; }
-    label { display:block; font-size:13px; margin-bottom:6px; }
-    input, select { width:100%; padding:6px 8px; margin-top:2px; box-sizing:border-box; font-size:13px; }
-    button { padding:6px 10px; font-size:13px; border-radius:4px; border:none; cursor:pointer; background:#2563eb; color:#fff; }
-    button.secondary { background:#6b7280; }
-    button.danger { background:#b91c1c; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th, td { border:1px solid #e5e7eb; padding:6px 8px; text-align:left; }
-    th { background:#f3f4f6; }
-    .tag { display:inline-block; padding:2px 6px; border-radius:999px; font-size:11px; }
-    .tag.green { background:#dcfce7; color:#166534; }
-    .tag.red { background:#fee2e2; color:#b91c1c; }
-    .tag.gray { background:#e5e7eb; color:#374151; }
-    .error { color:#b91c1c; font-size:12px; margin-top:4px; }
-    .hidden { display:none; }
-    #loginCard { max-width:320px; margin:12px auto; position:relative; z-index:10; }
-    .summary-grid { display:flex; flex-wrap:wrap; gap:10px; }
-    .summary-item { flex:1 1 180px; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; font-size:13px; }
-    .summary-label { color:#6b7280; font-size:12px; }
-    .summary-value { font-size:18px; font-weight:bold; margin-top:4px; }
-    .filter-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; align-items:flex-end; }
-    .filter-row > div { min-width:140px; flex:1 1 120px; }
-    .status-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
-    .status-open { background:#eef2ff; color:#4f46e5; }
-    .status-cancelled { background:#fee2e2; color:#b91c1c; }
-    .status-delivered { background:#dcfce7; color:#166534; }
-    .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.2); padding:16px; max-width:400px; width:90%; z-index:50; }
-    #dirPopupBackdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:40; }
+    :root{
+      --bg:#0b1020; --card:#121a33; --card2:#0f1730; --muted:#8ea0c6; --text:#e7ecf5;
+      --accent:#4cc9f0; --accent2:#80ffdb; --danger:#ff6b6b; --ok:#8aff8a; --warn:#ffd166;
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#070b18,#0b1020);color:var(--text)}
+    header{
+      position:sticky;top:0;z-index:10;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 18px;background:rgba(10,15,30,.92);backdrop-filter:blur(8px);
+      border-bottom:1px solid #1f2a4d;
+    }
+    header .brand{font-weight:800;letter-spacing:.5px}
+    nav{display:flex;gap:8px;flex-wrap:wrap}
+    nav button{
+      background:transparent;color:var(--text);border:1px solid #22315c;
+      padding:7px 10px;border-radius:10px;cursor:pointer;font-weight:600;
+    }
+    nav button.active{background:var(--accent);color:#03111d;border-color:transparent}
+    .right{display:flex;gap:8px;align-items:center}
+    .pill{padding:4px 8px;border-radius:999px;background:#1a2550;color:var(--muted);font-size:12px}
+    .btn{
+      background:var(--accent);border:none;color:#04111a;font-weight:700;
+      padding:8px 12px;border-radius:10px;cursor:pointer;
+    }
+    .btn.secondary{background:#22315c;color:var(--text)}
+    .btn.danger{background:var(--danger);color:#1a0202}
+    main{padding:18px;max-width:1400px;margin:0 auto}
+    .grid{display:grid;gap:12px}
+    .grid.cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:1100px){.grid.cards{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:600px){.grid.cards{grid-template-columns:1fr}}
+    .card{
+      background:var(--card);border:1px solid #1f2a4d;border-radius:var(--radius);
+      padding:14px;box-shadow:0 10px 25px rgba(0,0,0,.25);
+    }
+    .card h3{margin:0 0 8px 0;font-size:15px;color:var(--muted);font-weight:700}
+    .big{font-size:26px;font-weight:900}
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .row > *{flex:1}
+    label{font-size:12px;color:var(--muted);font-weight:700}
+    input,select,textarea{
+      width:100%;padding:8px 9px;border-radius:9px;border:1px solid #22315c;
+      background:var(--card2);color:var(--text);outline:none;
+    }
+    textarea{min-height:70px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:8px;border-bottom:1px solid #1f2a4d;vertical-align:top}
+    th{color:var(--muted);text-align:left;font-weight:800}
+    tr:hover td{background:#0e1733}
+    .tag{font-size:11px;padding:2px 7px;border-radius:999px;background:#1a2550;display:inline-block}
+    .tag.ok{background:rgba(138,255,138,.12);color:var(--ok)}
+    .tag.warn{background:rgba(255,209,102,.12);color:var(--warn)}
+    .tag.danger{background:rgba(255,107,107,.12);color:var(--danger)}
+    .actions{display:flex;gap:6px}
+    .actions .btn{padding:5px 7px;font-size:12px}
+    .section{display:none}
+    .section.active{display:block}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .toolbar .btn{padding:7px 10px}
+    .split{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+    @media(max-width:900px){.split{grid-template-columns:1fr}}
+    dialog{
+      border:none;border-radius:14px;padding:0;background:var(--card);color:var(--text);
+      width:min(720px,95vw);
+    }
+    dialog::backdrop{background:rgba(0,0,0,.6)}
+    .modal-head{padding:12px 14px;border-bottom:1px solid #1f2a4d;font-weight:800}
+    .modal-body{padding:14px}
+    .modal-foot{padding:12px 14px;border-top:1px solid #1f2a4d;display:flex;justify-content:flex-end;gap:8px}
+    .empty{padding:14px;color:var(--muted);text-align:center}
   </style>
 </head>
 <body>
-
 <header>
-  <div style="display:flex; align-items:center; gap:12px;">
-    <img src="static/logo.png" alt="AMT Logo" style="height:40px; width:auto; border-radius:4px;">
-    <h1>AMT Procurement</h1>
+  <div class="brand">AMT Procurement</div>
+  <nav id="tabs"></nav>
+  <div class="right">
+    <span id="userPill" class="pill">Not logged in</span>
+    <button id="loginBtn" class="btn secondary">Login</button>
+    <button id="logoutBtn" class="btn danger" style="display:none;">Logout</button>
   </div>
-  <div class="user-info" id="userInfo"></div>
 </header>
 
-<div id="loginCard" class="card hidden">
-  <h2>Login</h2>
-  <label>Username
-    <input type="text" id="loginUsername" />
-  </label>
-  <label>Password
-    <input type="password" id="loginPassword" />
-  </label>
-  <button id="loginBtn">Login</button>
-  <div id="loginError" class="error"></div>
-</div>
+<main>
+  <!-- OVERVIEW -->
+  <section id="sec-overview" class="section active">
+    <div class="grid cards">
+      <div class="card">
+        <h3>Total Paid (USD)</h3>
+        <div id="ovPaid" class="big">0</div>
+        <div class="muted" id="ovPaidCount">0 items</div>
+      </div>
+      <div class="card">
+        <h3>Total Unpaid (USD)</h3>
+        <div id="ovUnpaid" class="big">0</div>
+        <div class="muted" id="ovUnpaidCount">0 items</div>
+      </div>
+      <div class="card">
+        <h3>Open Requisitions</h3>
+        <div id="ovOpenReq" class="big">0</div>
+        <div class="muted">not delivered</div>
+      </div>
+      <div class="card">
+        <h3>Open Landings</h3>
+        <div id="ovOpenLand" class="big">0</div>
+        <div class="muted">not delivered</div>
+      </div>
+    </div>
 
-<div id="dirPopupBackdrop" class="hidden"></div>
-<div id="dirPopup" class="popup hidden">
-  <h3 id="dirPopupTitle">New entry</h3>
-  <label>Name
-    <input type="text" id="dirPopupName" />
-  </label>
-  <label>Email
-    <input type="email" id="dirPopupEmail" />
-  </label>
-  <label>Phone
-    <input type="text" id="dirPopupPhone" />
-  </label>
-  <label>Location / Address
-    <input type="text" id="dirPopupAddress" />
-  </label>
-  <div id="dirPopupError" class="error"></div>
-  <div style="margin-top:10px; text-align:right;">
-    <button id="dirPopupCancelBtn" class="secondary">Cancel</button>
-    <button id="dirPopupSaveBtn">Save</button>
+    <div class="split" style="margin-top:12px;">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Recent Requisitions</h2>
+          <div class="toolbar">
+            <select id="filterMonth"></select>
+            <select id="filterVessel"></select>
+            <select id="filterCategory"></select>
+            <button class="btn secondary" id="resetFilters">Reset</button>
+          </div>
+        </div>
+        <div id="recentReqWrap"></div>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0;">Top 5 Suppliers (Paid USD)</h2>
+        <div id="topSuppliersWrap"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <h2 style="margin-top:0;">Recent Landed Items</h2>
+      <div id="recentLandWrap"></div>
+    </div>
+  </section>
+
+  <!-- REQUISITIONS -->
+  <section id="sec-requisitions" class="section">
+    <div class="toolbar">
+      <button class="btn" id="addReqBtn">+ Add Requisition</button>
+    </div>
+    <div id="reqTableWrap"></div>
+  </section>
+
+  <!-- LANDINGS -->
+  <section id="sec-landings" class="section">
+    <div class="toolbar">
+      <button class="btn" id="addLandBtn">+ Add Landed Item</button>
+    </div>
+    <div id="landTableWrap"></div>
+  </section>
+
+  <!-- DIRECTORY -->
+  <section id="sec-directory" class="section">
+    <div class="toolbar">
+      <button class="btn" id="addDirBtn">+ Add Contact</button>
+      <select id="dirTypeFilter" style="max-width:220px;">
+        <option value="">All types</option>
+        <option value="supplier">Suppliers</option>
+        <option value="workshop">Workshops</option>
+      </select>
+    </div>
+    <div id="dirTableWrap"></div>
+  </section>
+
+  <!-- DELIVERED -->
+  <section id="sec-delivered" class="section">
+    <div class="card">
+      <h2 style="margin-top:0;">Delivered Items</h2>
+      <div id="deliveredWrap"></div>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="sec-admin" class="section">
+    <div class="split">
+      <div class="card">
+        <h2 style="margin-top:0;">Categories</h2>
+        <div class="row">
+          <div>
+            <label>Name</label>
+            <input id="catName" placeholder="e.g. Spare Parts"/>
+          </div>
+          <div>
+            <label>Abbr</label>
+            <input id="catAbbr" placeholder="e.g. SP"/>
+          </div>
+          <div style="flex:0.4;">
+            <label>&nbsp;</label>
+            <button class="btn" id="addCatBtn">Add</button>
+          </div>
+        </div>
+        <div id="catTableWrap" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0;">Vessels</h2>
+        <div class="row">
+          <div>
+            <label>Name</label>
+            <input id="vesName" placeholder="e.g. Lady Youmna"/>
+          </div>
+          <div style="flex:0.4;">
+            <label>&nbsp;</label>
+            <button class="btn" id="addVesBtn">Add</button>
+          </div>
+        </div>
+        <div id="vesTableWrap" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:12px;">
+      <div class="card">
+        <h2 style="margin-top:0;">Users</h2>
+        <div class="row">
+          <div><label>Username</label><input id="newUser" placeholder="username"/></div>
+          <div><label>Password</label><input id="newPass" type="password" placeholder="password"/></div>
+          <div><label>Role</label>
+            <select id="newRole">
+              <option value="user">user</option>
+              <option value="viewer">viewer</option>
+              <option value="finance">finance</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <div style="flex:0.4;"><label>&nbsp;</label><button class="btn" id="addUserBtn">Add</button></div>
+        </div>
+        <div id="userTableWrap" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0;">Backups / Upload</h2>
+        <div class="toolbar">
+          <button class="btn" id="downloadBackupBtn">Download backup</button>
+          <input id="uploadInput" type="file" accept=".xlsx" style="max-width:240px;"/>
+          <button class="btn secondary" id="uploadBtn">Upload & overwrite</button>
+        </div>
+        <div id="backupsTableWrap"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- LOGIN modal -->
+<dialog id="loginModal">
+  <div class="modal-head">Login</div>
+  <div class="modal-body">
+    <div class="row">
+      <div>
+        <label>Username</label>
+        <input id="loginUser" placeholder="admin"/>
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="loginPass" type="password" placeholder="admin123"/>
+      </div>
+    </div>
+    <div id="loginErr" class="muted" style="margin-top:8px;color:var(--danger);font-weight:700;"></div>
   </div>
-</div>
-
-<div id="app">
-  <div class="tabs">
-    <div class="tab active" data-tab="overview">Overview</div>
-    <div class="tab" data-tab="requisitions">Requisitions</div>
-    <div class="tab" data-tab="landings">Landings</div>
-    <div class="tab" data-tab="directory">Directory</div>
-    <div class="tab" data-tab="delivered">Delivered</div>
-    <div class="tab hidden" data-tab="admin" id="adminTab">Admin</div>
+  <div class="modal-foot">
+    <button class="btn secondary" onclick="loginModal.close()">Cancel</button>
+    <button class="btn" id="doLoginBtn">Login</button>
   </div>
+</dialog>
 
-  <div class="container tab-content">
-
-    <!-- OVERVIEW -->
-    <div id="tab-overview">
-      <div class="card">
-        <h2>Dashboard</h2>
-        <div class="summary-grid">
-          <div class="summary-item">
-            <div class="summary-label">Open Requisitions (not delivered)</div>
-            <div class="summary-value" id="summaryOpenReqNotDel">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Open Requisitions (unpaid)</div>
-            <div class="summary-value" id="summaryOpenReqUnpaid">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Open Landed Items (not delivered)</div>
-            <div class="summary-value" id="summaryOpenLandNotDel">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Open Landed Items (unpaid)</div>
-            <div class="summary-value" id="summaryOpenLandUnpaid">0</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Paid Totals (Filters)</h2>
-        <div class="filter-row">
-          <div>
-            <label>Type
-              <select id="ovTypeFilter">
-                <option value="">All</option>
-                <option value="req">Requisitions</option>
-                <option value="land">Workshops (Landed Items)</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Vessel
-              <select id="ovVesselFilter">
-                <option value="">All</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Paid?
-              <select id="ovPaidFilter">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Month
-              <select id="ovMonthFilter">
-                <option value="">All months</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Quarter
-              <select id="ovQuarterFilter">
-                <option value="">All quarters</option>
-                <option value="Q1">Q1</option>
-                <option value="Q2">Q2</option>
-                <option value="Q3">Q3</option>
-                <option value="Q4">Q4</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Category
-              <select id="ovCategoryFilter">
-                <option value="">All categories</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Year
-              <select id="ovYearFilter">
-                <option value="">All years</option>
-              </select>
-            </label>
-          </div>
-          <div style="align-self:flex-end;">
-            <button id="ovApplyTotalsBtn">Apply</button>
-            <button id="ovClearTotalsBtn" class="secondary">Clear</button>
-          </div>
-        </div>
-
-        <div class="summary-grid" style="margin-top:10px;">
-          <div class="summary-item">
-            <div class="summary-label">Total Paid (Selected Period)</div>
-            <div class="summary-value" id="ovPaidMonthTotal">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Total Paid (Selected Year)</div>
-            <div class="summary-value" id="ovPaidYearTotal">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Total Amount (Filter Result)</div>
-            <div class="summary-value" id="ovAllTotal">0</div>
-          </div>
-        </div>
-
-        <h3 style="margin-top:16px;">Top 5 Suppliers (Selected Period)</h3>
-        <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;">
-          <li>—</li>
-        </ul>
-      </div>
-
-      <div class="flex-row">
-        <div class="card flex-1">
-          <h2>Recent Requisitions</h2>
-          <table id="overviewReqTable">
-            <thead>
-              <tr>
-                <th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-                <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="card flex-1">
-          <h2>Recent Landed Items</h2>
-          <table id="overviewLandTable">
-            <thead>
-              <tr>
-                <th>Vessel</th><th>Description</th><th>Workshop</th>
-                <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
-                <th>Paid</th><th>Delivered</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+<!-- REQ modal -->
+<dialog id="reqModal">
+  <div class="modal-head" id="reqModalTitle">Add Requisition</div>
+  <div class="modal-body">
+    <input type="hidden" id="reqId"/>
+    <div class="row">
+      <div><label>Number*</label><input id="reqNumber"/></div>
+      <div><label>Vessel*</label><select id="reqVessel"></select></div>
+      <div><label>Category*</label><select id="reqCategory"></select></div>
+    </div>
+    <div class="row">
+      <div><label>Supplier*</label><input id="reqSupplier"/></div>
+      <div><label>Date Ordered*</label><input id="reqDate" type="date"/></div>
+      <div><label>Expected</label><input id="reqExpected" type="date"/></div>
+    </div>
+    <div class="row">
+      <div><label>Amount*</label><input id="reqAmount" type="number" step="0.01"/></div>
+      <div><label>Currency*</label><select id="reqCurrency"></select></div>
+      <div><label>Status</label>
+        <select id="reqStatus">
+          <option value="open">open</option>
+          <option value="ordered">ordered</option>
+          <option value="received">received</option>
+        </select>
       </div>
     </div>
-
-    <!-- REQUISITIONS -->
-    <div id="tab-requisitions" class="hidden">
-      <div class="card">
-        <h2 id="reqFormTitle">Add Requisition</h2>
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Requisition Number
-              <input type="text" id="reqNumber" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Vessel
-              <select id="reqVessel"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Category (Abbreviation)
-              <select id="reqCategory"></select>
-            </label>
-          </div>
-        </div>
-
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Supplier
-              <div style="display:flex; gap:8px;">
-                <select id="reqSupplierSelect" style="flex:1;"></select>
-                <button id="newSupplierBtn" type="button">New</button>
-              </div>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Date Ordered
-              <input type="date" id="reqDateOrdered" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Expected Date
-              <input type="date" id="reqExpected" />
-            </label>
-          </div>
-        </div>
-
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Amount
-              <input type="number" id="reqTotal" step="0.01" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Currency
-              <select id="reqCurrency"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>
-              <input type="checkbox" id="reqPaid" /> Paid
-            </label>
-          </div>
-        </div>
-
-        <div style="margin-top:8px;">
-          <button id="saveReqBtn">Save Requisition</button>
-          <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
-        </div>
-        <div id="reqError" class="error"></div>
+    <div class="row">
+      <div><label>PO#</label><input id="reqPO"/></div>
+      <div><label>Urgency</label>
+        <select id="reqUrgency">
+          <option value="normal">normal</option>
+          <option value="urgent">urgent</option>
+        </select>
       </div>
-
-      <div class="card">
-        <h2>Filter Requisitions</h2>
-        <div class="filter-row">
-          <div>
-            <label>Status
-              <select id="filterReqStatus">
-                <option value="">All</option>
-                <option value="open">Open</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Paid
-              <select id="filterReqPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Delivered
-              <select id="filterReqDelivered">
-                <option value="">All</option>
-                <option value="1">Delivered</option>
-                <option value="0">Not delivered</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search (number / vessel / supplier)
-              <input type="text" id="filterReqSearch" placeholder="Search..." />
-            </label>
-          </div>
-          <div style="align-self:flex-end;">
-            <button id="applyReqFilterBtn">Apply</button>
-            <button id="clearReqFilterBtn" class="secondary" type="button">Clear</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>All Requisitions</h2>
-        <table id="reqTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
-              <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h2>Cancelled / Deleted Requisitions</h2>
-        <table id="reqCancelledTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="row" style="gap:6px;">
+        <div><label>Paid</label><select id="reqPaid"><option value="0">No</option><option value="1">Yes</option></select></div>
+        <div><label>Delivered</label><select id="reqDelivered"><option value="0">No</option><option value="1">Yes</option></select></div>
       </div>
     </div>
-
-    <!-- LANDINGS -->
-    <div id="tab-landings" class="hidden">
-      <div class="card">
-        <h2 id="landFormTitle">Add Landed Item</h2>
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Vessel
-              <select id="landVessel"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Description
-              <input type="text" id="landDescription" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Workshop
-              <div style="display:flex; gap:8px;">
-                <select id="landWorkshopSelect" style="flex:1;"></select>
-                <button id="newWorkshopBtn" type="button">New</button>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Expected Delivery Date
-              <input type="date" id="landExpected" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Landed Date
-              <input type="date" id="landLanded" />
-            </label>
-          </div>
-        </div>
-
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Amount
-              <input type="number" id="landAmount" step="0.01" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Currency
-              <select id="landCurrency"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>
-              <input type="checkbox" id="landPaid" /> Paid
-            </label>
-          </div>
-        </div>
-
-        <div style="margin-top:8px;">
-          <button id="saveLandingBtn">Save Landed Item</button>
-          <button id="cancelLandEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
-        </div>
-        <div id="landError" class="error"></div>
-      </div>
-
-      <div class="card">
-        <h2>Filter Landed Items</h2>
-        <div class="filter-row">
-          <div>
-            <label>Status
-              <select id="filterLandingStatus">
-                <option value="">All</option>
-                <option value="open">Open</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Paid
-              <select id="filterLandingPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Delivered
-              <select id="filterLandingDelivered">
-                <option value="">All</option>
-                <option value="1">Delivered</option>
-                <option value="0">Not delivered</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search (vessel / description / workshop)
-              <input type="text" id="filterLandingSearch" placeholder="Search..." />
-            </label>
-          </div>
-          <div style="align-self:flex-end;">
-            <button id="applyLandingFilterBtn">Apply</button>
-            <button id="clearLandingFilterBtn" class="secondary" type="button">Clear</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>All Landed Items</h2>
-        <table id="landingTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
-              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th>
-              <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h2>Cancelled / Deleted Landed Items</h2>
-        <table id="landingCancelledTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
-              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- DIRECTORY -->
-    <div id="tab-directory" class="hidden">
-      <div class="card">
-        <h2>Suppliers & Workshops</h2>
-        <div style="margin-bottom:8px;">
-          <button id="dirNewSupplierBtn">Add Supplier</button>
-          <button id="dirNewWorkshopBtn" class="secondary" type="button">Add Workshop</button>
-        </div>
-        <table id="directoryTable">
-          <thead>
-            <tr><th>ID</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- DELIVERED -->
-    <div id="tab-delivered" class="hidden">
-      <div class="card">
-        <h2>Delivered Requisitions</h2>
-        <div class="filter-row">
-          <div>
-            <label>Paid
-              <select id="filterDeliveredReqPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search (number / vessel / supplier)
-              <input type="text" id="filterDeliveredReqSearch" placeholder="Search..." />
-            </label>
-          </div>
-          <div style="align-self:flex-end;">
-            <button id="applyDeliveredReqFilterBtn">Apply</button>
-            <button id="clearDeliveredReqFilterBtn" class="secondary" type="button">Clear</button>
-          </div>
-        </div>
-        <table id="deliveredReqTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h2>Delivered Landed Items</h2>
-        <div class="filter-row">
-          <div>
-            <label>Paid
-              <select id="filterDeliveredLandPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search (vessel / description / workshop)
-              <input type="text" id="filterDeliveredLandSearch" placeholder="Search..." />
-            </label>
-          </div>
-          <div style="align-self:flex-end;">
-            <button id="applyDeliveredLandFilterBtn">Apply</button>
-            <button id="clearDeliveredLandFilterBtn" class="secondary" type="button">Clear</button>
-          </div>
-        </div>
-        <table id="deliveredLandTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
-              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ADMIN -->
-    <div id="tab-admin" class="hidden">
-      <div class="card">
-        <h2>Categories</h2>
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Category Name
-              <input type="text" id="catName" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Abbreviation
-              <input type="text" id="catAbbr" />
-            </label>
-          </div>
-        </div>
-        <div style="margin-top:8px;">
-          <button id="addCatBtn">Save Category</button>
-          <button id="cancelCatEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
-        </div>
-        <div class="error" id="catError"></div>
-        <table id="catTable" style="margin-top:10px;">
-          <thead><tr><th>ID</th><th>Name</th><th>Abbreviation</th><th>Actions</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h2>Vessels</h2>
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Vessel Name
-              <input type="text" id="vesselName" />
-            </label>
-          </div>
-        </div>
-        <div style="margin-top:8px;">
-          <button id="addVesselBtn">Save Vessel</button>
-          <button id="cancelVesselEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
-        </div>
-        <div class="error" id="vesselError"></div>
-        <table id="vesselTable" style="margin-top:10px;">
-          <thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h2>Users</h2>
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Username
-              <input type="text" id="adminUsername"/>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Password
-              <input type="password" id="adminPassword"/>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Role
-              <select id="adminRole">
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="viewer">Viewer</option>
-                <option value="finance">Finance</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <div style="margin-top:8px;">
-          <button id="saveUserBtn">Save User</button>
-        </div>
-        <div id="adminUserError" class="error"></div>
-        <table id="userTable" style="margin-top:10px;">
-          <thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
+    <div><label>Remarks</label><textarea id="reqRemarks"></textarea></div>
+    <div id="reqErr" style="margin-top:8px;color:var(--danger);font-weight:700;"></div>
   </div>
-</div>
+  <div class="modal-foot">
+    <button class="btn secondary" onclick="reqModal.close()">Cancel</button>
+    <button class="btn" id="saveReqBtn">Save</button>
+  </div>
+</dialog>
+
+<!-- LAND modal -->
+<dialog id="landModal">
+  <div class="modal-head" id="landModalTitle">Add Landed Item</div>
+  <div class="modal-body">
+    <input type="hidden" id="landId"/>
+    <div class="row">
+      <div><label>Vessel*</label><select id="landVessel"></select></div>
+      <div><label>Description*</label><input id="landItem"/></div>
+      <div><label>Workshop*</label><input id="landWorkshop"/></div>
+    </div>
+    <div class="row">
+      <div><label>Expected</label><input id="landExpected" type="date"/></div>
+      <div><label>Landed Date</label><input id="landDate" type="date"/></div>
+      <div><label>Status</label>
+        <select id="landStatus">
+          <option value="open">open</option>
+          <option value="landed">landed</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Amount*</label><input id="landAmount" type="number" step="0.01"/></div>
+      <div><label>Currency*</label><select id="landCurrency"></select></div>
+      <div class="row" style="gap:6px;">
+        <div><label>Paid</label><select id="landPaid"><option value="0">No</option><option value="1">Yes</option></select></div>
+        <div><label>Delivered</label><select id="landDelivered"><option value="0">No</option><option value="1">Yes</option></select></div>
+      </div>
+    </div>
+    <div id="landErr" style="margin-top:8px;color:var(--danger);font-weight:700;"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn secondary" onclick="landModal.close()">Cancel</button>
+    <button class="btn" id="saveLandBtn">Save</button>
+  </div>
+</dialog>
+
+<!-- DIR modal -->
+<dialog id="dirModal">
+  <div class="modal-head">Add Contact</div>
+  <div class="modal-body">
+    <div class="row">
+      <div><label>Type*</label>
+        <select id="dirType">
+          <option value="supplier">supplier</option>
+          <option value="workshop">workshop</option>
+        </select>
+      </div>
+      <div><label>Name*</label><input id="dirName"/></div>
+    </div>
+    <div class="row">
+      <div><label>Email</label><input id="dirEmail"/></div>
+      <div><label>Phone</label><input id="dirPhone"/></div>
+      <div><label>Address</label><input id="dirAddress"/></div>
+    </div>
+    <div id="dirErr" style="margin-top:8px;color:var(--danger);font-weight:700;"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn secondary" onclick="dirModal.close()">Cancel</button>
+    <button class="btn" id="saveDirBtn">Save</button>
+  </div>
+</dialog>
 
 <script>
-/* ========= Helpers ========= */
-async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
-    ...options
-  });
-  if (!res.ok) {
-    let err;
-    try { err = await res.json(); } catch { err = { error: "unknown" }; }
-    throw err;
-  }
-  return res.json();
-}
+  // -----------------------
+  // Global state
+  // -----------------------
+  const API = location.origin; // same-host
+  let sessionUser = null;
+  let reqs = [];
+  let lands = [];
+  let cats = [];
+  let vessels = [];
+  let currencies = [];
+  let directory = [];
 
-let currentUser = null;
-let allReqs = [];
-let allLandings = [];
-let vessels = [];
-let editingReqId = null;
-let editingLandId = null;
-let editingCatId = null;
-let editingVesselId = null;
-let dirPopupType = null;
-let currencyList = ["USD"];
+  const TABS = [
+    {id:"overview", label:"Overview"},
+    {id:"requisitions", label:"Requisitions"},
+    {id:"landings", label:"Landings"},
+    {id:"directory", label:"Directory"},
+    {id:"delivered", label:"Delivered"},
+    {id:"admin", label:"Admin", adminOnly:true},
+  ];
 
-function quarterOfMonth(m){
-  if (m <= 3) return "Q1";
-  if (m <= 6) return "Q2";
-  if (m <= 9) return "Q3";
-  return "Q4";
-}
-function parseDateSafe(d) {
-  if (!d) return null;
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? null : dt;
-}
+  // -----------------------
+  // Helpers
+  // -----------------------
+  const $ = (id)=>document.getElementById(id);
 
-/* ========= Currencies ========= */
-async function loadCurrencies() {
-  try {
-    const res = await apiFetch("/api/currencies");
-    currencyList = res.currencies || ["USD"];
-  } catch (e) {
-    console.warn("FX error, fallback to defaults", e);
-    currencyList = ["USD","EUR","AED","GBP","LBP"];
-  }
-  const reqCurSel = document.getElementById("reqCurrency");
-  const landCurSel = document.getElementById("landCurrency");
-  reqCurSel.innerHTML = ""; landCurSel.innerHTML = "";
-  currencyList.forEach(cur => {
-    const o1 = document.createElement("option"); o1.value = cur; o1.textContent = cur; reqCurSel.appendChild(o1);
-    const o2 = document.createElement("option"); o2.value = cur; o2.textContent = cur; landCurSel.appendChild(o2);
-  });
-  if (!reqCurSel.value) reqCurSel.value = "USD";
-  if (!landCurSel.value) landCurSel.value = "USD";
-}
-
-/* ========= Session / Header / Login ========= */
-async function refreshSession() {
-  try {
-    currentUser = await apiFetch("/api/session");
-  } catch {
-    currentUser = null;
-  }
-
-  const userInfo = document.getElementById("userInfo");
-  const loginCard = document.getElementById("loginCard");
-
-  if (currentUser && currentUser.username) {
-    userInfo.innerHTML = `
-      Logged in as <strong>${currentUser.username}</strong> (${currentUser.role})
-      <button id="logoutBtn">Logout</button>
-    `;
-    document.getElementById("logoutBtn").onclick = async () => {
-      await apiFetch("/api/logout", { method:"POST" });
-      currentUser = null;
-      loginCard.classList.add("hidden");
-      await refreshSession();
-      await afterDataLoad();
-    };
-    loginCard.classList.add("hidden");
-  } else {
-    userInfo.innerHTML = `
-      Not logged in
-      <button id="showLoginBtn">Login</button>
-    `;
-    document.getElementById("showLoginBtn").onclick = () => {
-      loginCard.classList.toggle("hidden");
-    };
-  }
-
-  // Show/hide Admin tab
-  const isAdmin = currentUser && currentUser.role === "admin";
-  const adminTab = document.getElementById("adminTab");
-  if (adminTab) {
-    if (isAdmin) adminTab.classList.remove("hidden");
-    else adminTab.classList.add("hidden");
-  }
-
-  // Disable admin-only inputs for non-admin
-  ["catName","catAbbr","addCatBtn","cancelCatEditBtn",
-   "adminUsername","adminPassword","adminRole","saveUserBtn",
-   "vesselName","addVesselBtn","cancelVesselEditBtn"].forEach(id=>{
-    const el = document.getElementById(id);
-    if (el) el.disabled = !isAdmin && (id!=="adminRole");
-  });
-}
-
-document.getElementById("loginBtn").onclick = async () => {
-  const u = document.getElementById("loginUsername").value.trim();
-  const p = document.getElementById("loginPassword").value;
-  const errDiv = document.getElementById("loginError");
-  errDiv.textContent = "";
-  try {
-    await apiFetch("/api/login", {
-      method:"POST",
-      body: JSON.stringify({ username:u, password:p })
+  async function apiFetch(path, opts={}){
+    const res = await fetch(API+path, {
+      credentials:"include",
+      headers: {"Content-Type":"application/json", ...(opts.headers||{})},
+      ...opts,
     });
-    document.getElementById("loginCard").classList.add("hidden");
-    document.getElementById("loginUsername").value = "";
-    document.getElementById("loginPassword").value = "";
-    await refreshSession();
-    await afterDataLoad(true);
-  } catch(e) {
-    if (e.error === "invalid_credentials") errDiv.textContent = "Invalid username or password.";
-    else errDiv.textContent = "Login failed.";
-  }
-};
-
-/* ========= Tabs ========= */
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    if (tab.classList.contains("hidden")) return;
-    const t = tab.dataset.tab;
-    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-    document.querySelectorAll("[id^='tab-']").forEach(div => div.classList.add("hidden"));
-    tab.classList.add("active");
-    document.getElementById(`tab-${t}`).classList.remove("hidden");
-  });
-});
-
-/* ========= Overview Totals Filters ========= */
-async function loadOverviewTotalsFilters() {
-  let reqs = allReqs, lands = allLandings;
-  if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
-  if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
-
-  // Month dropdown 1..12
-  const monthSel = document.getElementById("ovMonthFilter");
-  monthSel.innerHTML = `<option value="">All months</option>` +
-    Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");
-
-  // Categories
-  const cats = new Set();
-  reqs.forEach(r => cats.add((r.category || "").trim()));
-  lands.forEach(r => cats.add((r.category || "").trim()));
-  const catSel = document.getElementById("ovCategoryFilter");
-  catSel.innerHTML = `<option value="">All categories</option>` +
-    [...cats].filter(Boolean).sort().map(c=>`<option value="${c}">${c}</option>`).join("");
-
-  // Vessels
-  const vset = new Set();
-  reqs.forEach(r => vset.add((r.vessel || "").trim()));
-  lands.forEach(r => vset.add((r.vessel || "").trim()));
-  const vesselSel = document.getElementById("ovVesselFilter");
-  vesselSel.innerHTML = `<option value="">All</option>` +
-    [...vset].filter(Boolean).sort().map(v=>`<option value="${v}">${v}</option>`).join("");
-
-  // Years
-  const years = new Set();
-  reqs.forEach(r => { const dt=parseDateSafe(r.date_ordered); if (dt) years.add(dt.getFullYear()); });
-  lands.forEach(r => { const dt=parseDateSafe(r.landed_date); if (dt) years.add(dt.getFullYear()); });
-  const yearSel = document.getElementById("ovYearFilter");
-  yearSel.innerHTML = `<option value="">All years</option>` +
-    [...years].sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join("");
-
-  updateOverviewPaidTotals(reqs, lands);
-}
-
-function updateOverviewPaidTotals(reqs, lands) {
-  const typeF = document.getElementById("ovTypeFilter").value;
-  const vesselF = document.getElementById("ovVesselFilter").value;
-  const paidF = document.getElementById("ovPaidFilter").value;
-  const monthF = document.getElementById("ovMonthFilter").value;
-  const yearF = document.getElementById("ovYearFilter").value;
-  const quarterF = document.getElementById("ovQuarterFilter").value;
-  const categoryF = document.getElementById("ovCategoryFilter").value;
-
-  let filtered = [];
-  if (!typeF || typeF==="req") filtered = filtered.concat(reqs.map(r=>({
-    _type:"req", vessel:r.vessel, category:r.category, supplier:r.supplier,
-    paid:Number(r.paid||0), amount:Number(r.total_amount||0), date:r.date_ordered
-  })));
-  if (!typeF || typeF==="land") filtered = filtered.concat(lands.map(r=>({
-    _type:"land", vessel:r.vessel, category:r.category, supplier:r.supplier||r.workshop,
-    paid:Number(r.paid||0), amount:Number(r.amount||0), date:r.landed_date
-  })));
-
-  filtered = filtered.filter(x=>{
-    if (vesselF && (x.vessel||"")!==vesselF) return false;
-    if (paidF!=="" && String(x.paid)!==paidF) return false;
-    const dt=parseDateSafe(x.date); if(!dt) return false;
-    const mm=dt.getMonth()+1, yy=dt.getFullYear(), qq=quarterOfMonth(mm);
-    if (yearF && String(yy)!==yearF) return false;
-    if (monthF) { if(String(mm)!==monthF) return false; }
-    else if (quarterF) { if(qq!==quarterF) return false; }
-    if (categoryF && (x.category||"")!==categoryF) return false;
-    return true;
-  });
-
-  const allTotal = filtered.reduce((s,x)=>s+x.amount,0);
-  const paidOnly = filtered.filter(x=>x.paid===1);
-  const paidMonthTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
-
-  let paidYearTotal = 0;
-  if (yearF) {
-    paidYearTotal = paidOnly.filter(x=>{
-      const dt=parseDateSafe(x.date);
-      return dt && String(dt.getFullYear())===yearF;
-    }).reduce((s,x)=>s+x.amount,0);
-  } else {
-    paidYearTotal = paidMonthTotal;
-  }
-
-  document.getElementById("ovAllTotal").textContent = allTotal.toFixed(2);
-  document.getElementById("ovPaidMonthTotal").textContent = paidMonthTotal.toFixed(2);
-  document.getElementById("ovPaidYearTotal").textContent = paidYearTotal.toFixed(2);
-
-  // Top suppliers
-  const supMap = {};
-  filtered.forEach(x=>{
-    const sname=x.supplier||"Unknown";
-    supMap[sname]=(supMap[sname]||0)+x.amount;
-  });
-  const topSup = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const ul=document.getElementById("ovTopSuppliers");
-  ul.innerHTML = topSup.length ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("") : "<li>—</li>";
-}
-
-document.getElementById("ovApplyTotalsBtn").onclick = async () => {
-  let reqs = allReqs, lands = allLandings;
-  if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
-  if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
-  updateOverviewPaidTotals(reqs, lands);
-};
-document.getElementById("ovClearTotalsBtn").onclick = async () => {
-  ["ovTypeFilter","ovVesselFilter","ovPaidFilter","ovMonthFilter","ovYearFilter","ovQuarterFilter","ovCategoryFilter"].forEach(id=>{
-    document.getElementById(id).value="";
-  });
-  await loadOverviewTotalsFilters();
-};
-
-/* ========= Directory Options / Popup / Page ========= */
-async function loadDirectoryOptions() {
-  let suppliers=[], workshops=[];
-  try { suppliers=await apiFetch("/api/directory?type=supplier"); } catch {}
-  try { workshops=await apiFetch("/api/directory?type=workshop"); } catch {}
-  const supSel=document.getElementById("reqSupplierSelect");
-  const workSel=document.getElementById("landWorkshopSelect");
-  supSel.innerHTML='<option value="">Select supplier</option>';
-  workSel.innerHTML='<option value="">Select workshop</option>';
-  suppliers.forEach(s=>{ const o=document.createElement("option"); o.value=s.name; o.textContent=s.name; supSel.appendChild(o); });
-  workshops.forEach(w=>{ const o=document.createElement("option"); o.value=w.name; o.textContent=w.name; workSel.appendChild(o); });
-}
-
-function openDirPopup(type){
-  dirPopupType=type;
-  document.getElementById("dirPopupTitle").textContent=type==="supplier"?"New Supplier":"New Workshop";
-  ["dirPopupName","dirPopupEmail","dirPopupPhone","dirPopupAddress"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("dirPopupError").textContent="";
-  document.getElementById("dirPopupBackdrop").classList.remove("hidden");
-  document.getElementById("dirPopup").classList.remove("hidden");
-}
-function closeDirPopup(){
-  document.getElementById("dirPopupBackdrop").classList.add("hidden");
-  document.getElementById("dirPopup").classList.add("hidden");
-}
-document.getElementById("dirPopupCancelBtn").onclick=closeDirPopup;
-document.getElementById("dirPopupSaveBtn").onclick=async ()=>{
-  const name=document.getElementById("dirPopupName").value.trim();
-  const email=document.getElementById("dirPopupEmail").value.trim();
-  const phone=document.getElementById("dirPopupPhone").value.trim();
-  const address=document.getElementById("dirPopupAddress").value.trim();
-  const err=document.getElementById("dirPopupError");
-  err.textContent="";
-  if(!dirPopupType){ err.textContent="Unknown type."; return; }
-  if(!name){ err.textContent="Name is required."; return; }
-  try{
-    await apiFetch("/api/directory/quick",{method:"POST",body:JSON.stringify({type:dirPopupType,name,email,phone,address})});
-    closeDirPopup();
-    await loadDirectoryOptions();
-    await loadDirectoryPage();
-  }catch(e){ err.textContent=e.error==="login_required"?"You must be logged in.":"Error saving."; }
-};
-document.getElementById("newSupplierBtn").onclick=()=>openDirPopup("supplier");
-document.getElementById("newWorkshopBtn").onclick=()=>openDirPopup("workshop");
-document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
-document.getElementById("dirNewWorkshopBtn").onclick=()=>openDirPopup("workshop");
-
-async function loadDirectoryPage(){
-  let rows=[]; try{ rows=await apiFetch("/api/directory"); }catch{}
-  const tbody=document.querySelector("#directoryTable tbody");
-  tbody.innerHTML="";
-  rows.forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td>${r.address||""}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-/* ========= Vessels ========= */
-async function loadVessels(){
-  try { vessels=await apiFetch("/api/vessels"); } catch { vessels=[]; }
-  const reqSel=document.getElementById("reqVessel");
-  const landSel=document.getElementById("landVessel");
-  if(reqSel){
-    const cur=reqSel.value;
-    reqSel.innerHTML='<option value="">Select vessel</option>';
-    vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; reqSel.appendChild(o); });
-    if(cur) reqSel.value=cur;
-  }
-  if(landSel){
-    const cur=landSel.value;
-    landSel.innerHTML='<option value="">Select vessel</option>';
-    vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; landSel.appendChild(o); });
-    if(cur) landSel.value=cur;
-  }
-  // admin table
-  const tbody=document.querySelector("#vesselTable tbody");
-  if(!tbody) return;
-  tbody.innerHTML="";
-  vessels.forEach(v=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${v.id}</td><td>${v.name}</td>
-      <td>
-        <button class="edit-vessel" data-id="${v.id}">Edit</button>
-        <button class="danger delete-vessel" data-id="${v.id}">Delete</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-
-  document.querySelectorAll(".edit-vessel").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const v=vessels.find(x=>x.id===id);
-      if(!v) return;
-      editingVesselId=id;
-      document.getElementById("vesselName").value=v.name;
-      document.getElementById("cancelVesselEditBtn").classList.remove("hidden");
-    };
-  });
-  document.querySelectorAll(".delete-vessel").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Delete this vessel?")) return;
-      try{ await apiFetch(`/api/vessels/${id}`,{method:"DELETE"}); await loadVessels(); }catch{ alert("Error deleting vessel."); }
-    };
-  });
-}
-
-document.getElementById("addVesselBtn").onclick=async ()=>{
-  const name=document.getElementById("vesselName").value.trim();
-  const err=document.getElementById("vesselError");
-  err.textContent="";
-  if(!name){ err.textContent="Vessel name required."; return; }
-  try{
-    if(editingVesselId){
-      await apiFetch(`/api/vessels/${editingVesselId}`,{method:"PATCH",body:JSON.stringify({name})});
-    }else{
-      await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name})});
+    let data = null;
+    try{ data = await res.json(); }catch(e){}
+    if(!res.ok){
+      const msg = data?.error || res.statusText;
+      throw new Error(msg);
     }
-    editingVesselId=null;
-    document.getElementById("vesselName").value="";
-    document.getElementById("cancelVesselEditBtn").classList.add("hidden");
-    await loadVessels();
-  }catch(e){
-    if(e.error==="duplicate_name") err.textContent="This vessel already exists.";
-    else if(e.error==="admin_required") err.textContent="Only admin can manage vessels.";
-    else err.textContent="Error saving vessel.";
+    return data;
   }
-};
-document.getElementById("cancelVesselEditBtn").onclick=()=>{
-  editingVesselId=null;
-  document.getElementById("vesselName").value="";
-  document.getElementById("cancelVesselEditBtn").classList.add("hidden");
-};
 
-/* ========= Categories ========= */
-async function loadCategories(){
-  let cats=[]; try{ cats=await apiFetch("/api/categories"); }catch{}
-  const catSelect=document.getElementById("reqCategory");
-  if(catSelect){
-    catSelect.innerHTML='<option value="">Select category</option>';
-    cats.forEach(c=>{ const o=document.createElement("option"); o.value=c.abbr; o.textContent=`${c.abbr} - ${c.name}`; catSelect.appendChild(o); });
+  function fmtUSD(x){
+    return (Number(x)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
   }
-  const tbody=document.querySelector("#catTable tbody");
-  tbody.innerHTML="";
-  cats.forEach(c=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${c.id}</td><td>${c.name}</td><td>${c.abbr}</td>
-      <td><button class="edit-cat" data-id="${c.id}">Edit</button>
-          <button class="danger delete-cat" data-id="${c.id}">Delete</button></td>`;
-    tbody.appendChild(tr);
-  });
-  document.querySelectorAll(".edit-cat").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const cat=cats.find(x=>x.id===id);
-      if(!cat) return;
-      editingCatId=id;
-      document.getElementById("catName").value=cat.name;
-      document.getElementById("catAbbr").value=cat.abbr;
-      document.getElementById("cancelCatEditBtn").classList.remove("hidden");
-    };
-  });
-  document.querySelectorAll(".delete-cat").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Delete this category?")) return;
-      try{ await apiFetch(`/api/categories/${id}`,{method:"DELETE"}); await loadCategories(); }catch{ alert("Error deleting category."); }
-    };
-  });
-}
-document.getElementById("addCatBtn").onclick=async ()=>{
-  const name=document.getElementById("catName").value.trim();
-  const abbr=document.getElementById("catAbbr").value.trim();
-  const err=document.getElementById("catError"); err.textContent="";
-  if(!name||!abbr){ err.textContent="Name and abbreviation are required."; return; }
-  try{
-    if(editingCatId){
-      await apiFetch(`/api/categories/${editingCatId}`,{method:"PATCH",body:JSON.stringify({name,abbr})});
-    }else{
-      await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name,abbr})});
+
+  function qs(sel, root=document){ return root.querySelector(sel); }
+  function qsa(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+
+  function setOptions(sel, items, valueKey="name", labelKey="name", includeAll=false){
+    sel.innerHTML="";
+    if(includeAll) sel.append(new Option("All", ""));
+    for(const it of items){
+      sel.append(new Option(it[labelKey], it[valueKey]));
     }
-    editingCatId=null;
-    document.getElementById("catName").value="";
-    document.getElementById("catAbbr").value="";
-    document.getElementById("cancelCatEditBtn").classList.add("hidden");
-    await loadCategories(); await loadOverviewTotalsFilters();
-  }catch(e){
-    if(e.error==="duplicate_abbr") err.textContent="Abbreviation already exists.";
-    else if(e.error==="admin_required") err.textContent="Only admin can manage categories.";
-    else err.textContent="Error saving category.";
   }
-};
-document.getElementById("cancelCatEditBtn").onclick=()=>{
-  editingCatId=null;
-  document.getElementById("catName").value="";
-  document.getElementById("catAbbr").value="";
-  document.getElementById("cancelCatEditBtn").classList.add("hidden");
-};
 
-/* ========= Users ========= */
-async function loadUsersAdmin(){
-  let users=[]; try{ users=await apiFetch("/api/users"); }catch{}
-  const tbody=document.querySelector("#userTable tbody"); tbody.innerHTML="";
-  users.forEach(u=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${u.username}</td><td>${u.role}</td>
-      <td><button class="danger delete-user" data-username="${u.username}">Delete</button></td>`;
-    tbody.appendChild(tr);
-  });
-  document.querySelectorAll(".delete-user").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const username=btn.dataset.username;
-      if(!confirm(`Delete user "${username}"?`)) return;
-      try{ await apiFetch(`/api/users/${username}`,{method:"DELETE"}); await loadUsersAdmin(); }catch{ alert("Error deleting user.");}
-    };
-  });
-}
-document.getElementById("saveUserBtn").onclick=async ()=>{
-  const username=document.getElementById("adminUsername").value.trim();
-  const password=document.getElementById("adminPassword").value;
-  const role=document.getElementById("adminRole").value;
-  const err=document.getElementById("adminUserError"); err.textContent="";
-  if(!username||!password){ err.textContent="Username and password are required."; return; }
-  try{
-    await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username,password,role})});
-    document.getElementById("adminUsername").value="";
-    document.getElementById("adminPassword").value="";
-    document.getElementById("adminRole").value="user";
-    await loadUsersAdmin();
-  }catch(e){
-    if(e.error==="admin_required") err.textContent="Only admin can manage users.";
-    else err.textContent="Error saving user.";
+  // -----------------------
+  // Tabs + session
+  // -----------------------
+  function buildTabs(){
+    const tabsEl = $("tabs");
+    tabsEl.innerHTML="";
+    for(const t of TABS){
+      const b = document.createElement("button");
+      b.textContent = t.label;
+      b.onclick = ()=>showTab(t.id);
+      b.id = "tab-"+t.id;
+      tabsEl.appendChild(b);
+    }
   }
-};
 
-/* ========= Requisitions ========= */
-async function loadAllRequisitions(){
-  let rows=[]; try{ rows=await apiFetch("/api/requisitions"); }catch{}
-  allReqs=rows;
-  const tbody=document.querySelector("#reqTable tbody"); tbody.innerHTML="";
-  const statusFilter=document.getElementById("filterReqStatus").value;
-  const paidFilter=document.getElementById("filterReqPaid").value;
-  const delFilter=document.getElementById("filterReqDelivered").value;
-  const search=document.getElementById("filterReqSearch").value.toLowerCase();
-
-  rows.forEach(r=>{
-    const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
-    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
-    const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
-    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
-
-    const tr=document.createElement("tr");
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
-    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open";
-    if((r.status||"open")==="cancelled") statusClass="status-cancelled";
-    if(r.delivered) statusClass="status-delivered";
-
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
-      <td>
-        <button class="edit-req" data-id="${r.id}">Edit</button>
-        <button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button>
-        <button class="secondary mark-delivered-req" data-id="${r.id}">Delivered</button>
-        <button class="danger cancel-req" data-id="${r.id}">Cancel</button>
-        <button class="danger delete-req" data-id="${r.id}">Delete</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-  attachReqRowActions();
-}
-
-function attachReqRowActions(){
-  document.querySelectorAll(".toggle-paid-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/requisitions/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
-      catch{ alert("Error toggling paid."); }
-    };
-  });
-  document.querySelectorAll(".mark-delivered-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/requisitions/${id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); }
-      catch{ alert("Error marking delivered."); }
-    };
-  });
-  document.querySelectorAll(".cancel-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Cancel this requisition?")) return;
-      try{ await apiFetch(`/api/requisitions/${id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }
-      catch{ alert("Error cancelling."); }
-    };
-  });
-  document.querySelectorAll(".delete-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Permanently delete this requisition?")) return;
-      try{ await apiFetch(`/api/requisitions/${id}`,{method:"DELETE"}); await afterDataLoad(); }
-      catch{ alert("Error deleting."); }
-    };
-  });
-  document.querySelectorAll(".edit-req").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const row=allReqs.find(r=>r.id===id); if(!row) return;
-      editingReqId=id;
-      document.getElementById("reqFormTitle").textContent="Edit Requisition";
-      document.getElementById("saveReqBtn").textContent="Update Requisition";
-      document.getElementById("cancelReqEditBtn").classList.remove("hidden");
-      document.getElementById("reqNumber").value=row.number||"";
-      document.getElementById("reqVessel").value=row.vessel||"";
-      document.getElementById("reqCategory").value=row.category||"";
-      document.getElementById("reqSupplierSelect").value=row.supplier||"";
-      document.getElementById("reqDateOrdered").value=row.date_ordered||"";
-      document.getElementById("reqExpected").value=row.expected||"";
-      const orig=(typeof row.original_amount==="number"?row.original_amount:row.total_amount)||0;
-      document.getElementById("reqTotal").value=orig;
-      document.getElementById("reqCurrency").value=row.currency||"USD";
-      document.getElementById("reqPaid").checked=!!row.paid;
-    };
-  });
-}
-document.getElementById("cancelReqEditBtn").onclick=()=>{
-  editingReqId=null;
-  document.getElementById("reqFormTitle").textContent="Add Requisition";
-  document.getElementById("saveReqBtn").textContent="Save Requisition";
-  document.getElementById("cancelReqEditBtn").classList.add("hidden");
-  ["reqNumber","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("reqPaid").checked=false;
-  document.getElementById("reqCurrency").value="USD";
-};
-document.getElementById("applyReqFilterBtn").onclick=loadAllRequisitions;
-document.getElementById("clearReqFilterBtn").onclick=async ()=>{
-  ["filterReqStatus","filterReqPaid","filterReqDelivered","filterReqSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadAllRequisitions();
-};
-
-document.getElementById("saveReqBtn").onclick=async ()=>{
-  const number=document.getElementById("reqNumber").value.trim();
-  const vessel=document.getElementById("reqVessel").value.trim();
-  const category=document.getElementById("reqCategory").value.trim();
-  const supplier=document.getElementById("reqSupplierSelect").value.trim();
-  const date_ordered=document.getElementById("reqDateOrdered").value;
-  const expected=document.getElementById("reqExpected").value;
-  const total=document.getElementById("reqTotal").value;
-  const currency=document.getElementById("reqCurrency").value||"USD";
-  const paid=document.getElementById("reqPaid").checked;
-  const err=document.getElementById("reqError"); err.textContent="";
-
-  if(!number||!vessel||!category||!supplier||!date_ordered||!total){
-    err.textContent="Please fill all required fields."; return;
+  function showTab(id){
+    qsa(".section").forEach(s=>s.classList.remove("active"));
+    $("sec-"+id).classList.add("active");
+    qsa("nav button").forEach(b=>b.classList.remove("active"));
+    $("tab-"+id).classList.add("active");
   }
-  try{
-    const payload={number,vessel,category,supplier,date_ordered,expected,amount:parseFloat(total),currency,paid};
-    if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
-    else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
-    document.getElementById("cancelReqEditBtn").onclick();
-    await afterDataLoad();
-  }catch(e){
-    if(e.error==="duplicate_number") err.textContent="This requisition number already exists.";
-    else if(e.error==="unknown_category") err.textContent="Invalid category abbreviation.";
-    else if(e.error==="login_required") err.textContent="You must be logged in to add / edit requisitions.";
-    else err.textContent="Error saving requisition.";
+
+  async function loadSession(){
+    try{
+      sessionUser = await apiFetch("/api/session");
+      $("userPill").textContent = sessionUser.username + " (" + sessionUser.role + ")";
+      $("loginBtn").style.display="none";
+      $("logoutBtn").style.display="inline-block";
+    }catch(e){
+      sessionUser = null;
+      $("userPill").textContent = "Not logged in";
+      $("loginBtn").style.display="inline-block";
+      $("logoutBtn").style.display="none";
+    }
+    // hide admin tab if not admin
+    const isAdmin = sessionUser?.role==="admin";
+    $("tab-admin").style.display = isAdmin ? "inline-block" : "none";
+    if(!isAdmin && $("sec-admin").classList.contains("active")){
+      showTab("overview");
+    }
   }
-};
 
-/* ========= Overview Reqs ========= */
-async function loadOverviewRequisitions(){
-  let rows=allReqs;
-  if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
-  const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
-  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
-    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
-      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
-    tbody.appendChild(tr);
-  });
-}
+  // -----------------------
+  // Load data
+  // -----------------------
+  async function loadLookups(){
+    [cats, vessels, currencies] = await Promise.all([
+      apiFetch("/api/categories"),
+      apiFetch("/api/vessels"),
+      apiFetch("/api/currencies").then(d=>d.currencies),
+    ]);
 
-/* ========= Landings ========= */
-async function loadAllLandings(){
-  let rows=[]; try{ rows=await apiFetch("/api/landings"); }catch{}
-  allLandings=rows;
-  const tbody=document.querySelector("#landingTable tbody"); tbody.innerHTML="";
-  const statusFilter=document.getElementById("filterLandingStatus").value;
-  const paidFilter=document.getElementById("filterLandingPaid").value;
-  const delFilter=document.getElementById("filterLandingDelivered").value;
-  const search=document.getElementById("filterLandingSearch").value.toLowerCase();
+    // fill dropdowns used in modals + filters
+    setOptions($("reqCategory"), cats, "abbr", "abbr");
+    setOptions($("filterCategory"), cats, "abbr", "abbr", true);
+    setOptions($("reqVessel"), vessels, "name","name");
+    setOptions($("landVessel"), vessels, "name","name");
+    setOptions($("filterVessel"), vessels, "name","name", true);
+    setOptions($("reqCurrency"), currencies.map(c=>({name:c})));
+    setOptions($("landCurrency"), currencies.map(c=>({name:c})));
 
-  rows.forEach(r=>{
-    const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
-    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
-    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
-    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
-
-    const tr=document.createElement("tr");
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
-    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
-      <td>
-        <button class="edit-land" data-id="${r.id}">Edit</button>
-        <button class="secondary toggle-paid-land" data-id="${r.id}">Paid</button>
-        <button class="secondary mark-delivered-land" data-id="${r.id}">Delivered</button>
-        <button class="danger cancel-land" data-id="${r.id}">Cancel</button>
-        <button class="danger delete-land" data-id="${r.id}">Delete</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-  attachLandingActions();
-}
-function attachLandingActions(){
-  document.querySelectorAll(".toggle-paid-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/landings/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
-      catch{ alert("Error toggling paid."); }
-    };
-  });
-  document.querySelectorAll(".mark-delivered-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/landings/${id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); }
-      catch{ alert("Error marking delivered."); }
-    };
-  });
-  document.querySelectorAll(".cancel-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Cancel this landed item?")) return;
-      try{ await apiFetch(`/api/landings/${id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }
-      catch{ alert("Error cancelling landing."); }
-    };
-  });
-  document.querySelectorAll(".delete-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Permanently delete this landed item?")) return;
-      try{ await apiFetch(`/api/landings/${id}`,{method:"DELETE"}); await afterDataLoad(); }
-      catch{ alert("Error deleting landing."); }
-    };
-  });
-  document.querySelectorAll(".edit-land").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const row=allLandings.find(l=>l.id===id); if(!row) return;
-      editingLandId=id;
-      document.getElementById("landFormTitle").textContent="Edit Landed Item";
-      document.getElementById("saveLandingBtn").textContent="Update Landed Item";
-      document.getElementById("cancelLandEditBtn").classList.remove("hidden");
-      document.getElementById("landVessel").value=row.vessel||"";
-      document.getElementById("landDescription").value=row.item||"";
-      document.getElementById("landWorkshopSelect").value=row.workshop||"";
-      document.getElementById("landExpected").value=row.expected||"";
-      document.getElementById("landLanded").value=row.landed_date||"";
-      const orig=(typeof row.amount_original==="number"?row.amount_original:row.amount)||0;
-      document.getElementById("landAmount").value=orig;
-      document.getElementById("landCurrency").value=row.currency||"USD";
-      document.getElementById("landPaid").checked=!!row.paid;
-    };
-  });
-}
-document.getElementById("cancelLandEditBtn").onclick=()=>{
-  editingLandId=null;
-  document.getElementById("landFormTitle").textContent="Add Landed Item";
-  document.getElementById("saveLandingBtn").textContent="Save Landed Item";
-  document.getElementById("cancelLandEditBtn").classList.add("hidden");
-  ["landVessel","landDescription","landWorkshopSelect","landExpected","landLanded","landAmount"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("landPaid").checked=false;
-  document.getElementById("landCurrency").value="USD";
-};
-document.getElementById("applyLandingFilterBtn").onclick=loadAllLandings;
-document.getElementById("clearLandingFilterBtn").onclick=async ()=>{
-  ["filterLandingStatus","filterLandingPaid","filterLandingDelivered","filterLandingSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadAllLandings();
-};
-document.getElementById("saveLandingBtn").onclick=async ()=>{
-  const vessel=document.getElementById("landVessel").value.trim();
-  const desc=document.getElementById("landDescription").value.trim();
-  const workshop=document.getElementById("landWorkshopSelect").value.trim();
-  const expected=document.getElementById("landExpected").value;
-  const landed=document.getElementById("landLanded").value;
-  const amount=document.getElementById("landAmount").value;
-  const currency=document.getElementById("landCurrency").value||"USD";
-  const paid=document.getElementById("landPaid").checked;
-  const err=document.getElementById("landError"); err.textContent="";
-  if(!vessel||!desc||!workshop||!amount){ err.textContent="Vessel, description, workshop and amount are required."; return; }
-  try{
-    const payload={vessel,item:desc,workshop,amount:parseFloat(amount),currency,expected,landed_date:landed,paid};
-    if(editingLandId) await apiFetch(`/api/landings/${editingLandId}`,{method:"PATCH",body:JSON.stringify(payload)});
-    else await apiFetch("/api/landings",{method:"POST",body:JSON.stringify(payload)});
-    document.getElementById("cancelLandEditBtn").onclick();
-    await afterDataLoad();
-  }catch(e){
-    err.textContent=e.error==="login_required"?"You must be logged in.":"Error saving landed item.";
+    // month filter
+    const months=["All", "01","02","03","04","05","06","07","08","09","10","11","12"];
+    $("filterMonth").innerHTML="";
+    months.forEach((m,i)=>{
+      $("filterMonth").append(new Option(m==="All"?"All months":m, m==="All"?"":m));
+    });
   }
-};
 
-/* ========= Cancelled tables ========= */
-async function fillCancelledTables(){
-  const reqBody=document.querySelector("#reqCancelledTable tbody");
-  const landBody=document.querySelector("#landingCancelledTable tbody");
-  reqBody.innerHTML=""; landBody.innerHTML="";
-  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    reqBody.appendChild(tr);
-  });
-  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    landBody.appendChild(tr);
-  });
-}
+  async function loadAll(){
+    [reqs, lands, directory] = await Promise.all([
+      apiFetch("/api/requisitions"),
+      apiFetch("/api/landings"),
+      apiFetch("/api/directory"),
+    ]);
+    // newest first
+    reqs.sort((a,b)=>String(b.date_ordered||"").localeCompare(String(a.date_ordered||"")));
+    lands.sort((a,b)=>String(b.landed_date||"").localeCompare(String(a.landed_date||"")));
+  }
 
-/* ========= Overview Landings ========= */
-async function loadOverviewLandings(){
-  let rows=allLandings;
-  if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
-  const tbody=document.querySelector("#overviewLandTable tbody"); tbody.innerHTML="";
-  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
-    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
-    tbody.appendChild(tr);
-  });
-}
+  // -----------------------
+  // Rendering
+  // -----------------------
+  function renderRequisitions(){
+    if(!reqs.length){
+      $("reqTableWrap").innerHTML='<div class="empty">No requisitions yet.</div>'; return;
+    }
+    $("reqTableWrap").innerHTML = `
+      <div class="card" style="padding:0;">
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th><th>Vessel</th><th>Cat</th><th>Supplier</th>
+              <th>Date</th><th>Expected</th>
+              <th>Amount (orig)</th><th>USD</th>
+              <th>Paid</th><th>Delivered</th><th>Status</th><th>PO#</th><th>Remarks</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${reqs.map(r=>`
+              <tr>
+                <td>${r.number||""}</td>
+                <td>${r.vessel||""}</td>
+                <td>${r.category||""}</td>
+                <td>${r.supplier||""}</td>
+                <td>${r.date_ordered||""}</td>
+                <td>${r.expected||""}</td>
+                <td>${fmtUSD(r.amount_original)} ${r.currency||"USD"}</td>
+                <td>${fmtUSD(r.amount_usd)}</td>
+                <td>${r.paid?'<span class="tag ok">Yes</span>':'<span class="tag">No</span>'}</td>
+                <td>${r.delivered?'<span class="tag ok">Yes</span>':'<span class="tag">No</span>'}</td>
+                <td>${r.status||""}</td>
+                <td>${r.po_number||""}</td>
+                <td>${r.remarks||""}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn secondary" onclick="openReqModal(${r.id})">Edit</button>
+                    <button class="btn secondary" onclick="togglePaidReq(${r.id})">Paid</button>
+                    ${sessionUser?.role==="admin" ? `<button class="btn danger" onclick="deleteReq(${r.id})">Del</button>`:""}
+                  </div>
+                </td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
 
-/* ========= Delivered ========= */
-async function loadDeliveredRequisitions(){
-  let rows=allReqs; if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
-  const paidFilter=document.getElementById("filterDeliveredReqPaid").value;
-  const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
-  const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
-  rows.filter(r=>r.delivered).forEach(r=>{
-    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
-    if(!(matchesPaid&&matchesSearch)) return;
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-document.getElementById("applyDeliveredReqFilterBtn").onclick=loadDeliveredRequisitions;
-document.getElementById("clearDeliveredReqFilterBtn").onclick=async ()=>{
-  ["filterDeliveredReqPaid","filterDeliveredReqSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadDeliveredRequisitions();
-};
+  function renderLandings(){
+    if(!lands.length){
+      $("landTableWrap").innerHTML='<div class="empty">No landed items yet.</div>'; return;
+    }
+    $("landTableWrap").innerHTML = `
+      <div class="card" style="padding:0;">
+        <table>
+          <thead>
+            <tr>
+              <th>Vessel</th><th>Description</th><th>Workshop</th>
+              <th>Expected</th><th>Landed</th>
+              <th>Amount (orig)</th><th>USD</th>
+              <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lands.map(r=>`
+              <tr>
+                <td>${r.vessel||""}</td>
+                <td>${r.item||""}</td>
+                <td>${r.workshop||""}</td>
+                <td>${r.expected||""}</td>
+                <td>${r.landed_date||""}</td>
+                <td>${fmtUSD(r.amount_original)} ${r.currency||"USD"}</td>
+                <td>${fmtUSD(r.amount_usd)}</td>
+                <td>${r.paid?'<span class="tag ok">Yes</span>':'<span class="tag">No</span>'}</td>
+                <td>${r.delivered?'<span class="tag ok">Yes</span>':'<span class="tag">No</span>'}</td>
+                <td>${r.status||""}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn secondary" onclick="openLandModal(${r.id})">Edit</button>
+                    <button class="btn secondary" onclick="togglePaidLand(${r.id})">Paid</button>
+                    ${sessionUser?.role==="admin" ? `<button class="btn danger" onclick="deleteLand(${r.id})">Del</button>`:""}
+                  </div>
+                </td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
 
-async function loadDeliveredLandings(){
-  let rows=allLandings; if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
-  const paidFilter=document.getElementById("filterDeliveredLandPaid").value;
-  const search=document.getElementById("filterDeliveredLandSearch").value.toLowerCase();
-  const tbody=document.querySelector("#deliveredLandTable tbody"); tbody.innerHTML="";
-  rows.filter(r=>r.delivered).forEach(r=>{
-    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
-    if(!(matchesPaid&&matchesSearch)) return;
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-document.getElementById("applyDeliveredLandFilterBtn").onclick=loadDeliveredLandings;
-document.getElementById("clearDeliveredLandFilterBtn").onclick=async ()=>{
-  ["filterDeliveredLandPaid","filterDeliveredLandSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadDeliveredLandings();
-};
+  function renderDirectory(){
+    let rows = directory;
+    const tf = $("dirTypeFilter").value;
+    if(tf) rows = rows.filter(r=>String(r.type||"").toLowerCase()===tf);
+    if(!rows.length){
+      $("dirTableWrap").innerHTML='<div class="empty">No contacts.</div>'; return;
+    }
+    $("dirTableWrap").innerHTML = `
+      <div class="card" style="padding:0;">
+        <table>
+          <thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th></tr></thead>
+          <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${r.type||""}</td>
+              <td>${r.name||""}</td>
+              <td>${r.email||""}</td>
+              <td>${r.phone||""}</td>
+              <td>${r.address||""}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
 
-/* ========= Summary counts ========= */
-async function updateSummaryCounts(){
-  let reqs=allReqs, lands=allLandings;
-  if(!reqs.length){ try{ reqs=await apiFetch("/api/requisitions"); }catch{ reqs=[]; } }
-  if(!lands.length){ try{ lands=await apiFetch("/api/landings"); }catch{ lands=[]; } }
+  function renderDelivered(){
+    const deliveredReq = reqs.filter(r=>r.delivered);
+    const deliveredLand = lands.filter(r=>r.delivered);
+    const combined = [
+      ...deliveredReq.map(r=>({kind:"REQ", date:r.date_ordered, vessel:r.vessel, desc:r.number, usd:r.amount_usd})),
+      ...deliveredLand.map(r=>({kind:"LAND", date:r.landed_date, vessel:r.vessel, desc:r.item, usd:r.amount_usd})),
+    ].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+    if(!combined.length){
+      $("deliveredWrap").innerHTML='<div class="empty">Nothing delivered yet.</div>'; return;
+    }
+    $("deliveredWrap").innerHTML=`
+      <table>
+        <thead><tr><th>Type</th><th>Date</th><th>Vessel</th><th>Description</th><th>USD</th></tr></thead>
+        <tbody>${combined.map(r=>`
+          <tr><td>${r.kind}</td><td>${r.date||""}</td><td>${r.vessel||""}</td><td>${r.desc||""}</td><td>${fmtUSD(r.usd)}</td></tr>
+        `).join("")}</tbody>
+      </table>`;
+  }
 
-  document.getElementById("summaryOpenReqNotDel").textContent=reqs.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
-  document.getElementById("summaryOpenReqUnpaid").textContent=reqs.filter(r=>!r.delivered&&!r.paid&&(r.status||"open")==="open").length;
-  document.getElementById("summaryOpenLandNotDel").textContent=lands.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
-  document.getElementById("summaryOpenLandUnpaid").textContent=lands.filter(r=>!r.delivered&&!r.paid&&(r.status||"open")==="open").length;
-}
+  function renderAdminTables(){
+    // categories
+    $("catTableWrap").innerHTML = cats.length ? `
+      <table><thead><tr><th>Abbr</th><th>Name</th><th></th></tr></thead><tbody>
+      ${cats.map(c=>`
+        <tr><td>${c.abbr}</td><td>${c.name}</td>
+        <td class="actions">
+          <button class="btn danger" onclick="deleteCat(${c.id})">Del</button>
+        </td></tr>`).join("")}
+      </tbody></table>` : '<div class="empty">No categories.</div>';
 
-/* ========= One place to reload everything ========= */
-async function afterDataLoad() {
-  await loadDirectoryOptions();
-  await loadCategories();
-  await loadVessels();
-  await loadDirectoryPage();
-  await loadUsersAdmin();
-  await loadAllRequisitions();
-  await loadAllLandings();
-  await loadOverviewRequisitions();
-  await loadOverviewLandings();
-  await loadDeliveredRequisitions();
-  await loadDeliveredLandings();
-  await fillCancelledTables();
-  await updateSummaryCounts();
-  await loadOverviewTotalsFilters();
-}
+    // vessels
+    $("vesTableWrap").innerHTML = vessels.length ? `
+      <table><thead><tr><th>Name</th><th></th></tr></thead><tbody>
+      ${vessels.map(v=>`
+        <tr><td>${v.name}</td>
+        <td class="actions">
+          <button class="btn danger" onclick="deleteVes(${v.id})">Del</button>
+        </td></tr>`).join("")}
+      </tbody></table>` : '<div class="empty">No vessels.</div>';
 
-/* ========= Init ========= */
-(async function init(){
-  await loadCurrencies();
-  await refreshSession();   // important due to admin tab visibility
-  await afterDataLoad();
-})();
+    // users
+    loadUsers();
+    loadBackups();
+  }
+
+  async function loadUsers(){
+    try{
+      const users = await apiFetch("/api/users");
+      $("userTableWrap").innerHTML = users.length ? `
+        <table><thead><tr><th>Username</th><th>Role</th><th></th></tr></thead><tbody>
+        ${users.map(u=>`
+          <tr><td>${u.username}</td><td>${u.role}</td>
+          <td class="actions">
+            ${u.username!=="admin"?`<button class="btn danger" onclick="deleteUser('${u.username}')">Del</button>`:""}
+          </td></tr>`).join("")}
+        </tbody></table>`:'<div class="empty">No users.</div>';
+    }catch(e){
+      $("userTableWrap").innerHTML='<div class="empty">Cannot load users.</div>';
+    }
+  }
+
+  async function loadBackups(){
+    try{
+      const backups = await apiFetch("/api/backups");
+      $("backupsTableWrap").innerHTML = backups.length ? `
+        <table><thead><tr><th>Name</th><th>Created</th><th>Size</th><th></th></tr></thead><tbody>
+        ${backups.map(b=>`
+          <tr>
+            <td>${b.name}</td>
+            <td>${b.created_at}</td>
+            <td>${(b.size/1024).toFixed(1)} KB</td>
+            <td class="actions">
+              <button class="btn secondary" onclick="restoreBackup('${b.name}')">Restore</button>
+              <button class="btn danger" onclick="deleteBackup('${b.name}')">Del</button>
+            </td>
+          </tr>`).join("")}
+        </tbody></table>` : '<div class="empty">No backups yet.</div>';
+    }catch(e){
+      $("backupsTableWrap").innerHTML='<div class="empty">Cannot load backups.</div>';
+    }
+  }
+
+  function renderOverview(){
+    // apply filters to reqs + lands for paid totals
+    let fReqs = [...reqs], fLands = [...lands];
+    const m = $("filterMonth").value;
+    const v = $("filterVessel").value;
+    const c = $("filterCategory").value;
+    if(m){
+      fReqs = fReqs.filter(r=>String(r.date_ordered||"").slice(5,7)===m);
+      fLands = fLands.filter(r=>String(r.landed_date||"").slice(5,7)===m);
+    }
+    if(v){
+      fReqs = fReqs.filter(r=>r.vessel===v);
+      fLands = fLands.filter(r=>r.vessel===v);
+    }
+    if(c){
+      fReqs = fReqs.filter(r=>r.category===c);
+    }
+
+    const paidItems = [...fReqs, ...fLands].filter(r=>r.paid);
+    const unpaidItems = [...fReqs, ...fLands].filter(r=>!r.paid);
+    const paidSum = paidItems.reduce((s,r)=>s+Number(r.amount_usd||0),0);
+    const unpaidSum = unpaidItems.reduce((s,r)=>s+Number(r.amount_usd||0),0);
+
+    $("ovPaid").textContent = fmtUSD(paidSum);
+    $("ovUnpaid").textContent = fmtUSD(unpaidSum);
+    $("ovPaidCount").textContent = paidItems.length + " items";
+    $("ovUnpaidCount").textContent = unpaidItems.length + " items";
+
+    $("ovOpenReq").textContent = reqs.filter(r=>!r.delivered).length;
+    $("ovOpenLand").textContent = lands.filter(r=>!r.delivered).length;
+
+    // recent requisitions table (top 8)
+    const recent = fReqs.slice(0,8);
+    $("recentReqWrap").innerHTML = recent.length?`
+      <table>
+        <thead><tr><th>No.</th><th>Vessel</th><th>Supplier</th><th>Date</th><th>USD</th><th>Paid</th></tr></thead>
+        <tbody>${recent.map(r=>`
+          <tr><td>${r.number}</td><td>${r.vessel}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${fmtUSD(r.amount_usd)}</td>
+          <td>${r.paid?"Yes":"No"}</td></tr>`).join("")}</tbody>
+      </table>`:'<div class="empty">No requisitions for these filters.</div>';
+
+    // recent landings (top 8)
+    const recentL = fLands.slice(0,8);
+    $("recentLandWrap").innerHTML = recentL.length?`
+      <table>
+        <thead><tr><th>Vessel</th><th>Description</th><th>Workshop</th><th>Landed</th><th>USD</th><th>Paid</th></tr></thead>
+        <tbody>${recentL.map(r=>`
+          <tr><td>${r.vessel}</td><td>${r.item}</td><td>${r.workshop}</td><td>${r.landed_date||""}</td><td>${fmtUSD(r.amount_usd)}</td>
+          <td>${r.paid?"Yes":"No"}</td></tr>`).join("")}</tbody>
+      </table>`:'<div class="empty">No landed items for these filters.</div>';
+
+    // top suppliers by paid USD (reqs only)
+    const paidReqs = fReqs.filter(r=>r.paid);
+    const bySup = {};
+    for(const r of paidReqs){
+      bySup[r.supplier] = (bySup[r.supplier]||0) + Number(r.amount_usd||0);
+    }
+    const top5 = Object.entries(bySup).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    $("topSuppliersWrap").innerHTML = top5.length?`
+      <table><thead><tr><th>Supplier</th><th>Paid USD</th></tr></thead>
+      <tbody>${top5.map(([s,val])=>`
+        <tr><td>${s}</td><td>${fmtUSD(val)}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">No paid suppliers yet.</div>';
+  }
+
+  async function refreshUI(){
+    await loadAll();
+    renderRequisitions();
+    renderLandings();
+    renderDirectory();
+    renderDelivered();
+    renderOverview();
+    if(sessionUser?.role==="admin") renderAdminTables();
+  }
+
+  // -----------------------
+  // Actions - Requisitions
+  // -----------------------
+  window.openReqModal = (id=null)=>{
+    $("reqErr").textContent="";
+    $("reqId").value=id||"";
+    $("reqModalTitle").textContent = id?"Edit Requisition":"Add Requisition";
+    if(id){
+      const r=reqs.find(x=>x.id===id);
+      $("reqNumber").value=r.number||"";
+      $("reqVessel").value=r.vessel||"";
+      $("reqCategory").value=r.category||"";
+      $("reqSupplier").value=r.supplier||"";
+      $("reqDate").value=r.date_ordered||"";
+      $("reqExpected").value=r.expected||"";
+      $("reqAmount").value=r.amount_original||0;
+      $("reqCurrency").value=r.currency||"USD";
+      $("reqStatus").value=r.status||"open";
+      $("reqPO").value=r.po_number||"";
+      $("reqRemarks").value=r.remarks||"";
+      $("reqUrgency").value=r.urgency||"normal";
+      $("reqPaid").value=r.paid?1:0;
+      $("reqDelivered").value=r.delivered?1:0;
+    }else{
+      qsa("#reqModal input, #reqModal textarea").forEach(i=>{ if(i.type!=="hidden") i.value="";});
+      $("reqStatus").value="open"; $("reqUrgency").value="normal";
+      $("reqPaid").value=0; $("reqDelivered").value=0;
+    }
+    reqModal.showModal();
+  };
+
+  $("saveReqBtn").onclick = async ()=>{
+    try{
+      const id = $("reqId").value;
+      const payload = {
+        number: $("reqNumber").value.trim(),
+        vessel: $("reqVessel").value,
+        category: $("reqCategory").value,
+        supplier: $("reqSupplier").value.trim(),
+        date_ordered: $("reqDate").value,
+        expected: $("reqExpected").value,
+        amount: Number($("reqAmount").value||0),
+        currency: $("reqCurrency").value,
+        status: $("reqStatus").value,
+        po_number: $("reqPO").value.trim(),
+        remarks: $("reqRemarks").value.trim(),
+        urgency: $("reqUrgency").value,
+        paid: $("reqPaid").value==="1",
+        delivered: $("reqDelivered").value==="1",
+      };
+      if(!payload.number||!payload.vessel||!payload.category||!payload.supplier||!payload.date_ordered||payload.amount<=0){
+        $("reqErr").textContent="Please fill all required fields (*)";
+        return;
+      }
+      if(id){
+        await apiFetch("/api/requisitions/"+id,{method:"PATCH",body:JSON.stringify(payload)});
+      }else{
+        await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
+      }
+      reqModal.close();
+      await refreshUI(); // ✅ this fixes amount not reflecting
+    }catch(e){
+      $("reqErr").textContent = e.message;
+    }
+  };
+
+  window.togglePaidReq = async(id)=>{
+    try{ await apiFetch(`/api/requisitions/${id}/toggle_paid`,{method:"PATCH"}); await refreshUI(); }catch(e){alert(e.message);}
+  };
+  window.deleteReq = async(id)=>{
+    if(!confirm("Delete requisition?")) return;
+    try{ await apiFetch(`/api/requisitions/${id}`,{method:"DELETE"}); await refreshUI(); }catch(e){alert(e.message);}
+  };
+
+  // -----------------------
+  // Actions - Landings
+  // -----------------------
+  window.openLandModal = (id=null)=>{
+    $("landErr").textContent="";
+    $("landId").value=id||"";
+    $("landModalTitle").textContent = id?"Edit Landed Item":"Add Landed Item";
+    if(id){
+      const r=lands.find(x=>x.id===id);
+      $("landVessel").value=r.vessel||"";
+      $("landItem").value=r.item||"";
+      $("landWorkshop").value=r.workshop||"";
+      $("landExpected").value=r.expected||"";
+      $("landDate").value=r.landed_date||"";
+      $("landAmount").value=r.amount_original||0;
+      $("landCurrency").value=r.currency||"USD";
+      $("landStatus").value=r.status||"open";
+      $("landPaid").value=r.paid?1:0;
+      $("landDelivered").value=r.delivered?1:0;
+    }else{
+      qsa("#landModal input").forEach(i=>{ if(i.type!=="hidden") i.value="";});
+      $("landStatus").value="open"; $("landPaid").value=0; $("landDelivered").value=0;
+    }
+    landModal.showModal();
+  };
+
+  $("saveLandBtn").onclick = async ()=>{
+    try{
+      const id = $("landId").value;
+      const payload = {
+        vessel: $("landVessel").value,
+        item: $("landItem").value.trim(),
+        workshop: $("landWorkshop").value.trim(),
+        expected: $("landExpected").value,
+        landed_date: $("landDate").value,
+        amount: Number($("landAmount").value||0),
+        currency: $("landCurrency").value,
+        status: $("landStatus").value,
+        paid: $("landPaid").value==="1",
+        delivered: $("landDelivered").value==="1",
+      };
+      if(!payload.vessel||!payload.item||!payload.workshop||payload.amount<=0){
+        $("landErr").textContent="Please fill required fields (*)";
+        return;
+      }
+      if(id){
+        await apiFetch("/api/landings/"+id,{method:"PATCH",body:JSON.stringify(payload)});
+      }else{
+        await apiFetch("/api/landings",{method:"POST",body:JSON.stringify(payload)});
+      }
+      landModal.close();
+      await refreshUI();
+    }catch(e){ $("landErr").textContent=e.message; }
+  };
+
+  window.togglePaidLand = async(id)=>{
+    try{ await apiFetch(`/api/landings/${id}/toggle_paid`,{method:"PATCH"}); await refreshUI(); }catch(e){alert(e.message);}
+  };
+  window.deleteLand = async(id)=>{
+    if(!confirm("Delete landed item?")) return;
+    try{ await apiFetch(`/api/landings/${id}`,{method:"DELETE"}); await refreshUI(); }catch(e){alert(e.message);}
+  };
+
+  // -----------------------
+  // Actions - Directory
+  // -----------------------
+  $("saveDirBtn").onclick = async()=>{
+    try{
+      const payload = {
+        type:$("dirType").value,
+        name:$("dirName").value.trim(),
+        email:$("dirEmail").value.trim(),
+        phone:$("dirPhone").value.trim(),
+        address:$("dirAddress").value.trim(),
+      };
+      if(!payload.type||!payload.name){ $("dirErr").textContent="Type and name are required"; return; }
+      await apiFetch("/api/directory",{method:"POST",body:JSON.stringify(payload)});
+      dirModal.close();
+      await refreshUI();
+    }catch(e){ $("dirErr").textContent=e.message; }
+  };
+
+  // -----------------------
+  // Admin actions
+  // -----------------------
+  $("addCatBtn").onclick = async()=>{
+    try{
+      await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({
+        name:$("catName").value.trim(),
+        abbr:$("catAbbr").value.trim()
+      })});
+      $("catName").value=""; $("catAbbr").value="";
+      await loadLookups(); await refreshUI();
+    }catch(e){alert(e.message);}
+  };
+  window.deleteCat = async(id)=>{
+    if(!confirm("Delete category?")) return;
+    try{ await apiFetch("/api/categories/"+id,{method:"DELETE"}); await loadLookups(); await refreshUI(); }catch(e){alert(e.message);}
+  };
+
+  $("addVesBtn").onclick = async()=>{
+    try{
+      await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name:$("vesName").value.trim()})});
+      $("vesName").value="";
+      await loadLookups(); await refreshUI();
+    }catch(e){alert(e.message);}
+  };
+  window.deleteVes = async(id)=>{
+    if(!confirm("Delete vessel?")) return;
+    try{ await apiFetch("/api/vessels/"+id,{method:"DELETE"}); await loadLookups(); await refreshUI(); }catch(e){alert(e.message);}
+  };
+
+  $("addUserBtn").onclick = async()=>{
+    try{
+      await apiFetch("/api/users",{method:"POST",body:JSON.stringify({
+        username:$("newUser").value.trim(),
+        password:$("newPass").value,
+        role:$("newRole").value
+      })});
+      $("newUser").value=""; $("newPass").value=""; $("newRole").value="user";
+      await loadUsers();
+    }catch(e){alert(e.message);}
+  };
+  window.deleteUser = async(username)=>{
+    if(!confirm("Delete user "+username+"?")) return;
+    try{ await apiFetch("/api/users/"+username,{method:"DELETE"}); await loadUsers(); }catch(e){alert(e.message);}
+  };
+
+  // backups
+  $("downloadBackupBtn").onclick = ()=>{
+    window.open(API+"/api/backup","_blank");
+  };
+  $("uploadBtn").onclick = async()=>{
+    const f = $("uploadInput").files[0];
+    if(!f){ alert("Select .xlsx file"); return; }
+    if(!f.name.toLowerCase().endsWith(".xlsx")){ alert("Only .xlsx"); return; }
+    if(!confirm("This will OVERWRITE current database. Continue?")) return;
+    const fd = new FormData();
+    fd.append("file", f);
+    const res = await fetch(API+"/api/upload",{method:"POST",credentials:"include",body:fd});
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(data.error||"Upload failed"); return; }
+    $("uploadInput").value="";
+    await loadLookups(); await refreshUI();
+  };
+  window.restoreBackup = async(name)=>{
+    if(!confirm("Restore backup "+name+"? This overwrites current DB.")) return;
+    try{ await apiFetch("/api/backups/"+encodeURIComponent(name)+"/restore",{method:"POST"}); await loadLookups(); await refreshUI(); }
+    catch(e){alert(e.message);}
+  };
+  window.deleteBackup = async(name)=>{
+    if(!confirm("Delete backup "+name+"?")) return;
+    try{ await apiFetch("/api/backups/"+encodeURIComponent(name),{method:"DELETE"}); await loadBackups(); }
+    catch(e){alert(e.message);}
+  };
+
+  // -----------------------
+  // Login / logout
+  // -----------------------
+  $("loginBtn").onclick = ()=>{ $("loginErr").textContent=""; loginModal.showModal(); };
+  $("doLoginBtn").onclick = async()=>{
+    try{
+      await apiFetch("/api/login",{method:"POST",body:JSON.stringify({
+        username:$("loginUser").value.trim(),
+        password:$("loginPass").value
+      })});
+      loginModal.close();
+      await loadSession();
+      await refreshUI();
+    }catch(e){
+      $("loginErr").textContent="Login failed";
+    }
+  };
+  $("logoutBtn").onclick = async()=>{
+    await apiFetch("/api/logout",{method:"POST"}).catch(()=>{});
+    await loadSession();
+    await refreshUI();
+  };
+
+  // -----------------------
+  // Wire buttons / filters
+  // -----------------------
+  $("addReqBtn").onclick = ()=>openReqModal();
+  $("addLandBtn").onclick = ()=>openLandModal();
+  $("addDirBtn").onclick = ()=>{ $("dirErr").textContent=""; qsa("#dirModal input").forEach(i=>i.value=""); dirModal.showModal(); };
+  $("dirTypeFilter").onchange = renderDirectory;
+
+  $("filterMonth").onchange = renderOverview;
+  $("filterVessel").onchange = renderOverview;
+  $("filterCategory").onchange = renderOverview;
+  $("resetFilters").onclick = ()=>{
+    $("filterMonth").value=""; $("filterVessel").value=""; $("filterCategory").value="";
+    renderOverview();
+  };
+
+  // -----------------------
+  // Init
+  // -----------------------
+  (async function init(){
+    buildTabs();
+    showTab("overview");
+    await loadSession();
+    await loadLookups();
+    await refreshUI();
+  })();
 </script>
-
-</body>
-</html>
+</body></html>
