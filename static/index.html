@@ -681,6 +681,29 @@
           <tbody></tbody>
         </table>
       </div>
+
+      <div class="card" id="backupCard">
+        <h2>Backups</h2>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <button id="downloadBackupBtn">Download Backup</button>
+
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="file" id="uploadBackupInput" accept=".xlsx" style="width:auto;" />
+            <button id="uploadBackupBtn" class="secondary" type="button">Upload .xlsx (Overwrite)</button>
+          </label>
+        </div>
+
+        <div id="backupError" class="error"></div>
+
+        <table id="backupTable" style="margin-top:10px;">
+          <thead>
+            <tr><th>Name</th><th>Created</th><th>Size (KB)</th><th>Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
     </div>
 
   </div>
@@ -1563,6 +1586,91 @@ async function afterDataLoad() {
   await updateSummaryCounts();
   await loadOverviewTotalsFilters();
 }
+
+
+/* ========= Backups (Admin) ========= */
+async function loadBackupsAdmin(){
+  const err=document.getElementById("backupError");
+  const tbody=document.querySelector("#backupTable tbody");
+  if(!tbody) return;
+  tbody.innerHTML="";
+  err.textContent="";
+  try{
+    const backups=await apiFetch("/api/backups");
+    backups.forEach(b=>{
+      const tr=document.createElement("tr");
+      const sizeKB=((b.size||0)/1024).toFixed(1);
+      tr.innerHTML=`<td>${b.name}</td><td>${b.created_at||""}</td><td>${sizeKB}</td>
+        <td>
+          <button class="secondary dl-backup" data-name="${b.name}">Download</button>
+          <button class="secondary restore-backup" data-name="${b.name}">Restore</button>
+          <button class="danger delete-backup" data-name="${b.name}">Delete</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll(".dl-backup").forEach(btn=>{
+      btn.onclick=()=>{ window.open(`/api/backups/${encodeURIComponent(btn.dataset.name)}/download`, "_blank"); };
+    });
+    document.querySelectorAll(".restore-backup").forEach(btn=>{
+      btn.onclick=async ()=>{
+        const name=btn.dataset.name;
+        if(!confirm(`Restore backup "${name}"? This will overwrite current data.`)) return;
+        try{
+          await apiFetch(`/api/backups/${encodeURIComponent(name)}/restore`, {method:"POST"});
+          await afterDataLoad();
+          alert("Backup restored.");
+        }catch{ alert("Error restoring backup."); }
+      };
+    });
+    document.querySelectorAll(".delete-backup").forEach(btn=>{
+      btn.onclick=async ()=>{
+        const name=btn.dataset.name;
+        if(!confirm(`Delete backup "${name}"?`)) return;
+        try{
+          await apiFetch(`/api/backups/${encodeURIComponent(name)}`, {method:"DELETE"});
+          await loadBackupsAdmin();
+        }catch{ alert("Error deleting backup."); }
+      };
+    });
+  }catch(e){
+    if(e.error==="admin_required") err.textContent="Only admin can access backups.";
+    else err.textContent="Error loading backups.";
+  }
+}
+
+document.getElementById("downloadBackupBtn")?.addEventListener("click", ()=>{
+  window.open("/api/backup", "_blank");
+});
+
+document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>{
+  const input=document.getElementById("uploadBackupInput");
+  const err=document.getElementById("backupError");
+  err.textContent="";
+  if(!input || !input.files || !input.files.length){ err.textContent="Please choose a .xlsx file."; return; }
+  const file=input.files[0];
+  if(!file.name.toLowerCase().endsWith(".xlsx")){ err.textContent="Only .xlsx allowed."; return; }
+
+  const fd=new FormData();
+  fd.append("file", file);
+  try{
+    const res=await fetch("/api/upload", {method:"POST", body: fd, credentials:"same-origin"});
+    if(!res.ok){
+      let j={}; try{ j=await res.json(); }catch{}
+      throw j;
+    }
+    input.value="";
+    await afterDataLoad();
+    await loadBackupsAdmin();
+    alert("Uploaded and overwritten successfully.");
+  }catch(e){
+    if(e.error==="invalid_file_type") err.textContent="Only .xlsx allowed.";
+    else if(e.error==="corrupt_excel") err.textContent="Excel file is not valid.";
+    else if(e.error==="admin_required") err.textContent="Only admin can upload.";
+    else err.textContent="Upload failed.";
+  }
+});
+
 
 /* ========= Init ========= */
 (async function init(){
