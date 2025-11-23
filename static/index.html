@@ -397,9 +397,10 @@
             </label>
           </div>
           <div class="flex-1">
-            <label>Vessel
-              <input type="text" id="reqVessel" />
-            </label>
+          <label>Vessel
+             <select id="reqVessel"></select>
+          </label>
+
           </div>
           <div class="flex-1">
             <label>Category (Abbreviation)
@@ -547,9 +548,10 @@
         <h2 id="landFormTitle">Add Landed Item</h2>
         <div class="flex-row">
           <div class="flex-1">
-            <label>Vessel
-              <input type="text" id="landVessel" />
-            </label>
+        <label>Vessel
+           <select id="landVessel"></select>
+        </label>
+
           </div>
           <div class="flex-1">
             <label>Description
@@ -831,6 +833,34 @@
           <tbody></tbody>
         </table>
       </div>
+<div class="card">
+  <h2>Vessels</h2>
+
+  <div class="flex-row">
+    <div class="flex-1">
+      <label>Vessel Name
+        <input type="text" id="vesselName" />
+      </label>
+    </div>
+  </div>
+
+  <div style="margin-top:8px;">
+    <button id="addVesselBtn">Save Vessel</button>
+    <button id="cancelVesselEditBtn" class="secondary hidden">Cancel Edit</button>
+  </div>
+  <div class="error" id="vesselError"></div>
+
+  <table id="vesselTable" style="margin-top:10px;">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
       <div class="card">
         <h2>Users</h2>
@@ -901,6 +931,9 @@ let currencyList = ["USD"];
 let chartPaidUnpaid = null;
 let chartVessel = null;
 let chartCategory = null;
+let vessels = [];
+let editingVesselId = null;
+
 
 function quarterOfMonth(m){ // m = 1..12
   if (m <= 3) return "Q1";
@@ -1388,6 +1421,85 @@ async function loadDirectoryPage() {
   });
 }
 
+async function loadVessels() {
+  try {
+    vessels = await apiFetch("/api/vessels");
+  } catch {
+    vessels = [];
+  }
+
+  // Fill Requisition vessel dropdown
+  const reqSel = document.getElementById("reqVessel");
+  if (reqSel) {
+    const current = reqSel.value;
+    reqSel.innerHTML = '<option value="">Select vessel</option>';
+    vessels.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v.name;
+      opt.textContent = v.name;
+      reqSel.appendChild(opt);
+    });
+    if (current) reqSel.value = current;
+  }
+
+  // Fill Landing vessel dropdown
+  const landSel = document.getElementById("landVessel");
+  if (landSel) {
+    const current = landSel.value;
+    landSel.innerHTML = '<option value="">Select vessel</option>';
+    vessels.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v.name;
+      opt.textContent = v.name;
+      landSel.appendChild(opt);
+    });
+    if (current) landSel.value = current;
+  }
+
+  // Admin table
+  const tbody = document.querySelector("#vesselTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  vessels.forEach(v => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${v.id}</td>
+      <td>${v.name}</td>
+      <td>
+        <button class="edit-vessel" data-id="${v.id}">Edit</button>
+        <button class="danger delete-vessel" data-id="${v.id}">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.querySelectorAll(".edit-vessel").forEach(btn => {
+    btn.onclick = () => {
+      const id = parseInt(btn.dataset.id);
+      const v = vessels.find(x => x.id === id);
+      if (!v) return;
+      editingVesselId = id;
+      document.getElementById("vesselName").value = v.name;
+      document.getElementById("cancelVesselEditBtn").classList.remove("hidden");
+    };
+  });
+
+  document.querySelectorAll(".delete-vessel").forEach(btn => {
+    btn.onclick = async () => {
+      const id = parseInt(btn.dataset.id);
+      if (!confirm("Delete this vessel?")) return;
+      try {
+        await apiFetch(`/api/vessels/${id}`, { method: "DELETE" });
+        await loadVessels();
+      } catch {
+        alert("Error deleting vessel.");
+      }
+    };
+  });
+}
+
+
+  
 /* ========= Categories (Admin) ========= */
 async function loadCategories() {
   let cats = [];
@@ -2212,6 +2324,47 @@ async function loadDeliveredRequisitions() {
     });
 }
 
+document.getElementById("addVesselBtn").onclick = async () => {
+  const name = document.getElementById("vesselName").value.trim();
+  const err = document.getElementById("vesselError");
+  err.textContent = "";
+
+  if (!name) {
+    err.textContent = "Vessel name required.";
+    return;
+  }
+
+  try {
+    if (editingVesselId) {
+      await apiFetch(`/api/vessels/${editingVesselId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name })
+      });
+    } else {
+      await apiFetch("/api/vessels", {
+        method: "POST",
+        body: JSON.stringify({ name })
+      });
+    }
+
+    editingVesselId = null;
+    document.getElementById("vesselName").value = "";
+    document.getElementById("cancelVesselEditBtn").classList.add("hidden");
+    await loadVessels();
+  } catch (e) {
+    if (e.error === "duplicate_name") err.textContent = "This vessel already exists.";
+    else if (e.error === "admin_required") err.textContent = "Only admin can manage vessels.";
+    else err.textContent = "Error saving vessel.";
+  }
+};
+
+document.getElementById("cancelVesselEditBtn").onclick = () => {
+  editingVesselId = null;
+  document.getElementById("vesselName").value = "";
+  document.getElementById("cancelVesselEditBtn").classList.add("hidden");
+};
+
+  
 document.getElementById("applyDeliveredReqFilterBtn").onclick = async () => {
   await loadDeliveredRequisitions();
 };
@@ -2298,10 +2451,14 @@ async function updateSummaryCounts() {
   await loadCurrencies();
   await refreshSession();   // Overview visible even if not logged in
   await loadOverviewTotalsFilters();   // << ADD THIS
+  await loadCategories();
+  await loadVessels();   // ✅ add this
+
 })();
 </script>
 
 </body>
 </html>
+
 
 
