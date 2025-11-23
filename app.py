@@ -1,507 +1,528 @@
 from flask import Flask, request, jsonify, session, send_from_directory
-import pandas as pd
-import os, time
-import requests
+import os, time, json, requests
 from werkzeug.security import generate_password_hash, check_password_hash
+from openpyxl import Workbook, load_workbook
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = os.environ.get("APP_SECRET", "amt-procurement-secret")
+app.secret_key = os.environ.get("APP_SECRET", "amt-secret")
 
 DATA_FILE = os.environ.get("DATA_FILE", "data.xlsx")
 
+# --------------------------------------------------
+# EXCEL SCHEMA (Guaranteed)
+# --------------------------------------------------
 SHEETS = {
     "Requisitions": [
-        "id", "number", "vessel", "category", "supplier",
-        "date_ordered", "expected",
-        "original_amount", "currency", "total_amount",
-        "paid", "delivered", "status"
+        "id","number","vessel","category","supplier",
+        "date_ordered","expected",
+        "original_amount","currency","total_amount",
+        "paid","delivered","status"
     ],
     "Landings": [
-        "id", "vessel", "item", "workshop",
-        "expected", "landed_date",
-        "amount_original", "currency", "amount",
-        "paid", "delivered", "status"
+        "id","vessel","item","workshop",
+        "expected","landed_date",
+        "amount_original","currency","amount",
+        "paid","delivered","status"
     ],
-    "Directory": ["id", "type", "name", "email", "phone", "address"],
-    "Categories": ["id", "name", "abbr"],
-    "Users": ["username", "password_hash", "role"],
-    "Vessels": ["id", "name"],
+    "Directory": ["id","type","name","email","phone","address"],
+    "Categories": ["id","name","abbr"],
+    "Users": ["username","password_hash","role"],
+    "Vessels": ["id","name"]
 }
 
-# ---------- Excel helpers ----------
-def _open_wb():
+# --------------------------------------------------
+# SAFE EXCEL LOAD + CREATION
+# --------------------------------------------------
+def open_wb():
+    """Load workbook, create if not exists."""
     if not os.path.exists(DATA_FILE):
-        with pd.ExcelWriter(DATA_FILE, engine="openpyxl") as w:
-            for s, cols in SHEETS.items():
-                pd.DataFrame(columns=cols).to_excel(w, s, index=False)
+        wb = Workbook()
+        for name, cols in SHEETS.items():
+            ws = wb.create_sheet(name)
+            ws.append(cols)
+        if "Sheet" in wb.sheetnames:
+            del wb["Sheet"]
+        wb.save(DATA_FILE)
 
-def _upgrade_schema():
-    _open_wb()
-    wb = pd.ExcelFile(DATA_FILE, engine="openpyxl")
-    with pd.ExcelWriter(DATA_FILE, engine="openpyxl", mode="a", if_sheet_exists="overlay") as w:
-        for sheet, cols in SHEETS.items():
-            if sheet not in wb.sheet_names:
-                pd.DataFrame(columns=cols).to_excel(w, sheet, index=False)
-                continue
-            df = pd.read_excel(DATA_FILE, sheet_name=sheet)
-            for c in cols:
-                if c not in df.columns:
-                    df[c] = None
-            df = df[cols]
-            df.to_excel(w, sheet, index=False)
+    return load_workbook(DATA_FILE)
 
-def read_sheet(sheet):
-    _upgrade_schema()
-    try:
-        df = pd.read_excel(DATA_FILE, sheet_name=sheet)
-    except Exception:
-        df = pd.DataFrame(columns=SHEETS[sheet])
-    df = df.where(pd.notnull(df), None)
-    return df.to_dict(orient="records")
+def save_wb(wb):
+    wb.save(DATA_FILE)
 
-def write_sheet(sheet, rows):
-    _upgrade_schema()
-    df = pd.DataFrame(rows, columns=SHEETS[sheet])
-    with pd.ExcelWriter(DATA_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as w:
-        df.to_excel(w, sheet, index=False)
+def ensure_sheet_columns(ws, required_cols):
+    """Guarantee sheet has exactly required columns."""
+    existing = [c.value for c in ws[1]]
+    if existing == required_cols:
+        return
+
+    existing = [c.value for c in ws[1]]
+    col_index = {col: i for i, col in enumerate(existing)} 
+
+    new_rows = []
+    for r in ws.iter_rows(min_row=2, values_only=True):
+        row_dict = {}
+        for col in required_cols:
+            idx = col_index.get(col)
+            row_dict[col] = r[idx] if idx is not None else None
+        new_rows.append(row_dict)
+
+    ws.delete_rows(1, ws.max_row)
+    ws.append(required_cols)
+    for r in new_rows:
+        ws.append([r[c] for c in required_cols])
+
+def load_sheet(name):
+    wb = open_wb()
+    if name not in wb.sheetnames:
+        ws = wb.create_sheet(name)
+        ws.append(SHEETS[name])
+        save_wb(wb)
+    ws = wb[name]
+    ensure_sheet_columns(ws, SHEETS[name])
+
+    rows=[]
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        rows.append(dict(zip(SHEETS[name], row)))
+    return rows
+
+def write_sheet(name, rows):
+    wb = open_wb()
+    if name not in wb.sheetnames:
+        ws = wb.create_sheet(name)
+        ws.append(SHEETS[name])
+    ws = wb[name]
+
+    ws.delete_rows(1, ws.max_row)
+    ws.append(SHEETS[name])
+    for r in rows:
+        ws.append([r.get(c) for c in SHEETS[name]])
+
+    save_wb(wb)
 
 def next_id(rows):
-    if not rows:
-        return 1
-    return max(int(r.get("id") or 0) for r in rows) + 1
+    ids=[int(r["id"]) for r in rows if r.get("id")]
+    return max(ids) + 1 if ids else 1
 
-# ---------- Auth helpers ----------
-def require_login():
-    if not session.get("username"):
-        return jsonify({"error": "login_required"}), 401
-    return None
-
-def require_admin():
-    if not session.get("username"):
-        return jsonify({"error": "login_required"}), 401
-    if session.get("role") != "admin":
-        return jsonify({"error": "admin_required"}), 403
-    return None
-
-# ---------- FX helpers ----------
-FX_CACHE = {"ts": 0, "rates": {"USD": 1.0}}
-FX_TTL = 60 * 60  # 1 hour
+# --------------------------------------------------
+# CURRENCY API
+# --------------------------------------------------
+FX_CACHE = {"ts":0, "rates":{"USD":1.0}}
+FX_TTL = 60*60
 
 def get_rates():
-    now = time.time()
-    if now - FX_CACHE["ts"] < FX_TTL and FX_CACHE.get("rates"):
+    now=time.time()
+    if now - FX_CACHE["ts"] < FX_TTL:
         return FX_CACHE["rates"]
 
     try:
         r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=8)
-        data = r.json()
-        rates = data.get("rates") or {"USD": 1.0}
-        rates["USD"] = 1.0
-        FX_CACHE["rates"] = rates
-        FX_CACHE["ts"] = now
+        data=r.json()
+        rates=data.get("rates")
+        if not rates:
+            return FX_CACHE["rates"]
+        rates["USD"]=1.0
+        FX_CACHE["rates"]=rates
+        FX_CACHE["ts"]=now
         return rates
-    except Exception:
-        return FX_CACHE.get("rates") or {"USD": 1.0}
+    except:
+        return FX_CACHE["rates"]
 
 def to_usd(amount, currency):
     if amount is None:
         return 0.0
     try:
-        amount = float(amount)
-    except Exception:
+        amount=float(amount)
+    except:
         return 0.0
-    currency = (currency or "USD").upper()
-    rates = get_rates()
-    rate = rates.get(currency)
-    if not rate:
-        return amount
+    currency=(currency or "USD").upper()
+    rate=get_rates().get(currency,1.0)
     return amount / rate
 
-# ---------- Static ----------
+# --------------------------------------------------
+# AUTH HELPERS
+# --------------------------------------------------
+def require_login():
+    if not session.get("username"):
+        return jsonify({"error":"login_required"}),401
+    return None
+
+def require_admin():
+    if not session.get("username"):
+        return jsonify({"error":"login_required"}),401
+    if session.get("role")!="admin":
+        return jsonify({"error":"admin_required"}),403
+    return None
+
+# --------------------------------------------------
+# ROUTES
+# --------------------------------------------------
+
+# Static
 @app.get("/")
 def index():
-    return send_from_directory("templates", "index.html")
+    return send_from_directory("templates","index.html")
 
 @app.get("/static/<path:p>")
 def static_files(p):
     return send_from_directory("static", p)
 
-# ---------- Session ----------
 @app.get("/api/session")
 def api_session():
     if session.get("username"):
-        return jsonify({"username": session["username"], "role": session.get("role", "user")})
+        return jsonify({
+            "username":session["username"],
+            "role":session.get("role","user")
+        })
     return jsonify({})
 
 @app.post("/api/login")
 def api_login():
-    data = request.get_json(force=True) or {}
-    username = (data.get("username") or "").strip()
-    password = data.get("password") or ""
+    data=request.get_json()
+    username=data.get("username","").strip()
+    password=data.get("password","")
 
-    users = read_sheet("Users")
-    u = next((x for x in users if (x.get("username") or "").lower() == username.lower()), None)
-    if not u or not check_password_hash(u.get("password_hash") or "", password):
-        return jsonify({"error": "invalid_credentials"}), 401
+    users=load_sheet("Users")
+    u=next((x for x in users if x["username"].lower()==username.lower()),None)
+    if not u or not check_password_hash(u["password_hash"],password):
+        return jsonify({"error":"invalid_credentials"}),401
 
-    session["username"] = u["username"]
-    session["role"] = u.get("role", "user")
-    return jsonify({"ok": True})
+    session["username"]=u["username"]
+    session["role"]=u["role"]
+    return jsonify({"ok":True})
 
 @app.post("/api/logout")
 def api_logout():
     session.clear()
-    return jsonify({"ok": True})
+    return jsonify({"ok":True})
 
-# ---------- Currencies ----------
 @app.get("/api/currencies")
 def api_currencies():
-    rates = get_rates()
-    return jsonify({"currencies": sorted(list(rates.keys()))})
+    return jsonify({"currencies":sorted(list(get_rates().keys()))})
 
-# ===== Vessels =====
-@app.get("/api/vessels")
-def vessels_list():
-    rows = read_sheet("Vessels")
-    rows = sorted(rows, key=lambda r: (r.get("name") or "").lower())
-    return jsonify(rows)
-
-@app.post("/api/vessels")
-def vessels_add():
-    err = require_admin()
-    if err: return err
-    data = request.get_json(force=True) or {}
-    name = (data.get("name") or "").strip()
-    if not name:
-        return jsonify({"error": "name_required"}), 400
-
-    rows = read_sheet("Vessels")
-    if any((r.get("name") or "").strip().lower() == name.lower() for r in rows):
-        return jsonify({"error": "duplicate_name"}), 400
-
-    new_id = next_id(rows)
-    rows.append({"id": new_id, "name": name})
-    write_sheet("Vessels", rows)
-    return jsonify({"id": new_id, "name": name})
-
-@app.patch("/api/vessels/<int:vid>")
-def vessels_edit(vid):
-    err = require_admin()
-    if err: return err
-    data = request.get_json(force=True) or {}
-    name = (data.get("name") or "").strip()
-    if not name:
-        return jsonify({"error": "name_required"}), 400
-
-    rows = read_sheet("Vessels")
-    if any((r.get("name") or "").strip().lower() == name.lower() and int(r.get("id") or 0) != vid for r in rows):
-        return jsonify({"error": "duplicate_name"}), 400
-
-    found = False
-    for r in rows:
-        if int(r.get("id") or 0) == vid:
-            r["name"] = name
-            found = True
-            break
-    if not found:
-        return jsonify({"error": "not_found"}), 404
-
-    write_sheet("Vessels", rows)
-    return jsonify({"ok": True})
-
-@app.delete("/api/vessels/<int:vid>")
-def vessels_delete(vid):
-    err = require_admin()
-    if err: return err
-    rows = read_sheet("Vessels")
-    new_rows = [r for r in rows if int(r.get("id") or 0) != vid]
-    if len(new_rows) == len(rows):
-        return jsonify({"error": "not_found"}), 404
-    write_sheet("Vessels", new_rows)
-    return jsonify({"ok": True})
-
-# ===== Categories =====
-@app.get("/api/categories")
-def cat_list():
-    rows = read_sheet("Categories")
-    return jsonify(rows)
-
-@app.post("/api/categories")
-def cat_add():
-    err = require_admin()
-    if err: return err
-    data = request.get_json(force=True) or {}
-    name = (data.get("name") or "").strip()
-    abbr = (data.get("abbr") or "").strip()
-    if not name or not abbr:
-        return jsonify({"error": "bad_request"}), 400
-
-    rows = read_sheet("Categories")
-    if any((r.get("abbr") or "").lower() == abbr.lower() for r in rows):
-        return jsonify({"error": "duplicate_abbr"}), 400
-
-    new_id = next_id(rows)
-    rows.append({"id": new_id, "name": name, "abbr": abbr})
-    write_sheet("Categories", rows)
-    return jsonify({"ok": True, "id": new_id})
-
-@app.patch("/api/categories/<int:cid>")
-def cat_edit(cid):
-    err = require_admin()
-    if err: return err
-    data = request.get_json(force=True) or {}
-    name = (data.get("name") or "").strip()
-    abbr = (data.get("abbr") or "").strip()
-    if not name or not abbr:
-        return jsonify({"error": "bad_request"}), 400
-
-    rows = read_sheet("Categories")
-    if any((r.get("abbr") or "").lower() == abbr.lower() and int(r.get("id") or 0) != cid for r in rows):
-        return jsonify({"error": "duplicate_abbr"}), 400
-
-    for r in rows:
-        if int(r.get("id") or 0) == cid:
-            r["name"] = name
-            r["abbr"] = abbr
-            break
-    write_sheet("Categories", rows)
-    return jsonify({"ok": True})
-
-@app.delete("/api/categories/<int:cid>")
-def cat_delete(cid):
-    err = require_admin()
-    if err: return err
-    rows = read_sheet("Categories")
-    rows = [r for r in rows if int(r.get("id") or 0) != cid]
-    write_sheet("Categories", rows)
-    return jsonify({"ok": True})
-
-# ===== Directory =====
-@app.get("/api/directory")
-def dir_list():
-    t = request.args.get("type")
-    rows = read_sheet("Directory")
-    if t:
-        rows = [r for r in rows if (r.get("type") or "").lower() == t.lower()]
-    return jsonify(rows)
-
-@app.post("/api/directory/quick")
-def dir_add_quick():
-    err = require_login()
-    if err: return err
-    data = request.get_json(force=True) or {}
-    dtype = (data.get("type") or "").strip().lower()
-    name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip()
-    phone = (data.get("phone") or "").strip()
-    address = (data.get("address") or "").strip()
-
-    if dtype not in ("supplier", "workshop") or not name:
-        return jsonify({"error": "bad_request"}), 400
-
-    rows = read_sheet("Directory")
-    new_id = next_id(rows)
-    rows.append({"id": new_id, "type": dtype, "name": name, "email": email, "phone": phone, "address": address})
-    write_sheet("Directory", rows)
-    return jsonify({"ok": True, "id": new_id})
-
-# ===== Users =====
+# ----------------- USERS -----------------
 @app.get("/api/users")
 def users_list():
-    err = require_admin()
+    err=require_admin()
     if err: return err
-    users = read_sheet("Users")
-    return jsonify([{"username": u["username"], "role": u.get("role", "user")} for u in users])
+    users=load_sheet("Users")
+    return jsonify([{"username":u["username"],"role":u["role"]} for u in users])
 
 @app.post("/api/users")
 def users_add():
-    err = require_admin()
+    err=require_admin()
     if err: return err
-    data = request.get_json(force=True) or {}
-    username = (data.get("username") or "").strip()
-    password = data.get("password") or ""
-    role = (data.get("role") or "user").strip()
+    data=request.get_json()
+    username=data.get("username","").strip()
+    password=data.get("password","")
+    role=data.get("role","user")
 
     if not username or not password:
-        return jsonify({"error": "bad_request"}), 400
+        return jsonify({"error":"bad_request"}),400
 
-    rows = read_sheet("Users")
-    if any((r.get("username") or "").lower() == username.lower() for r in rows):
-        return jsonify({"error": "duplicate_user"}), 400
+    users=load_sheet("Users")
+    if any(u["username"].lower()==username.lower() for u in users):
+        return jsonify({"error":"duplicate_user"}),400
 
-    rows.append({"username": username, "password_hash": generate_password_hash(password), "role": role if role in ("admin","user") else "user"})
-    write_sheet("Users", rows)
-    return jsonify({"ok": True})
+    users.append({
+        "username":username,
+        "password_hash":generate_password_hash(password),
+        "role":role
+    })
+    write_sheet("Users",users)
+    return jsonify({"ok":True})
 
 @app.delete("/api/users/<username>")
-def users_delete(username):
-    err = require_admin()
+def users_del(username):
+    err=require_admin()
     if err: return err
-    rows = read_sheet("Users")
-    rows = [r for r in rows if (r.get("username") or "").lower() != username.lower()]
-    write_sheet("Users", rows)
-    return jsonify({"ok": True})
 
-# ===== Requisitions =====
+    users=load_sheet("Users")
+    users=[u for u in users if u["username"].lower()!=username.lower()]
+    write_sheet("Users",users)
+    return jsonify({"ok":True})
+
+# ----------------- VESSELS -----------------
+@app.get("/api/vessels")
+def vessels_list():
+    return jsonify(load_sheet("Vessels"))
+
+@app.post("/api/vessels")
+def vessels_add():
+    err=require_admin()
+    if err: return err
+    data=request.get_json()
+    name=data.get("name","").strip()
+    if not name:
+        return jsonify({"error":"name_required"}),400
+
+    rows=load_sheet("Vessels")
+    if any(r["name"].lower()==name.lower() for r in rows):
+        return jsonify({"error":"duplicate_name"}),400
+
+    rows.append({"id":next_id(rows),"name":name})
+    write_sheet("Vessels",rows)
+    return jsonify({"ok":True})
+
+@app.patch("/api/vessels/<int:vid>")
+def vessels_edit(vid):
+    err=require_admin()
+    if err: return err
+    data=request.get_json()
+    name=data.get("name","").strip()
+    if not name: return jsonify({"error":"name_required"}),400
+
+    rows=load_sheet("Vessels")
+    for r in rows:
+        if r["id"]==vid:
+            r["name"]=name
+            break
+    write_sheet("Vessels",rows)
+    return jsonify({"ok":True})
+
+@app.delete("/api/vessels/<int:vid>")
+def vessels_delete(vid):
+    err=require_admin()
+    if err: return err
+    rows=load_sheet("Vessels")
+    rows=[r for r in rows if r["id"]!=vid]
+    write_sheet("Vessels",rows)
+    return jsonify({"ok":True})
+
+# ----------------- CATEGORIES -----------------
+@app.get("/api/categories")
+def categories():
+    return jsonify(load_sheet("Categories"))
+
+@app.post("/api/categories")
+def cat_add():
+    err=require_admin()
+    if err: return err
+    data=request.get_json()
+    name=data.get("name","").strip()
+    abbr=data.get("abbr","").strip()
+    if not name or not abbr:
+        return jsonify({"error":"bad_request"}),400
+
+    rows=load_sheet("Categories")
+    if any(r["abbr"].lower()==abbr.lower() for r in rows):
+        return jsonify({"error":"duplicate_abbr"}),400
+
+    rows.append({"id":next_id(rows),"name":name,"abbr":abbr})
+    write_sheet("Categories",rows)
+    return jsonify({"ok":True})
+
+@app.patch("/api/categories/<int:cid>")
+def cat_edit(cid):
+    err=require_admin()
+    if err: return err
+    data=request.get_json()
+    name=data.get("name","").strip()
+    abbr=data.get("abbr","").strip()
+    rows=load_sheet("Categories")
+    for r in rows:
+        if r["id"]==cid:
+            r["name"]=name
+            r["abbr"]=abbr
+            break
+    write_sheet("Categories",rows)
+    return jsonify({"ok":True})
+
+@app.delete("/api/categories/<int:cid>")
+def cat_delete(cid):
+    err=require_admin()
+    if err: return err
+    rows=load_sheet("Categories")
+    rows=[r for r in rows if r["id"]!=cid]
+    write_sheet("Categories",rows)
+    return jsonify({"ok":True})
+
+# ----------------- DIRECTORY -----------------
+@app.get("/api/directory")
+def directory():
+    t=request.args.get("type")
+    rows=load_sheet("Directory")
+    if t:
+        rows=[r for r in rows if r["type"]==t]
+    return jsonify(rows)
+
+@app.post("/api/directory/quick")
+def dir_quick():
+    err=require_login()
+    if err: return err
+    data=request.get_json()
+    dtype=data.get("type","")
+    name=data.get("name","").strip()
+
+    rows=load_sheet("Directory")
+    rows.append({
+        "id":next_id(rows),
+        "type":dtype,
+        "name":name,
+        "email":data.get("email"),
+        "phone":data.get("phone"),
+        "address":data.get("address")
+    })
+    write_sheet("Directory",rows)
+    return jsonify({"ok":True})
+
+# ----------------- REQUISITIONS -----------------
 @app.get("/api/requisitions")
 def req_list():
-    return jsonify(read_sheet("Requisitions"))
+    return jsonify(load_sheet("Requisitions"))
 
 @app.post("/api/requisitions")
 def req_add():
-    err = require_login()
+    err=require_login()
     if err: return err
-    data = request.get_json(force=True) or {}
-    number = (data.get("number") or "").strip()
-    vessel = (data.get("vessel") or "").strip()
-    category = (data.get("category") or "").strip()
-    supplier = (data.get("supplier") or "").strip()
-    date_ordered = data.get("date_ordered")
-    expected = data.get("expected")
-    amount = data.get("amount")
-    currency = (data.get("currency") or "USD").upper()
-    paid = 1 if data.get("paid") else 0
+    data=request.get_json()
 
-    rows = read_sheet("Requisitions")
-    if any((r.get("number") or "").lower() == number.lower() for r in rows):
-        return jsonify({"error": "duplicate_number"}), 400
+    rows=load_sheet("Requisitions")
+    usd=to_usd(data.get("amount"), data.get("currency"))
 
-    usd = to_usd(amount, currency)
-    new_id = next_id(rows)
     rows.append({
-        "id": new_id, "number": number, "vessel": vessel, "category": category, "supplier": supplier,
-        "date_ordered": date_ordered, "expected": expected,
-        "original_amount": float(amount), "currency": currency, "total_amount": float(usd),
-        "paid": paid, "delivered": 0, "status": "open"
+        "id":next_id(rows),
+        "number":data.get("number"),
+        "vessel":data.get("vessel"),
+        "category":data.get("category"),
+        "supplier":data.get("supplier"),
+        "date_ordered":data.get("date_ordered"),
+        "expected":data.get("expected"),
+        "original_amount":data.get("amount"),
+        "currency":data.get("currency"),
+        "total_amount":usd,
+        "paid":1 if data.get("paid") else 0,
+        "delivered":0,
+        "status":"open"
     })
-    write_sheet("Requisitions", rows)
-    return jsonify({"ok": True, "id": new_id})
+    write_sheet("Requisitions",rows)
+    return jsonify({"ok":True})
 
 @app.patch("/api/requisitions/<int:rid>")
 def req_edit(rid):
-    err = require_login()
+    err=require_login()
     if err: return err
-    data = request.get_json(force=True) or {}
+    data=request.get_json()
+    rows=load_sheet("Requisitions")
 
-    rows = read_sheet("Requisitions")
-    row = next((r for r in rows if int(r.get("id") or 0) == rid), None)
-    if not row:
-        return jsonify({"error": "not_found"}), 404
+    for r in rows:
+        if r["id"]==rid:
+            for k in ["number","vessel","category","supplier","date_ordered","expected","status"]:
+                if k in data: r[k]=data[k]
+            if "paid" in data: r["paid"]=1 if data["paid"] else 0
+            if "delivered" in data: r["delivered"]=1 if data["delivered"] else 0
 
-    for k in ["number","vessel","category","supplier","date_ordered","expected","status"]:
-        if k in data: row[k] = data[k]
-    if "paid" in data: row["paid"] = 1 if data["paid"] else 0
-    if "delivered" in data: row["delivered"] = 1 if data["delivered"] else 0
+            if "amount" in data or "currency" in data:
+                amt=data.get("amount", r["original_amount"])
+                cur=data.get("currency", r["currency"])
+                r["original_amount"]=amt
+                r["currency"]=cur
+                r["total_amount"]=to_usd(amt,cur)
+            break
 
-    if "amount" in data or "currency" in data:
-        amount = data.get("amount", row.get("original_amount"))
-        currency = (data.get("currency", row.get("currency")) or "USD").upper()
-        row["original_amount"] = float(amount)
-        row["currency"] = currency
-        row["total_amount"] = float(to_usd(amount, currency))
-
-    write_sheet("Requisitions", rows)
-    return jsonify({"ok": True})
+    write_sheet("Requisitions",rows)
+    return jsonify({"ok":True})
 
 @app.patch("/api/requisitions/<int:rid>/toggle_paid")
 def req_toggle_paid(rid):
-    err = require_login()
+    err=require_login()
     if err: return err
-    rows = read_sheet("Requisitions")
+    rows=load_sheet("Requisitions")
     for r in rows:
-        if int(r.get("id") or 0) == rid:
-            r["paid"] = 0 if r.get("paid") else 1
+        if r["id"]==rid:
+            r["paid"]=0 if r["paid"] else 1
             break
-    write_sheet("Requisitions", rows)
-    return jsonify({"ok": True})
+    write_sheet("Requisitions",rows)
+    return jsonify({"ok":True})
 
 @app.delete("/api/requisitions/<int:rid>")
 def req_delete(rid):
-    err = require_login()
+    err=require_login()
     if err: return err
-    rows = read_sheet("Requisitions")
-    rows = [r for r in rows if int(r.get("id") or 0) != rid]
-    write_sheet("Requisitions", rows)
-    return jsonify({"ok": True})
+    rows=load_sheet("Requisitions")
+    rows=[r for r in rows if r["id"]!=rid]
+    write_sheet("Requisitions",rows)
+    return jsonify({"ok":True})
 
-# ===== Landings =====
+# ----------------- LANDINGS -----------------
 @app.get("/api/landings")
 def land_list():
-    return jsonify(read_sheet("Landings"))
+    return jsonify(load_sheet("Landings"))
 
 @app.post("/api/landings")
 def land_add():
-    err = require_login()
+    err=require_login()
     if err: return err
-    data = request.get_json(force=True) or {}
-    vessel = (data.get("vessel") or "").strip()
-    item = (data.get("item") or "").strip()
-    workshop = (data.get("workshop") or "").strip()
-    expected = data.get("expected")
-    landed_date = data.get("landed_date")
-    amount = data.get("amount")
-    currency = (data.get("currency") or "USD").upper()
-    paid = 1 if data.get("paid") else 0
+    data=request.get_json()
 
-    rows = read_sheet("Landings")
-    new_id = next_id(rows)
-    usd = to_usd(amount, currency)
+    rows=load_sheet("Landings")
+    usd=to_usd(data.get("amount"), data.get("currency"))
 
     rows.append({
-        "id": new_id, "vessel": vessel, "item": item, "workshop": workshop,
-        "expected": expected, "landed_date": landed_date,
-        "amount_original": float(amount), "currency": currency, "amount": float(usd),
-        "paid": paid, "delivered": 0, "status": "open"
+        "id":next_id(rows),
+        "vessel":data.get("vessel"),
+        "item":data.get("item"),
+        "workshop":data.get("workshop"),
+        "expected":data.get("expected"),
+        "landed_date":data.get("landed_date"),
+        "amount_original":data.get("amount"),
+        "currency":data.get("currency"),
+        "amount":usd,
+        "paid":1 if data.get("paid") else 0,
+        "delivered":0,
+        "status":"open"
     })
-    write_sheet("Landings", rows)
-    return jsonify({"ok": True, "id": new_id})
+    write_sheet("Landings",rows)
+    return jsonify({"ok":True})
 
 @app.patch("/api/landings/<int:lid>")
 def land_edit(lid):
-    err = require_login()
+    err=require_login()
     if err: return err
-    data = request.get_json(force=True) or {}
+    data=request.get_json()
+    rows=load_sheet("Landings")
 
-    rows = read_sheet("Landings")
-    row = next((r for r in rows if int(r.get("id") or 0) == lid), None)
-    if not row:
-        return jsonify({"error": "not_found"}), 404
+    for r in rows:
+        if r["id"]==lid:
+            for k in ["vessel","item","workshop","expected","landed_date","status"]:
+                if k in data: r[k]=data[k]
+            if "paid" in data: r["paid"]=1 if data["paid"] else 0
+            if "delivered" in data: r["delivered"]=1 if data["delivered"] else 0
 
-    for k in ["vessel","item","workshop","expected","landed_date","status"]:
-        if k in data: row[k] = data[k]
-    if "paid" in data: row["paid"] = 1 if data["paid"] else 0
-    if "delivered" in data: row["delivered"] = 1 if data["delivered"] else 0
+            if "amount" in data or "currency" in data:
+                amt=data.get("amount", r["amount_original"])
+                cur=data.get("currency", r["currency"])
+                r["amount_original"]=amt
+                r["currency"]=cur
+                r["amount"]=to_usd(amt,cur)
+            break
 
-    if "amount" in data or "currency" in data:
-        amount = data.get("amount", row.get("amount_original"))
-        currency = (data.get("currency", row.get("currency")) or "USD").upper()
-        row["amount_original"] = float(amount)
-        row["currency"] = currency
-        row["amount"] = float(to_usd(amount, currency))
-
-    write_sheet("Landings", rows)
-    return jsonify({"ok": True})
+    write_sheet("Landings",rows)
+    return jsonify({"ok":True})
 
 @app.patch("/api/landings/<int:lid>/toggle_paid")
 def land_toggle_paid(lid):
-    err = require_login()
+    err=require_login()
     if err: return err
-    rows = read_sheet("Landings")
+    rows=load_sheet("Landings")
     for r in rows:
-        if int(r.get("id") or 0) == lid:
-            r["paid"] = 0 if r.get("paid") else 1
+        if r["id"]==lid:
+            r["paid"]=0 if r["paid"] else 1
             break
-    write_sheet("Landings", rows)
-    return jsonify({"ok": True})
+    write_sheet("Landings",rows)
+    return jsonify({"ok":True})
 
 @app.delete("/api/landings/<int:lid>")
 def land_delete(lid):
-    err = require_login()
+    err=require_login()
     if err: return err
-    rows = read_sheet("Landings")
-    rows = [r for r in rows if int(r.get("id") or 0) != lid]
-    write_sheet("Landings", rows)
-    return jsonify({"ok": True})
+    rows=load_sheet("Landings")
+    rows=[r for r in rows if r["id"]!=lid]
+    write_sheet("Landings",rows)
+    return jsonify({"ok":True})
 
+
+# --------------------------------------------------
+# RUN
+# --------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
