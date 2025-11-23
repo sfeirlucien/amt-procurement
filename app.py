@@ -1,6 +1,6 @@
 # ============================================
-# AMT PROCUREMENT - FINAL BACKEND (CORRECTED)
-# Excel-based Database + Backups + Authentication
+# AMT PROCUREMENT - FINAL BACKEND (CORRECTED v2)
+# Excel-based Database + Backups + Authentication + Currencies API
 # ============================================
 
 import os
@@ -12,6 +12,7 @@ from datetime import datetime
 import openpyxl
 from flask import Flask, jsonify, request, session, send_file, send_from_directory
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 # --------------------------------------------
@@ -20,22 +21,23 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.secret_key = "SECRET_KEY_987654321"
 
-# ✅ REQUIRED so browser stores your session cookie across domains
+# ✅ REQUIRED so browser stores session cookie across domains
 app.config.update(
-    SESSION_COOKIE_SAMESITE="None",  # allow cross-site cookie
-    SESSION_COOKIE_SECURE=True       # required when SameSite=None (HTTPS)
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=True
 )
 
-# ✅ CORS must allow credentials + a specific origin (NOT "*")
+# ✅ Render/Proxy HTTPS fix (important for Secure cookies)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# ✅ CORS with credentials must have specific origins
 CORS(app, supports_credentials=True, origins=[
+    "https://amt-procurement.onrender.com",
     "http://localhost:5000",
     "http://127.0.0.1:5000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    # 🔥 put your real frontend URL here:
-    # "https://your-frontend-domain.com"
 ])
-
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAIN_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
@@ -117,6 +119,31 @@ def api_health():
 
 
 # ============================================
+# CURRENCIES API (needed by your frontend)
+# ============================================
+@app.route("/api/currencies")
+def api_currencies():
+    """
+    Returns currency symbols list for dropdowns.
+    Frontend calls this on load.
+    """
+    try:
+        res = requests.get("https://api.exchangerate.host/symbols", timeout=10).json()
+        symbols = res.get("symbols", {})
+        currs = sorted(symbols.keys())
+        if not currs:
+            raise Exception("empty symbols")
+        # keep USD first
+        if "USD" in currs:
+            currs.remove("USD")
+            currs = ["USD"] + currs
+        return jsonify({"currencies": currs})
+    except:
+        # fallback list if API fails
+        return jsonify({"currencies": ["USD", "EUR", "AED", "GBP", "LBP", "SAR", "QAR", "INR"]})
+
+
+# ============================================
 # PART 2 — LOGIN + USERS API
 # ============================================
 
@@ -146,10 +173,10 @@ def login():
             continue
 
         # ✅ Correct SHA256 compare
-        if u.strip() == username and str(pw_hash).strip() == hash_pw(password):
+        if str(u).strip() == username and str(pw_hash).strip() == hash_pw(password):
             session["username"] = username
             session["role"] = role or "user"
-            return jsonify({"success": True})
+            return jsonify({"success": True, "role": session["role"]})
 
     return jsonify({"error": "invalid_credentials"}), 400
 
@@ -902,11 +929,15 @@ def cancel_landing(id_):
 
 @app.route("/api/backups")
 def api_backups_list():
+    if not require_admin():
+        return jsonify({"error": "admin_required"}), 403
     return jsonify(list_backups())
 
 
 @app.route("/api/backups/download/<filename>")
 def api_backups_download(filename):
+    if not require_admin():
+        return jsonify({"error": "admin_required"}), 403
     path = os.path.join(BACKUP_DIR, filename)
     if not os.path.exists(path):
         return jsonify({"error": "not_found"}), 404
@@ -915,6 +946,8 @@ def api_backups_download(filename):
 
 @app.route("/api/backups/restore/<filename>", methods=["POST"])
 def api_backups_restore(filename):
+    if not require_admin():
+        return jsonify({"error": "admin_required"}), 403
     ok = restore_backup(filename)
     if not ok:
         return jsonify({"error": "not_found"}), 404
@@ -923,6 +956,8 @@ def api_backups_restore(filename):
 
 @app.route("/api/backups/delete/<filename>", methods=["DELETE"])
 def api_backups_delete(filename):
+    if not require_admin():
+        return jsonify({"error": "admin_required"}), 403
     ok = delete_backup(filename)
     if not ok:
         return jsonify({"error": "not_found"}), 404
@@ -934,4 +969,3 @@ def api_backups_delete(filename):
 # ============================================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-
