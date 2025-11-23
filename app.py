@@ -1,6 +1,5 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-Rebuilt from scratch per specs.
 
 Features:
 - Excel-based storage (office_ops.xlsx auto-created)
@@ -33,7 +32,6 @@ from flask_cors import CORS
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.secret_key = os.environ.get("SECRET_KEY", "AMT_SECRET_KEY_CHANGE_ME")
 
-# Allow local dev + Render domain. If you later host frontend elsewhere, add it here.
 CORS(app, supports_credentials=True, origins=[
     "http://localhost:5500",
     "http://127.0.0.1:5500",
@@ -41,8 +39,6 @@ CORS(app, supports_credentials=True, origins=[
 ])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# ✅ IMPORTANT: use your real Excel file name
 DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
@@ -80,7 +76,7 @@ SHEETS: Dict[str, List[str]] = {
 
 
 # -------------------------------------------------
-# Helpers
+# Helpers (NO recursion)
 # -------------------------------------------------
 def now_iso() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
@@ -91,10 +87,12 @@ def hash_pw(pw: str) -> str:
 
 
 def ensure_db() -> None:
-    """Create office_ops.xlsx and sheets if not exist.
-       Ensure a valid default admin exists.
-       IMPORTANT: no read_rows/get_wb calls here to avoid recursion."""
-    # 1) Create file + sheets if missing
+    """
+    Create Excel + sheets if missing.
+    Ensure default admin exists.
+    IMPORTANT: do NOT call read_rows/get_wb inside this function.
+    """
+    # 1) Create file if missing
     if not os.path.exists(DB_FILE):
         wb = Workbook()
         if "Sheet" in wb.sheetnames:
@@ -104,112 +102,53 @@ def ensure_db() -> None:
             ws.append(headers)
         wb.save(DB_FILE)
 
-    # 2) Open workbook directly (NO get_wb)
+    # 2) Load workbook directly (no get_wb)
     wb = openpyxl.load_workbook(DB_FILE)
 
     # 3) Ensure all sheets exist with headers
     for sname, headers in SHEETS.items():
         if sname not in wb.sheetnames:
-            ws_new = wb.create_sheet(sname)
-            ws_new.append(headers)
+            ws = wb.create_sheet(sname)
+            ws.append(headers)
+        else:
+            ws = wb[sname]
+            if ws.max_row == 0:
+                ws.append(headers)
+            else:
+                first_row = [c.value for c in ws[1]]
+                if first_row != headers:
+                    # overwrite headers to correct order
+                    ws.delete_rows(1)
+                    ws.insert_rows(1)
+                    ws.append(headers)
 
+    # 4) Ensure admin user exists AND has a valid hash
     ws = wb["users"]
     headers = [c.value for c in ws[1]]
-
-    # If users sheet somehow has no headers, reset it
-    if headers != SHEETS["users"]:
-        ws.delete_rows(1, ws.max_row)
-        ws.append(SHEETS["users"])
-        headers = SHEETS["users"]
-
     u_col = headers.index("username") + 1
     p_col = headers.index("password_hash") + 1
     r_col = headers.index("role") + 1
-    c_col = headers.index("created_at") + 1
+
+    admin_row = None
+    for r_idx in range(2, ws.max_row + 1):
+        if ws.cell(r_idx, u_col).value == "admin":
+            admin_row = r_idx
+            break
 
     default_hash = hash_pw(DEFAULT_ADMIN["password"])
 
-    # 4) Scan users rows directly
-    found_admin_row = None
-    any_valid_admin = False
-
-    for r_idx in range(2, ws.max_row + 1):
-        uname = ws.cell(r_idx, u_col).value
-        phash = ws.cell(r_idx, p_col).value
-        role = (ws.cell(r_idx, r_col).value or "").lower()
-
-        if uname == "admin":
-            found_admin_row = r_idx
-
-        if role == "admin" and phash and str(phash).strip():
-            any_valid_admin = True
-
-    # 5) If no admin at all -> add default admin
-    if found_admin_row is None and not any_valid_admin:
-        ws.append([
-            DEFAULT_ADMIN["username"],
-            default_hash,
-            "admin",
-            now_iso()
-        ])
-        wb.save(DB_FILE)
-        return
-
-    # 6) If admin exists but broken -> repair it
-    if found_admin_row is not None:
-        current_hash = ws.cell(found_admin_row, p_col).value
-        current_role = (ws.cell(found_admin_row, r_col).value or "").lower()
-
-        if not current_hash or str(current_hash).strip() in {"", "none", "None"}:
-            ws.cell(found_admin_row, p_col).value = default_hash
-
-        if current_role != "admin":
-            ws.cell(found_admin_row, r_col).value = "admin"
-
-        if not ws.cell(found_admin_row, c_col).value:
-            ws.cell(found_admin_row, c_col).value = now_iso()
-
-    # 7) If there is no valid admin after repairs -> enforce one clean admin row
-    if not any_valid_admin:
-        # clear users except header
-        for r_idx in range(ws.max_row, 1, -1):
-            ws.delete_rows(r_idx, 1)
-
-        ws.append([
-            DEFAULT_ADMIN["username"],
-            default_hash,
-            "admin",
-            now_iso()
-        ])
+    if admin_row is None:
+        ws.append(["admin", default_hash, "admin", now_iso()])
+    else:
+        # repair missing hash/role
+        cur_hash = ws.cell(admin_row, p_col).value
+        cur_role = (ws.cell(admin_row, r_col).value or "").lower()
+        if not cur_hash or str(cur_hash).strip() == "" or cur_hash == "None":
+            ws.cell(admin_row, p_col).value = default_hash
+        if cur_role != "admin":
+            ws.cell(admin_row, r_col).value = "admin"
 
     wb.save(DB_FILE)
-
-    # -------------------------------
-    # FIX: ensure at least one valid admin exists
-    # -------------------------------
-    all_users = read_rows("users")
-
-    def has_valid_admin(us: List[Dict[str, Any]]) -> bool:
-        for u in us:
-            if (u.get("role") or "").lower() == "admin" and (u.get("password_hash") or "").strip():
-                return True
-        return False
-
-    if not all_users or not has_valid_admin(all_users):
-        # Clear users sheet completely (repair)
-        for r_idx in range(ws.max_row, 1, -1):
-            ws.delete_rows(r_idx, 1)
-
-        # Add correct admin
-        ws.append([
-            DEFAULT_ADMIN["username"],
-            hash_pw(DEFAULT_ADMIN["password"]),
-            "admin",
-            now_iso()
-        ])
-
-        wb.save(DB_FILE)
-
 
 
 def get_wb() -> Workbook:
@@ -654,7 +593,7 @@ def delete_user(username: str):
 
 
 # -------------------------------------------------
-# Directory (suppliers / workshops)
+# Directory
 # -------------------------------------------------
 @app.get("/api/directory")
 def list_directory():
