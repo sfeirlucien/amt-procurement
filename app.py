@@ -3,10 +3,10 @@ AMT Procurement - Single-file Flask Backend (Excel DB)
 Rebuilt from scratch per specs.
 
 Features:
-- Excel-based storage (database.xlsx auto-created)
+- Excel-based storage (office_ops.xlsx auto-created)
 - Roles: admin, user, viewer, finance
 - Default admin if none exists: admin / admin123
-- Manual backups only (no automatic backups)
+- Manual backups only
 - Requisitions + Landings + Directory + Categories + Vessels + Users
 - Real-time FX conversion to USD (cached)
 - Permissions:
@@ -33,6 +33,7 @@ from flask_cors import CORS
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.secret_key = os.environ.get("SECRET_KEY", "AMT_SECRET_KEY_CHANGE_ME")
 
+# Allow local dev + Render domain. If you later host frontend elsewhere, add it here.
 CORS(app, supports_credentials=True, origins=[
     "http://localhost:5500",
     "http://127.0.0.1:5500",
@@ -40,7 +41,9 @@ CORS(app, supports_credentials=True, origins=[
 ])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, "database.xlsx")
+
+# ✅ IMPORTANT: use your real Excel file name
+DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
 ROLES = {"admin", "user", "viewer", "finance"}
@@ -88,8 +91,12 @@ def hash_pw(pw: str) -> str:
 
 
 def ensure_db() -> None:
-    """Create database.xlsx and sheets if not exist.
-       Also create default admin if users sheet empty."""
+    """
+    Create office_ops.xlsx and sheets if not exist.
+    Also create default admin if:
+      - users sheet is empty OR
+      - users sheet exists but all password_hash are empty/None.
+    """
     if not os.path.exists(DB_FILE):
         wb = Workbook()
         if "Sheet" in wb.sheetnames:
@@ -99,9 +106,16 @@ def ensure_db() -> None:
             ws.append(headers)
         wb.save(DB_FILE)
 
-    # ensure at least one admin exists
+    # ensure at least one valid admin exists
     users = read_rows("users")
-    if not users:
+
+    def has_valid_admin(us: List[Dict[str, Any]]) -> bool:
+        for u in us:
+            if (u.get("role") or "").lower() == "admin" and (u.get("password_hash") or "").strip():
+                return True
+        return False
+
+    if (not users) or (not has_valid_admin(users)):
         append_row("users", {
             "username": DEFAULT_ADMIN["username"],
             "password_hash": hash_pw(DEFAULT_ADMIN["password"]),
@@ -250,7 +264,6 @@ def fetch_fx_rates(base: str = "USD") -> Dict[str, float]:
         except Exception:
             pass
 
-    # Primary API
     try:
         r = requests.get(
             "https://api.exchangerate.host/latest",
@@ -269,7 +282,6 @@ def fetch_fx_rates(base: str = "USD") -> Dict[str, float]:
     except Exception:
         pass
 
-    # Fallback
     if cache.get("rates"):
         return cache["rates"]
     return {"USD": 1.0, "EUR": 0.9, "AED": 3.67, "GBP": 0.78, "LBP": 90000.0}
@@ -288,7 +300,6 @@ def to_usd(amount: float, currency: str) -> float:
     r = rates.get(currency)
     if not r or r == 0:
         return float(amount)
-    # 1 USD = r currency -> 1 currency = 1/r USD
     return float(amount) / float(r)
 
 
@@ -315,8 +326,13 @@ def login():
     password = data.get("password") or ""
 
     users = read_rows("users")
-    u = next((x for x in users if x["username"] == username), None)
-    if not u or u.get("password_hash") != hash_pw(password):
+    u = next((x for x in users if x.get("username") == username), None)
+
+    if not u:
+        return jsonify({"error": "invalid_credentials"}), 401
+
+    stored_hash = (u.get("password_hash") or "").strip()
+    if (not stored_hash) or (stored_hash != hash_pw(password)):
         return jsonify({"error": "invalid_credentials"}), 401
 
     session["username"] = username
