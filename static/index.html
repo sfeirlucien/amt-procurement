@@ -812,7 +812,7 @@
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
+    credentials: "include",
     ...options
   });
   if (!res.ok) {
