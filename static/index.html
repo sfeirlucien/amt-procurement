@@ -681,6 +681,30 @@
           <tbody></tbody>
         </table>
       </div>
+
+      <div class="card">
+        <h2>Backups</h2>
+        <div class="flex-row" style="align-items:flex-end; gap:10px; flex-wrap:wrap;">
+          <div>
+            <button class="btn" id="downloadBackupBtn">Download Backup</button>
+          </div>
+          <div>
+            <label>Upload .xlsx (overwrite)
+              <input type="file" id="uploadBackupFile" accept=".xlsx"/>
+            </label>
+          </div>
+          <div>
+            <button class="btn" id="uploadBackupBtn">Upload Backup</button>
+          </div>
+        </div>
+        <div id="backupError" class="error"></div>
+
+        <table id="backupTable" style="margin-top:10px;">
+          <thead><tr><th>File</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
     </div>
 
   </div>
@@ -700,6 +724,19 @@ async function apiFetch(url, options = {}) {
     throw err;
   }
   return res.json();
+}
+
+
+// Normalize backend fields (supports old/new names)
+function normReq(r){
+  r.amount_usd = Number(r.amount_usd ?? r.amount_usd ?? 0);
+  r.amount_original = Number(r.amount_original ?? r.original_amount ?? r.amount ?? 0);
+  return r;
+}
+function normLand(l){
+  l.amount_usd = Number(l.amount_usd ?? l.total_amount ?? 0);
+  l.amount_original = Number(l.amount_original ?? l.original_amount ?? l.amount ?? 0);
+  return l;
 }
 
 let currentUser = null;
@@ -767,6 +804,8 @@ async function refreshSession() {
       loginCard.classList.add("hidden");
       await refreshSession();
       await afterDataLoad();
+  setupBackupButtons();
+  await loadBackups();
     };
     loginCard.classList.add("hidden");
   } else {
@@ -879,7 +918,7 @@ function updateOverviewPaidTotals(reqs, lands) {
   let filtered = [];
   if (!typeF || typeF==="req") filtered = filtered.concat(reqs.map(r=>({
     _type:"req", vessel:r.vessel, category:r.category, supplier:r.supplier,
-    paid:Number(r.paid||0), amount:Number(r.total_amount||0), date:r.date_ordered
+    paid:Number(r.paid||0), amount:Number(r.amount_usd||0), date:r.date_ordered
   })));
   if (!typeF || typeF==="land") filtered = filtered.concat(lands.map(r=>({
     _type:"land", vessel:r.vessel, category:r.category, supplier:r.supplier||r.workshop,
@@ -1201,7 +1240,7 @@ async function loadAllRequisitions(){
     if(r.delivered) statusClass="status-delivered";
 
     tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.amount_usd||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-req" data-id="${r.id}">Edit</button>
@@ -1260,7 +1299,7 @@ function attachReqRowActions(){
       document.getElementById("reqSupplierSelect").value=row.supplier||"";
       document.getElementById("reqDateOrdered").value=row.date_ordered||"";
       document.getElementById("reqExpected").value=row.expected||"";
-      const orig=(typeof row.original_amount==="number"?row.original_amount:row.total_amount)||0;
+      const orig=(typeof row.amount_original==="number"?row.amount_original:row.amount_usd)||0;
       document.getElementById("reqTotal").value=orig;
       document.getElementById("reqCurrency").value=row.currency||"USD";
       document.getElementById("reqPaid").checked=!!row.paid;
@@ -1303,6 +1342,8 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
     else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
     document.getElementById("cancelReqEditBtn").onclick();
     await afterDataLoad();
+  setupBackupButtons();
+  await loadBackups();
   }catch(e){
     if(e.error==="duplicate_number") err.textContent="This requisition number already exists.";
     else if(e.error==="unknown_category") err.textContent="Invalid category abbreviation.";
@@ -1322,7 +1363,7 @@ async function loadOverviewRequisitions(){
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
+      <td>${r.date_ordered||""}</td><td>${(r.amount_usd||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
       <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
   });
@@ -1446,6 +1487,8 @@ document.getElementById("saveLandingBtn").onclick=async ()=>{
     else await apiFetch("/api/landings",{method:"POST",body:JSON.stringify(payload)});
     document.getElementById("cancelLandEditBtn").onclick();
     await afterDataLoad();
+  setupBackupButtons();
+  await loadBackups();
   }catch(e){
     err.textContent=e.error==="login_required"?"You must be logged in.":"Error saving landed item.";
   }
@@ -1459,7 +1502,7 @@ async function fillCancelledTables(){
   allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.amount_usd||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     reqBody.appendChild(tr);
   });
@@ -1501,7 +1544,7 @@ async function loadDeliveredRequisitions(){
     if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.amount_usd||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     tbody.appendChild(tr);
   });
@@ -1565,10 +1608,89 @@ async function afterDataLoad() {
 }
 
 /* ========= Init ========= */
+(async 
+// -------------------- Backups (admin) --------------------
+async function loadBackups(){
+  if(!currentUser || currentUser.role!=='admin') return;
+  try{
+    const list = await apiGet('/api/backups');
+    const tbody = document.querySelector('#backupTable tbody');
+    tbody.innerHTML = '';
+    list.forEach(b=>{
+      const tr=document.createElement('tr');
+      const created = b.created_at || b.created || '';
+      tr.innerHTML = `
+        <td>${b.filename || b.file || ''}</td>
+        <td>${created}</td>
+        <td>
+          <button class="btn btn-sm" data-act="restore" data-file="${b.filename||b.file}">Restore</button>
+          <button class="btn btn-sm btn-danger" data-act="delete" data-file="${b.filename||b.file}">Delete</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    tbody.onclick = async (e)=>{
+      const btn = e.target.closest('button[data-act]');
+      if(!btn) return;
+      const act=btn.dataset.act;
+      const file=btn.dataset.file;
+      if(!file) return;
+      if(act==='delete'){
+        if(!confirm('Delete backup '+file+'?')) return;
+        await apiDelete('/api/backups/'+encodeURIComponent(file));
+        loadBackups();
+      }else if(act==='restore'){
+        if(!confirm('Restore from backup '+file+'? This will overwrite current database.')) return;
+        await apiPost('/api/backups/restore', {filename:file});
+        alert('Restored. Please refresh page.');
+      }
+    };
+  }catch(err){
+    console.error(err);
+  }
+}
+
+function setupBackupButtons(){
+  const dlBtn=document.getElementById('downloadBackupBtn');
+  const upBtn=document.getElementById('uploadBackupBtn');
+  const fileInp=document.getElementById('uploadBackupFile');
+  const errBox=document.getElementById('backupError');
+
+  if(dlBtn){
+    dlBtn.onclick=()=>{ window.location.href = '/api/backup'; };
+  }
+
+  if(upBtn){
+    upBtn.onclick=async ()=>{
+      errBox.textContent='';
+      if(!fileInp.files || !fileInp.files[0]){
+        errBox.textContent='Please choose a .xlsx file';
+        return;
+      }
+      const f=fileInp.files[0];
+      if(!f.name.toLowerCase().endsWith('.xlsx')){
+        errBox.textContent='Only .xlsx allowed';
+        return;
+      }
+      const fd=new FormData();
+      fd.append('file', f);
+      try{
+        await apiUpload('/api/upload', fd);
+        alert('Backup uploaded. Please refresh page.');
+        fileInp.value='';
+        loadBackups();
+      }catch(e){
+        errBox.textContent='Upload failed';
+      }
+    };
+  }
+}
 (async function init(){
-  await loadCurrencies();
+await loadCurrencies();
   await refreshSession();   // important due to admin tab visibility
   await afterDataLoad();
+  setupBackupButtons();
+  await loadBackups();
 })();
 </script>
 
