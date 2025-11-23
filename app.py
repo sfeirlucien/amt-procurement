@@ -1,29 +1,37 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
+Rebuilt from scratch per specs + Manual backups endpoints.
 
 Features:
 - Excel-based storage (office_ops.xlsx auto-created)
 - Roles: admin, user, viewer, finance
 - Default admin if none exists: admin / admin123
-- Manual backups only
+- Manual backups only:
+    * GET  /api/backup                -> creates backup and downloads it
+    * GET  /api/backups               -> list backups
+    * DELETE /api/backups/<name>      -> delete backup
+    * POST /api/backups/<name>/restore-> restore backup
+    * POST /api/upload                -> upload .xlsx and overwrite DB
 - Requisitions + Landings + Directory + Categories + Vessels + Users
 - Real-time FX conversion to USD (cached)
 - Permissions:
-    * admin: full CRUD
+    * admin: full CRUD + backups/upload
     * other roles: add/edit own requisitions/landings, no delete, no admin access
 """
 
 import os
 import json
 import hashlib
+import shutil
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import requests
 import openpyxl
 from openpyxl import Workbook
-from flask import Flask, jsonify, request, session, send_from_directory
+from flask import Flask, jsonify, request, session, send_from_directory, send_file
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 
 
 # -------------------------------------------------
@@ -39,7 +47,10 @@ CORS(app, supports_credentials=True, origins=[
 ])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+os.makedirs(BACKUP_DIR, exist_ok=True)
 
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
 ROLES = {"admin", "user", "viewer", "finance"}
@@ -76,7 +87,7 @@ SHEETS: Dict[str, List[str]] = {
 
 
 # -------------------------------------------------
-# Helpers (NO recursion)
+# Helpers
 # -------------------------------------------------
 def now_iso() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
@@ -87,12 +98,9 @@ def hash_pw(pw: str) -> str:
 
 
 def ensure_db() -> None:
-    """
-    Create Excel + sheets if missing.
-    Ensure default admin exists.
-    IMPORTANT: do NOT call read_rows/get_wb inside this function.
-    """
-    # 1) Create file if missing
+    """Create office_ops.xlsx and required sheets if missing.
+       Ensure default admin exists and has a valid password_hash.
+       IMPORTANT: this function MUST NOT call read_rows() to avoid recursion."""
     if not os.path.exists(DB_FILE):
         wb = Workbook()
         if "Sheet" in wb.sheetnames:
@@ -102,29 +110,23 @@ def ensure_db() -> None:
             ws.append(headers)
         wb.save(DB_FILE)
 
-    # 2) Load workbook directly (no get_wb)
     wb = openpyxl.load_workbook(DB_FILE)
 
-    # 3) Ensure all sheets exist with headers
+    # ensure sheets exist
     for sname, headers in SHEETS.items():
         if sname not in wb.sheetnames:
             ws = wb.create_sheet(sname)
             ws.append(headers)
-        else:
-            ws = wb[sname]
-            if ws.max_row == 0:
-                ws.append(headers)
-            else:
-                first_row = [c.value for c in ws[1]]
-                if first_row != headers:
-                    # overwrite headers to correct order
-                    ws.delete_rows(1)
-                    ws.insert_rows(1)
-                    ws.append(headers)
 
-    # 4) Ensure admin user exists AND has a valid hash
     ws = wb["users"]
     headers = [c.value for c in ws[1]]
+    if headers != SHEETS["users"]:
+        # repair headers if corrupt
+        ws.delete_rows(1)
+        ws.insert_rows(1)
+        ws.append(SHEETS["users"])
+        headers = SHEETS["users"]
+
     u_col = headers.index("username") + 1
     p_col = headers.index("password_hash") + 1
     r_col = headers.index("role") + 1
@@ -140,10 +142,9 @@ def ensure_db() -> None:
     if admin_row is None:
         ws.append(["admin", default_hash, "admin", now_iso()])
     else:
-        # repair missing hash/role
-        cur_hash = ws.cell(admin_row, p_col).value
-        cur_role = (ws.cell(admin_row, r_col).value or "").lower()
-        if not cur_hash or str(cur_hash).strip() == "" or cur_hash == "None":
+        cur_hash = (ws.cell(admin_row, p_col).value or "").strip()
+        cur_role = (ws.cell(admin_row, r_col).value or "user").lower()
+        if not cur_hash:
             ws.cell(admin_row, p_col).value = default_hash
         if cur_role != "admin":
             ws.cell(admin_row, r_col).value = "admin"
@@ -386,6 +387,105 @@ def session_info():
 
 
 # -------------------------------------------------
+# Backups / Upload (admin)
+# -------------------------------------------------
+def backup_filename() -> str:
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    return f"office_ops_{ts}.xlsx"
+
+
+@app.get("/api/backup")
+def download_backup():
+    guard = require_admin()
+    if guard:
+        return guard
+    ensure_db()
+    name = backup_filename()
+    dst = os.path.join(BACKUP_DIR, name)
+    shutil.copy2(DB_FILE, dst)
+    log_action("backup_create", name)
+    return send_file(dst, as_attachment=True, download_name=name)
+
+
+@app.get("/api/backups")
+def list_backups():
+    guard = require_admin()
+    if guard:
+        return guard
+    items = []
+    for fn in sorted(os.listdir(BACKUP_DIR), reverse=True):
+        if not fn.lower().endswith(".xlsx"):
+            continue
+        path = os.path.join(BACKUP_DIR, fn)
+        st = os.stat(path)
+        items.append({
+            "name": fn,
+            "size": st.st_size,
+            "created_at": datetime.utcfromtimestamp(st.st_mtime).isoformat(timespec="seconds"),
+        })
+    return jsonify(items)
+
+
+@app.delete("/api/backups/<name>")
+def delete_backup(name: str):
+    guard = require_admin()
+    if guard:
+        return guard
+    safe = secure_filename(name)
+    path = os.path.join(BACKUP_DIR, safe)
+    if not os.path.exists(path):
+        return jsonify({"error": "not_found"}), 404
+    os.remove(path)
+    log_action("backup_delete", safe)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/backups/<name>/restore")
+def restore_backup(name: str):
+    guard = require_admin()
+    if guard:
+        return guard
+    safe = secure_filename(name)
+    path = os.path.join(BACKUP_DIR, safe)
+    if not os.path.exists(path):
+        return jsonify({"error": "not_found"}), 404
+    shutil.copy2(path, DB_FILE)
+    ensure_db()  # re-validate admin + sheets
+    log_action("backup_restore", safe)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/upload")
+def upload_db():
+    guard = require_admin()
+    if guard:
+        return guard
+
+    if "file" not in request.files:
+        return jsonify({"error": "no_file"}), 400
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "no_file"}), 400
+    safe = secure_filename(f.filename)
+    if not safe.lower().endswith(".xlsx"):
+        return jsonify({"error": "only_xlsx"}), 400
+
+    tmp = os.path.join(BASE_DIR, f".upload_{safe}")
+    f.save(tmp)
+    # quick validity check
+    try:
+        openpyxl.load_workbook(tmp)
+    except Exception:
+        os.remove(tmp)
+        return jsonify({"error": "invalid_xlsx"}), 400
+
+    shutil.move(tmp, DB_FILE)
+    ensure_db()
+    log_action("upload_overwrite", safe)
+    return jsonify({"ok": True})
+
+
+# -------------------------------------------------
 # FX / currencies routes
 # -------------------------------------------------
 @app.get("/api/currencies")
@@ -593,7 +693,7 @@ def delete_user(username: str):
 
 
 # -------------------------------------------------
-# Directory
+# Directory (suppliers / workshops)
 # -------------------------------------------------
 @app.get("/api/directory")
 def list_directory():
