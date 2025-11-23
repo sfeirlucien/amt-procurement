@@ -10,7 +10,6 @@ import hashlib
 import requests
 from datetime import datetime
 import openpyxl
-from werkzeug.security import check_password_hash
 from flask import Flask, jsonify, request, session, send_file
 from flask_cors import CORS
 
@@ -109,14 +108,15 @@ def login():
     wb = load_wb()
     ws = wb["Users"]
 
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        u, pw_hash, role = row
+for row in ws.iter_rows(min_row=2, values_only=True):
+    u, pw_hash, role = row
 
-        # Compare SCRYPT hash stored in Excel with input password
-        if u == username and check_password_hash(pw_hash, password):
-            session["username"] = username
-            session["role"] = role
-            return jsonify({"success": True})
+    # Compare SHA256 hashes
+    if u == username and pw_hash == hash_pw(password):
+        session["username"] = username
+        session["role"] = role
+        return jsonify({"success": True})
+
 
     return jsonify({"error": "invalid_credentials"}), 400
 @app.route("/api/session")
@@ -972,6 +972,7 @@ def root():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
 
 
