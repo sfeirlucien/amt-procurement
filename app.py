@@ -56,7 +56,7 @@ ALLOWED_UPLOAD_EXT = {".xlsx"}
 SHEETS: Dict[str, List[str]] = {
     "users": ["username", "password_hash", "role", "created_at"],
     "requisitions": [
-        "id", "number", "vessel", "category", "supplier",
+        "id", "number", "description", "vessel", "category", "supplier",
         "date_ordered", "expected",
         "amount_original", "currency", "amount_usd",
         "paid", "delivered", "status",
@@ -107,6 +107,20 @@ def ensure_db() -> None:
         wb.save(DB_FILE)
 
     wb = openpyxl.load_workbook(DB_FILE)
+
+    # --- Header migration: add any missing columns (non-destructive) ---
+    for sname, headers in SHEETS.items():
+        if sname not in wb.sheetnames:
+            ws_new = wb.create_sheet(sname)
+            ws_new.append(headers)
+            continue
+        ws_exist = wb[sname]
+        exist_headers = [c.value for c in ws_exist[1] if c.value]
+        # append missing headers to the right
+        for h in headers:
+            if h not in exist_headers:
+                ws_exist.cell(1, ws_exist.max_column + 1).value = h
+                exist_headers.append(h)
 
     for sname, headers in SHEETS.items():
         if sname not in wb.sheetnames:
@@ -795,6 +809,7 @@ def add_requisition():
 
     data = request.json or {}
     number = (data.get("number") or "").strip()
+    description = (data.get("description") or "").strip()
     vessel = (data.get("vessel") or "").strip()
     category = (data.get("category") or "").strip().upper()
     supplier = (data.get("supplier") or "").strip()
@@ -825,6 +840,7 @@ def add_requisition():
     row = {
         "id": next_id("requisitions"),
         "number": number,
+        "description": description,
         "vessel": vessel,
         "category": category,
         "supplier": supplier,
@@ -864,7 +880,7 @@ def edit_requisition(rid: int):
     data = request.json or {}
     updates: Dict[str, Any] = {}
 
-    for k in ["number", "vessel", "category", "supplier", "date_ordered",
+    for k in ["number", "description", "vessel", "category", "supplier", "date_ordered",
               "expected", "status", "po_number", "remarks", "urgency"]:
         if k in data:
             val = data[k]
