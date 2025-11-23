@@ -1,1094 +1,894 @@
-# app.py
-from flask import Flask, request, jsonify, session, send_from_directory
-from werkzeug.security import generate_password_hash, check_password_hash
-from openpyxl import Workbook, load_workbook
-from pathlib import Path
-import os, threading, time
-import shutil
-from flask import send_file
-import shutil
-import time
+"""
+AMT Procurement - Single-file Flask Backend (Excel DB)
+Rebuilt from scratch per specs.
 
-# Try to use requests for live FX, fallback to static if missing
-try:
-    import requests
-except ImportError:
-    requests = None
-
-
-
-app = Flask(__name__, static_url_path="/static", static_folder="static")
-app.secret_key = os.environ.get("SECRET_KEY", "change-me")
-
-#from flask import send_file    # make sure this import is at the top
-
-#----to download backups
-@app.get("/backups")
-def list_backups():
-    need = require_admin()
-    if need:
-        return need
-
-    backups = sorted(DATA_DIR.glob("office_ops_backup_*.xlsx"))
-    items = "".join(
-    f"""
-    <li style="margin-bottom:10px;">
-      <a href="/api/download_backup/{b.name}">{b.name}</a>
-      &nbsp; | &nbsp;
-
-      <button onclick="restoreBackup('{b.name}')"
-              style="padding:4px 8px;border:1px solid #999;border-radius:6px;cursor:pointer;">
-        Restore
-      </button>
-
-      &nbsp;
-
-      <button onclick="deleteBackup('{b.name}')"
-              style="padding:4px 8px;border:1px solid #e11d48;color:#e11d48;border-radius:6px;cursor:pointer;">
-        Delete
-      </button>
-    </li>
-    """
-    for b in backups
-)
-
-    return f"""
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Excel Backups</title>
-  <style>
-    body{{{{font-family:Arial; margin:30px}}}}
-    a{{{{text-decoration:none}}}}
-  </style>
-</head>
-<body>
-
-  <h2>Available Backups</h2>
-  <ul>
-    {items or "<li>No backups yet</li>"}
-  </ul>
-
-  <script>
-  async function restoreBackup(name){{ 
-    if(!confirm("Restore this backup? This will overwrite the live Excel.")) return;
-
-    const r = await fetch("/api/restore_backup/" + encodeURIComponent(name), {{
-      method: "POST",
-      credentials: "same-origin"
-    }});
-
-    if(r.ok){{ 
-      alert("Restored ✅");
-      window.location.href = "/";
-    }} else {{
-      alert("Restore failed");
-    }}
-  }}
-
-  async function deleteBackup(name){{ 
-    if(!confirm("Delete this backup forever?")) return;
-
-    const r = await fetch("/api/delete_backup/" + encodeURIComponent(name), {{
-      method: "POST",
-      credentials: "same-origin"
-    }});
-
-    if(r.ok){{ 
-      alert("Deleted ❌");
-      window.location.reload();
-    }} else {{
-      alert("Delete failed");
-    }}
-  }}
-  </script>
-
-</body>
-</html>
+Features:
+- Excel-based storage (database.xlsx auto-created)
+- Roles: admin, user, viewer, finance
+- Default admin if none exists: admin / admin123
+- Manual backups only (no automatic backups)
+- Requisitions + Landings + Directory + Categories + Vessels + Users
+- Real-time FX conversion to USD (cached)
+- Permissions:
+    * admin: full CRUD
+    * other roles: add/edit own requisitions/landings, no delete, no admin access
 """
 
-@app.get("/api/download_backup/<filename>")
-def download_backup_file(filename):
-    need = require_admin()
-    if need:
-        return need
+import os
+import json
+import hashlib
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-    path = DATA_DIR / filename
-    if not path.exists() or not filename.startswith("office_ops_backup_"):
-        return "Not found", 404
-
-    return send_file(
-        path,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-@app.post("/api/delete_backup/<filename>")
-def delete_backup(filename):
-    need = require_admin()
-    if need:
-        return need
-
-    path = DATA_DIR / filename
-
-    # Safety checks: only allow deleting backup files
-    if (not path.exists()) or (not filename.startswith("office_ops_backup_")) or (not filename.endswith(".xlsx")):
-        return "Not found", 404
-
-    path.unlink()  # delete the file
-
-    return jsonify({"ok": True, "deleted": filename})
+import requests
+import openpyxl
+from openpyxl import Workbook
+from flask import Flask, jsonify, request, session, send_from_directory
+from flask_cors import CORS
 
 
-#------restore
-@app.post("/api/restore_backup/<filename>")
-def restore_backup(filename):
-    need = require_admin()
-    if need:
-        return need
+# -------------------------------------------------
+# App init
+# -------------------------------------------------
+app = Flask(__name__, static_folder="static", static_url_path="/static")
+app.secret_key = os.environ.get("SECRET_KEY", "AMT_SECRET_KEY_CHANGE_ME")
 
-    path = DATA_DIR / filename
+CORS(app, supports_credentials=True, origins=[
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "https://amt-procurement.onrender.com",
+])
 
-    # Safety checks
-    if (not path.exists()) or (not filename.startswith("office_ops_backup_")) or (not filename.endswith(".xlsx")):
-        return "Not found", 404
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, "database.xlsx")
 
-    # Replace live Excel with selected backup
-    shutil.copy2(path, XLSX_PATH)
+DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
+ROLES = {"admin", "user", "viewer", "finance"}
 
-    # Ensure schema still OK
-    _ensure_workbook()
-
-    return jsonify({"ok": True, "restored": filename})
-
-
-#-----for upload
-@app.get("/upload")
-def upload_page():
-    need = require_admin()
-    if need:
-        return need
-
-    # Simple phone-friendly upload form
-    return """
-    <!doctype html>
-    <html>
-    <head>
-      <meta charset="utf-8"/>
-      <title>Upload Excel Backup</title>
-      <style>
-        body{font-family:Arial; margin:30px;}
-        .box{max-width:480px; margin:auto; padding:20px; border:1px solid #ddd; border-radius:10px;}
-        h2{margin-top:0;}
-        input,button{width:100%; padding:10px; margin-top:10px;}
-        button{background:#0ea5e9; color:white; border:none; border-radius:6px; font-size:16px;}
-      </style>
-    </head>
-    <body>
-      <div class="box">
-        <h2>Upload updated office_ops.xlsx</h2>
-        <form action="/api/upload_excel" method="post" enctype="multipart/form-data">
-          <input type="file" name="file" accept=".xlsx" required />
-          <button type="submit">Upload</button>
-        </form>
-        <p style="color:#666; font-size:14px;">
-          After upload, refresh the website.
-        </p>
-      </div>
-    </body>
-    </html>
-    """
+FX_CACHE_FILE = os.path.join(BASE_DIR, "fx_cache.json")
+FX_CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
 
 
-@app.post("/api/upload_excel")
-def upload_excel():
-    need = require_admin()
-    if need:
-        return need
+SHEETS: Dict[str, List[str]] = {
+    "users": ["username", "password_hash", "role", "created_at"],
+    "requisitions": [
+        "id", "number", "vessel", "category", "supplier",
+        "date_ordered", "expected",
+        "amount_original", "currency", "amount_usd",
+        "paid", "delivered", "status",
+        "po_number", "remarks", "urgency",
+        "created_by", "created_at", "updated_at"
+    ],
+    "landings": [
+        "id", "vessel", "item", "workshop",
+        "expected", "landed_date",
+        "amount_original", "currency", "amount_usd",
+        "paid", "delivered", "status",
+        "created_by", "created_at", "updated_at"
+    ],
+    "directory": [
+        "id", "type", "name", "email", "phone", "address",
+        "created_by", "created_at"
+    ],
+    "categories": ["id", "name", "abbr", "created_at"],
+    "vessels": ["id", "name", "created_at"],
+    "logs": ["timestamp", "action", "details"],
+}
 
-    f = request.files.get("file")
-    if not f:
-        return "No file selected", 400
 
-    # Optional safety: keep a timestamped backup
+# -------------------------------------------------
+# Helpers
+# -------------------------------------------------
+def now_iso() -> str:
+    return datetime.utcnow().isoformat(timespec="seconds")
+
+
+def hash_pw(pw: str) -> str:
+    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+
+
+def ensure_db() -> None:
+    """Create database.xlsx and sheets if not exist.
+       Also create default admin if users sheet empty."""
+    if not os.path.exists(DB_FILE):
+        wb = Workbook()
+        if "Sheet" in wb.sheetnames:
+            wb.remove(wb["Sheet"])
+        for sname, headers in SHEETS.items():
+            ws = wb.create_sheet(sname)
+            ws.append(headers)
+        wb.save(DB_FILE)
+
+    # ensure at least one admin exists
+    users = read_rows("users")
+    if not users:
+        append_row("users", {
+            "username": DEFAULT_ADMIN["username"],
+            "password_hash": hash_pw(DEFAULT_ADMIN["password"]),
+            "role": DEFAULT_ADMIN["role"],
+            "created_at": now_iso()
+        })
+
+
+def get_wb() -> Workbook:
+    ensure_db()
+    return openpyxl.load_workbook(DB_FILE)
+
+
+def read_rows(sheet: str) -> List[Dict[str, Any]]:
+    wb = get_wb()
+    ws = wb[sheet]
+    headers = [c.value for c in ws[1]]
+    out: List[Dict[str, Any]] = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if all(v is None for v in row):
+            continue
+        out.append(dict(zip(headers, row)))
+    return out
+
+
+def append_row(sheet: str, row: Dict[str, Any]) -> None:
+    wb = get_wb()
+    ws = wb[sheet]
+    headers = [c.value for c in ws[1]]
+    ws.append([row.get(h) for h in headers])
+    wb.save(DB_FILE)
+
+
+def next_id(sheet: str) -> int:
+    rows = read_rows(sheet)
+    mx = 0
+    for r in rows:
+        try:
+            mx = max(mx, int(r.get("id") or 0))
+        except Exception:
+            pass
+    return mx + 1
+
+
+def update_row_by_id(sheet: str, row_id: int, updates: Dict[str, Any]) -> bool:
+    wb = get_wb()
+    ws = wb[sheet]
+    headers = [c.value for c in ws[1]]
+    if "id" not in headers:
+        return False
+    id_col = headers.index("id") + 1
+
+    for r_idx in range(2, ws.max_row + 1):
+        if ws.cell(r_idx, id_col).value == row_id:
+            for k, v in updates.items():
+                if k in headers:
+                    c_idx = headers.index(k) + 1
+                    ws.cell(r_idx, c_idx).value = v
+            wb.save(DB_FILE)
+            return True
+    return False
+
+
+def delete_row_by_id(sheet: str, row_id: int) -> bool:
+    wb = get_wb()
+    ws = wb[sheet]
+    headers = [c.value for c in ws[1]]
+    if "id" not in headers:
+        return False
+    id_col = headers.index("id") + 1
+
+    for r_idx in range(2, ws.max_row + 1):
+        if ws.cell(r_idx, id_col).value == row_id:
+            ws.delete_rows(r_idx, 1)
+            wb.save(DB_FILE)
+            return True
+    return False
+
+
+def log_action(action: str, details: str = "") -> None:
+    append_row("logs", {"timestamp": now_iso(), "action": action, "details": details})
+
+
+# -------------------------------------------------
+# Auth helpers
+# -------------------------------------------------
+def current_user() -> Optional[Dict[str, str]]:
+    if "username" not in session:
+        return None
+    return {"username": session["username"], "role": session.get("role", "user")}
+
+
+def require_login():
+    if not current_user():
+        return jsonify({"error": "login_required"}), 401
+    return None
+
+
+def require_admin():
+    u = current_user()
+    if not u:
+        return jsonify({"error": "login_required"}), 401
+    if u["role"] != "admin":
+        return jsonify({"error": "admin_required"}), 403
+    return None
+
+
+def can_edit_row(row: Dict[str, Any]) -> bool:
+    u = current_user()
+    if not u:
+        return False
+    if u["role"] == "admin":
+        return True
+    return (row.get("created_by") or "") == u["username"]
+
+
+# -------------------------------------------------
+# FX helpers
+# -------------------------------------------------
+def load_fx_cache() -> Dict[str, Any]:
+    if not os.path.exists(FX_CACHE_FILE):
+        return {}
     try:
-        if XLSX_PATH.exists():
-            ts = int(time.time())
-            backup_path = XLSX_PATH.with_name(f"office_ops_backup_{ts}.xlsx")
-            shutil.copy2(XLSX_PATH, backup_path)
+        with open(FX_CACHE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_fx_cache(cache: Dict[str, Any]) -> None:
+    try:
+        with open(FX_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f)
     except Exception:
         pass
 
-    # Replace live Excel with uploaded one
-    f.save(XLSX_PATH)
 
-    # Ensure correct schema
-    _ensure_workbook()
+def fetch_fx_rates(base: str = "USD") -> Dict[str, float]:
+    cache = load_fx_cache()
+    ts = cache.get("timestamp")
+    if ts and cache.get("base") == base and cache.get("rates"):
+        try:
+            age = datetime.utcnow().timestamp() - float(ts)
+            if age < FX_CACHE_TTL_SECONDS:
+                return cache["rates"]
+        except Exception:
+            pass
 
-    return """
-    Upload successful ✅<br>
-    Go back to the website and refresh.
-    """
-
-
-#-----for backup
-@app.get("/backup")
-def download_backup():
-    need = require_admin()
-    if need:
-        return need
-
-    _ensure_workbook()
-    return send_file(
-        XLSX_PATH,
-        as_attachment=True,
-        download_name="office_ops.xlsx"
-    )
-
-
-# ===== Excel file location
-DATA_DIR = Path(os.environ.get("OPS_DATA_DIR", "data"))
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-XLSX_PATH = DATA_DIR / "office_ops.xlsx"
-
-WB_LOCK = threading.Lock()
-
-SHEETS = {
-    "Users":        ["username", "password_hash", "role"],
-    "Directory":    ["id", "type", "name", "email", "phone", "address"],
-    # Requisitions: store amount in USD, plus original amount + currency
-    "Requisitions": [
-        "id", "number", "vessel", "supplier",
-        "date_ordered", "expected",
-        "total_amount", "paid",
-        "category", "delivered", "status",
-        "currency", "original_amount",
-    ],
-    # Landings: store amount in USD, plus original amount + currency
-    "Landings": [
-        "id", "vessel", "item", "workshop",
-        "amount", "paid",
-        "expected", "landed_date", "status", "delivered",
-        "currency", "amount_original",
-    ],
-    "Categories":   ["id", "name", "abbr"],
-    "Vessels":      ["id", "name"],
-
-}
-
-FX_CACHE = {"timestamp": 0, "rates": {}}
-
-# ========= FX helpers =========
-def _get_fx_rates():
-    """
-    Get FX rates (base = USD) from the internet, cached for 1 hour.
-    If requests is not available or call fails, fallback to USD=1 only.
-    """
-    now = time.time()
-    if FX_CACHE["rates"] and now - FX_CACHE["timestamp"] < 3600:
-        return FX_CACHE["rates"]
-
-    if not requests:
-        FX_CACHE["rates"] = {"USD": 1.0}
-        FX_CACHE["timestamp"] = now
-        return FX_CACHE["rates"]
-
+    # Primary API
     try:
-        resp = requests.get("https://api.exchangerate.host/latest?base=USD", timeout=5)
-        data = resp.json()
-        rates = data.get("rates", {})
-        if not rates:
-            raise ValueError("no rates")
-        rates["USD"] = 1.0
-        FX_CACHE["rates"] = rates
-        FX_CACHE["timestamp"] = now
-        return FX_CACHE["rates"]
+        r = requests.get(
+            "https://api.exchangerate.host/latest",
+            params={"base": base},
+            timeout=10
+        )
+        data = r.json()
+        rates = data.get("rates") or {}
+        if rates:
+            save_fx_cache({
+                "timestamp": datetime.utcnow().timestamp(),
+                "base": base,
+                "rates": rates
+            })
+            return rates
     except Exception:
-        # fallback: if nothing yet, at least keep USD=1
-        if not FX_CACHE["rates"]:
-            FX_CACHE["rates"] = {"USD": 1.0}
-            FX_CACHE["timestamp"] = now
-        return FX_CACHE["rates"]
+        pass
 
-STATIC_CURRENCY_TO_USD = {
-    # 1 unit of currency ≈ this many USD (approximate fallback)
-    "USD": 1.0,
-    "EUR": 1.08,     # 1 EUR ≈ 1.08 USD
-    "AED": 0.27,     # 1 AED ≈ 0.27 USD
-    "GBP": 1.25,     # 1 GBP ≈ 1.25 USD
-    "LBP": 0.000011, # 1 LBP ≈ 0.000011 USD (just an example)
-    "SAR": 0.27,
-    "QAR": 0.27,
-    "KWD": 3.25,
-    "OMR": 2.60,
-    "CHF": 1.10,
-}
+    # Fallback
+    if cache.get("rates"):
+        return cache["rates"]
+    return {"USD": 1.0, "EUR": 0.9, "AED": 3.67, "GBP": 0.78, "LBP": 90000.0}
 
 
-def convert_to_usd(amount, currency):
-    """
-    Convert amount in <currency> to USD using latest FX.
-    If unknown currency or FX fails, use static fallback.
-    """
-    try:
-        amount = float(amount)
-    except (TypeError, ValueError):
-        return 0.0
+def currencies_list() -> List[str]:
+    rates = fetch_fx_rates("USD")
+    return sorted(set(rates.keys()) | {"USD"})
 
+
+def to_usd(amount: float, currency: str) -> float:
     currency = (currency or "USD").upper()
     if currency == "USD":
-        return amount
-
-    # 1) Try live FX from exchangerate.host
-    rates = _get_fx_rates()
+        return float(amount)
+    rates = fetch_fx_rates("USD")
     r = rates.get(currency)
-    if r:
-        # API gives: 1 USD = r * CURRENCY => 1 CURRENCY = 1/r USD
-        return amount / float(r)
+    if not r or r == 0:
+        return float(amount)
+    # 1 USD = r currency -> 1 currency = 1/r USD
+    return float(amount) / float(r)
 
-    # 2) Fallback: static approximate mapping (1 currency ≈ x USD)
-    if currency in STATIC_CURRENCY_TO_USD:
-        return amount * STATIC_CURRENCY_TO_USD[currency]
 
-    # 3) Last resort: no conversion
-    return amount
-# ========= Workbook helpers =========
-def _upgrade_schema(wb):
-    """
-    Option A: automatically upgrade existing Excel to have all required sheets/columns.
-    Called for both new and existing workbooks.
-    """
-    changed = False
+# -------------------------------------------------
+# Static / health
+# -------------------------------------------------
+@app.get("/")
+def home():
+    return send_from_directory("static", "index.html")
 
-    # Ensure all sheets exist with at least headers
-    for title, headers in SHEETS.items():
-        if title not in wb.sheetnames:
-            ws = wb.create_sheet(title)
-            ws.append(headers)
-            changed = True
-        else:
-            ws = wb[title]
-            # if sheet is empty, write headers
-            if ws.max_row == 1 and all(c.value is None for c in ws[1]):
-                for i, h in enumerate(headers, start=1):
-                    ws.cell(row=1, column=i, value=h)
-                changed = True
 
-    # Ensure Requisitions has new columns if missing
-    ws_req = wb["Requisitions"]
-    headers_req = [c.value for c in ws_req[1]]
-    for col_name in ("category", "delivered", "status", "currency", "original_amount"):
-        if col_name not in headers_req:
-            ws_req.cell(row=1, column=len(headers_req) + 1, value=col_name)
-            headers_req.append(col_name)
-            changed = True
+@app.get("/api/health")
+def health():
+    return jsonify({"status": "ok", "time": now_iso()})
 
-    # Ensure Landings has new columns if missing
-    ws_land = wb["Landings"]
-    headers_land = [c.value for c in ws_land[1]]
-    for col_name in ("landed_date", "status", "delivered", "currency", "amount_original"):
-        if col_name not in headers_land:
-            ws_land.cell(row=1, column=len(headers_land) + 1, value=col_name)
-            headers_land.append(col_name)
-            changed = True
 
-    if changed:
-        wb.save(XLSX_PATH)
-
-def _ensure_workbook():
-    if XLSX_PATH.exists():
-        wb = load_workbook(XLSX_PATH)
-        _upgrade_schema(wb)
-        wb.save(XLSX_PATH)
-        return
-    # Create new workbook from scratch
-    wb = Workbook()
-    # First sheet: Users
-    ws = wb.active
-    ws.title = "Users"
-    ws.append(SHEETS["Users"])
-    # seed admin user
-    ws.append(["admin", generate_password_hash("admin123"), "admin"])
-
-    # Other sheets
-    for title in ["Directory", "Requisitions", "Landings", "Categories", "Vessels"]:
-        ws2 = wb.create_sheet(title)
-        ws2.append(SHEETS[title])
-
-    _upgrade_schema(wb)  # ensure final schema
-    wb.save(XLSX_PATH)
-
-def _open_wb():
-    _ensure_workbook()
-    return load_workbook(XLSX_PATH)
-
-def _sheet_rows(ws):
-    headers = [c.value for c in ws[1]]
-    out = []
-    for r in ws.iter_rows(min_row=2, values_only=False):
-        vals = [c.value for c in r]
-        if all(v is None for v in vals):
-            continue
-        out.append(dict(zip(headers, vals)))
-    return out
-
-def _next_id(rows):
-    ids = [int(r.get("id") or 0) for r in rows if str(r.get("id") or "").isdigit()]
-    return (max(ids) + 1) if ids else 1
-
-def _find_row_index_by(ws, key, value):
-    headers = [c.value for c in ws[1]]
-    try:
-        col = headers.index(key) + 1
-    except ValueError:
-        return None
-    for i in range(2, ws.max_row + 1):
-        if ws.cell(row=i, column=col).value == value:
-            return i
-    return None
-
-def _save_wb(wb):
-    wb.save(XLSX_PATH)
-
-# ---- Flask 3.x compatible init (runs once)
-@app.before_request
-def _init_guard():
-    if not hasattr(app, "_init_done"):
-        _ensure_workbook()
-        app._init_done = True
-
-def require_login():
-    if "user" not in session:
-        return jsonify({"error": "login_required"}), 401
-
-def require_admin():
-    if "user" not in session or session["user"]["role"] != "admin":
-        return jsonify({"error": "admin_required"}), 403
-
-# ===== FX API for frontend =====
-@app.get("/api/currencies")
-def currencies():
-    rates = _get_fx_rates()
-
-    # Default currencies you want to see in the dropdown
-    default_codes = [
-        "USD", "EUR", "AED", "GBP", "LBP",
-        "SAR", "QAR", "KWD", "OMR", "CHF"
-    ]
-
-    # Even if API fails and only USD exists, we still show these codes
-    codes = sorted(set(list(rates.keys()) + default_codes))
-
-    return jsonify({"currencies": codes})
-
-# ===== Auth =====
+# -------------------------------------------------
+# Auth routes
+# -------------------------------------------------
 @app.post("/api/login")
 def login():
     data = request.json or {}
-    u = (data.get("username") or "").strip()
-    p = (data.get("password") or "")
-    with WB_LOCK:
-        wb = _open_wb()
-        ws = wb["Users"]
-        users = _sheet_rows(ws)
-    user = next((x for x in users if x["username"] == u), None)
-    if not user or not check_password_hash(user["password_hash"], p):
-        return jsonify({"error": "invalid_credentials"}), 400
-    session["user"] = {"username": user["username"], "role": user["role"]}
-    return jsonify(session["user"])
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+
+    users = read_rows("users")
+    u = next((x for x in users if x["username"] == username), None)
+    if not u or u.get("password_hash") != hash_pw(password):
+        return jsonify({"error": "invalid_credentials"}), 401
+
+    session["username"] = username
+    session["role"] = (u.get("role") or "user").lower()
+    log_action("login", username)
+    return jsonify({"ok": True, "username": username, "role": session["role"]})
+
 
 @app.post("/api/logout")
 def logout():
-    session.pop("user", None)
+    u = current_user()
+    session.clear()
+    if u:
+        log_action("logout", u["username"])
     return jsonify({"ok": True})
+
 
 @app.get("/api/session")
-def whoami():
-    return jsonify(session.get("user"))
-
-# ===== Users (admin) =====
-@app.get("/api/users")
-def users_list():
-    need = require_admin()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Users"]; users = _sheet_rows(ws)
-    return jsonify([{"username": u["username"], "role": u["role"]} for u in users])
-
-@app.post("/api/users")
-def users_add_update():
-    need = require_admin()
-    if need: return need
-    data = request.json or {}
-    username = (data.get("username") or "").strip()
-    password = (data.get("password") or "")
-    role = data.get("role") or "user"
-    if not username or not password or role not in ("admin","user"):
-        return jsonify({"error": "bad_request"}), 400
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Users"]
-        idx = _find_row_index_by(ws, "username", username)
-        if idx:
-            ws.cell(row=idx, column=2, value=generate_password_hash(password))
-            ws.cell(row=idx, column=3, value=role)
-        else:
-            ws.append([username, generate_password_hash(password), role])
-        _save_wb(wb)
-    return jsonify({"ok": True})
-
-@app.delete("/api/users/<username>")
-def users_delete(username):
-    need = require_admin()
-    if need: return need
-    if username == "admin":
-        return jsonify({"error":"cannot_delete_admin"}), 400
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Users"]
-        idx = _find_row_index_by(ws, "username", username)
-        if idx:
-            ws.delete_rows(idx); _save_wb(wb)
-    return jsonify({"ok": True})
-
-# ===== Directory =====
-@app.get("/api/directory")
-def dir_list():
-    t = request.args.get("type")
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Directory"]; rows = _sheet_rows(ws)
-    if t in ("supplier","workshop"):
-        rows = [r for r in rows if r["type"] == t]
-    for r in rows:
-        r["id"] = int(r["id"])
-        r["email"] = r.get("email") or ""
-        r["phone"] = r.get("phone") or ""
-        r["address"] = r.get("address") or ""
-    return jsonify(rows)
-
-@app.post("/api/directory")
-def dir_add():
-    need = require_login()
-    if need: return need
-    d = request.json or {}
-    typ = d.get("type")
-    name = (d.get("name") or "").strip()
-    email = (d.get("email") or "").strip()
-    phone = (d.get("phone") or "").strip()
-    address = (d.get("address") or "").strip()
-    if typ not in ("supplier","workshop") or not name:
-        return jsonify({"error":"name_required"}), 400
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Directory"]; rows = _sheet_rows(ws)
-        new_id = _next_id(rows)
-        ws.append([new_id, typ, name, email, phone, address])
-        _save_wb(wb)
-    return jsonify({"ok": True})
-
-@app.post("/api/directory/quick")
-def dir_quick_add():
-    need = require_login()
-    if need: return need
-    d = request.json or {}
-    typ = d.get("type")
-    name = (d.get("name") or "").strip()
-    email = (d.get("email") or "").strip()
-    phone = (d.get("phone") or "").strip()
-    address = (d.get("address") or "").strip()
-    if typ not in ("supplier","workshop") or not name:
-        return jsonify({"error":"bad_request"}), 400
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Directory"]; rows = _sheet_rows(ws)
-        new_id = _next_id(rows)
-        ws.append([new_id, typ, name, email, phone, address])
-        _save_wb(wb)
-    return jsonify({"ok": True})
-
-@app.patch("/api/directory/<int:did>")
-def dir_update(did):
-    need = require_login()
-    if need: return need
-    patch = request.json or {}
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Directory"]
-        idx = _find_row_index_by(ws, "id", did)
-        if not idx: return jsonify({"error":"not_found"}), 404
-        headers = [c.value for c in ws[1]]
-        for key in ("email","phone","address","name"):
-            if key in patch and key in headers:
-                col = headers.index(key) + 1
-                ws.cell(row=idx, column=col, value=patch[key] or "")
-        _save_wb(wb)
-    return jsonify({"ok": True})
-
-@app.delete("/api/directory/<int:did>")
-def dir_delete(did):
-    need = require_login()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Directory"]
-        idx = _find_row_index_by(ws, "id", did)
-        if idx:
-            ws.delete_rows(idx); _save_wb(wb)
-    return jsonify({"ok": True})
-
-# ===== Vessels (admin) =====
-@app.get("/api/vessels")
-def vessel_list():
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Vessels"]; rows = _sheet_rows(ws)
-    out = []
-    for r in rows:
-        out.append({
-            "id": int(r.get("id") or 0),
-            "name": (r.get("name") or "").strip()
-        })
-    return jsonify(out)
-
-@app.post("/api/vessels")
-def vessel_add():
-    need = require_admin()
-    if need: return need
-    d = request.json or {}
-    name = (d.get("name") or "").strip()
-    if not name:
-        return jsonify({"error": "bad_request"}), 400
-
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Vessels"]; rows = _sheet_rows(ws)
-        lower = name.lower()
-        if any((r.get("name") or "").strip().lower() == lower for r in rows):
-            return jsonify({"error": "duplicate_name"}), 400
-
-        new_id = _next_id(rows)
-        ws.append([new_id, name])
-        _save_wb(wb)
-
-    return jsonify({"ok": True})
-
-@app.patch("/api/vessels/<int:vid>")
-def vessel_update(vid):
-    need = require_admin()
-    if need: return need
-    d = request.json or {}
-    name = (d.get("name") or "").strip()
-    if not name:
-        return jsonify({"error": "bad_request"}), 400
-
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Vessels"]; rows = _sheet_rows(ws)
-        idx = _find_row_index_by(ws, "id", vid)
-        if not idx:
-            return jsonify({"error": "not_found"}), 404
-
-        lower = name.lower()
-        for r in rows:
-            if int(r.get("id") or 0) == vid:
-                continue
-            if (r.get("name") or "").strip().lower() == lower:
-                return jsonify({"error": "duplicate_name"}), 400
-
-        headers = [c.value for c in ws[1]]
-        ws.cell(row=idx, column=headers.index("name")+1, value=name)
-        _save_wb(wb)
-
-    return jsonify({"ok": True})
-
-@app.delete("/api/vessels/<int:vid>")
-def vessel_delete(vid):
-    need = require_admin()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Vessels"]
-        idx = _find_row_index_by(ws, "id", vid)
-        if idx:
-            ws.delete_rows(idx)
-            _save_wb(wb)
-    return jsonify({"ok": True})
+def session_info():
+    u = current_user()
+    if not u:
+        return jsonify({"logged_in": False}), 401
+    return jsonify({"logged_in": True, **u})
 
 
-# ===== Categories (admin) =====
+# -------------------------------------------------
+# FX / currencies routes
+# -------------------------------------------------
+@app.get("/api/currencies")
+def api_currencies():
+    return jsonify({"currencies": currencies_list()})
+
+
+@app.get("/api/fx")
+def api_fx():
+    return jsonify({"base": "USD", "rates": fetch_fx_rates("USD")})
+
+
+# -------------------------------------------------
+# Categories (admin)
+# -------------------------------------------------
 @app.get("/api/categories")
-def cat_list():
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Categories"]; rows = _sheet_rows(ws)
-    out = []
-    for r in rows:
-        r["id"] = int(r.get("id") or 0)
-        r["name"] = r.get("name") or ""
-        r["abbr"] = (r.get("abbr") or "").strip()
-        out.append(r)
-    return jsonify(out)
+def get_categories():
+    return jsonify(read_rows("categories"))
+
 
 @app.post("/api/categories")
-def cat_add():
-    need = require_admin()
-    if need: return need
-    d = request.json or {}
-    name = (d.get("name") or "").strip()
-    abbr = (d.get("abbr") or "").strip()
+def add_category():
+    guard = require_admin()
+    if guard:
+        return guard
+    data = request.json or {}
+    name = (data.get("name") or "").strip()
+    abbr = (data.get("abbr") or "").strip().upper()
     if not name or not abbr:
-        return jsonify({"error":"bad_request"}), 400
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Categories"]; rows = _sheet_rows(ws)
-        # unique abbreviation
-        al = abbr.lower()
-        if any((r.get("abbr") or "").strip().lower() == al for r in rows):
-            return jsonify({"error":"duplicate_abbr"}), 400
-        new_id = _next_id(rows)
-        ws.append([new_id, name, abbr])
-        _save_wb(wb)
-    return jsonify({"ok": True})
+        return jsonify({"error": "missing_fields"}), 400
+
+    cats = read_rows("categories")
+    if any((c.get("abbr") or "").upper() == abbr for c in cats):
+        return jsonify({"error": "duplicate_abbr"}), 409
+
+    row = {
+        "id": next_id("categories"),
+        "name": name,
+        "abbr": abbr,
+        "created_at": now_iso()
+    }
+    append_row("categories", row)
+    log_action("category_add", abbr)
+    return jsonify(row)
+
 
 @app.patch("/api/categories/<int:cid>")
-def cat_update(cid):
-    need = require_admin()
-    if need: return need
-    d = request.json or {}
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Categories"]; rows = _sheet_rows(ws)
-        idx = _find_row_index_by(ws, "id", cid)
-        if not idx: return jsonify({"error":"not_found"}), 404
-        headers = [c.value for c in ws[1]]
+def edit_category(cid: int):
+    guard = require_admin()
+    if guard:
+        return guard
+    data = request.json or {}
+    updates = {}
 
-        # check uniqueness if abbr changed
-        new_abbr = d.get("abbr")
-        if new_abbr is not None:
-            new_abbr = new_abbr.strip()
-            al = new_abbr.lower()
-            for r in rows:
-                if int(r.get("id") or 0) == cid:
-                    continue
-                if (r.get("abbr") or "").strip().lower() == al:
-                    return jsonify({"error":"duplicate_abbr"}), 400
-            ws.cell(row=idx, column=headers.index("abbr")+1, value=new_abbr)
+    if "name" in data:
+        updates["name"] = (data["name"] or "").strip()
+    if "abbr" in data:
+        updates["abbr"] = (data["abbr"] or "").strip().upper()
 
-        if "name" in d:
-            ws.cell(row=idx, column=headers.index("name")+1, value=d["name"] or "")
-        _save_wb(wb)
+    if not updates:
+        return jsonify({"error": "no_updates"}), 400
+
+    cats = read_rows("categories")
+    if "abbr" in updates:
+        if any(c["id"] != cid and (c.get("abbr") or "").upper() == updates["abbr"] for c in cats):
+            return jsonify({"error": "duplicate_abbr"}), 409
+
+    if not update_row_by_id("categories", cid, updates):
+        return jsonify({"error": "not_found"}), 404
+
+    log_action("category_edit", str(cid))
     return jsonify({"ok": True})
+
 
 @app.delete("/api/categories/<int:cid>")
-def cat_delete(cid):
-    need = require_admin()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Categories"]
-        idx = _find_row_index_by(ws, "id", cid)
-        if idx:
-            ws.delete_rows(idx); _save_wb(wb)
+def delete_category(cid: int):
+    guard = require_admin()
+    if guard:
+        return guard
+    if not delete_row_by_id("categories", cid):
+        return jsonify({"error": "not_found"}), 404
+    log_action("category_delete", str(cid))
     return jsonify({"ok": True})
 
-# ===== Requisitions =====
+
+# -------------------------------------------------
+# Vessels (admin)
+# -------------------------------------------------
+@app.get("/api/vessels")
+def get_vessels():
+    return jsonify(read_rows("vessels"))
+
+
+@app.post("/api/vessels")
+def add_vessel():
+    guard = require_admin()
+    if guard:
+        return guard
+    data = request.json or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "missing_fields"}), 400
+
+    vs = read_rows("vessels")
+    if any((v.get("name") or "").strip().lower() == name.lower() for v in vs):
+        return jsonify({"error": "duplicate_name"}), 409
+
+    row = {"id": next_id("vessels"), "name": name, "created_at": now_iso()}
+    append_row("vessels", row)
+    log_action("vessel_add", name)
+    return jsonify(row)
+
+
+@app.patch("/api/vessels/<int:vid>")
+def edit_vessel(vid: int):
+    guard = require_admin()
+    if guard:
+        return guard
+    data = request.json or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "missing_fields"}), 400
+
+    vs = read_rows("vessels")
+    if any(v["id"] != vid and (v.get("name") or "").strip().lower() == name.lower() for v in vs):
+        return jsonify({"error": "duplicate_name"}), 409
+
+    if not update_row_by_id("vessels", vid, {"name": name}):
+        return jsonify({"error": "not_found"}), 404
+
+    log_action("vessel_edit", str(vid))
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/vessels/<int:vid>")
+def delete_vessel(vid: int):
+    guard = require_admin()
+    if guard:
+        return guard
+    if not delete_row_by_id("vessels", vid):
+        return jsonify({"error": "not_found"}), 404
+    log_action("vessel_delete", str(vid))
+    return jsonify({"ok": True})
+
+
+# -------------------------------------------------
+# Users (admin)
+# -------------------------------------------------
+@app.get("/api/users")
+def list_users():
+    guard = require_admin()
+    if guard:
+        return guard
+    users = read_rows("users")
+    return jsonify([{"username": u["username"], "role": u.get("role", "user")} for u in users])
+
+
+@app.post("/api/users")
+def add_user():
+    guard = require_admin()
+    if guard:
+        return guard
+    data = request.json or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    role = (data.get("role") or "user").strip().lower()
+
+    if not username or not password or role not in ROLES:
+        return jsonify({"error": "missing_fields"}), 400
+
+    users = read_rows("users")
+    if any(u["username"] == username for u in users):
+        return jsonify({"error": "duplicate_username"}), 409
+
+    append_row("users", {
+        "username": username,
+        "password_hash": hash_pw(password),
+        "role": role,
+        "created_at": now_iso()
+    })
+    log_action("user_add", username)
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/users/<username>")
+def delete_user(username: str):
+    guard = require_admin()
+    if guard:
+        return guard
+    if username == "admin":
+        return jsonify({"error": "cannot_delete_admin"}), 400
+
+    wb = get_wb()
+    ws = wb["users"]
+    headers = [c.value for c in ws[1]]
+    u_col = headers.index("username") + 1
+    for r_idx in range(2, ws.max_row + 1):
+        if ws.cell(r_idx, u_col).value == username:
+            ws.delete_rows(r_idx, 1)
+            wb.save(DB_FILE)
+            log_action("user_delete", username)
+            return jsonify({"ok": True})
+
+    return jsonify({"error": "not_found"}), 404
+
+
+# -------------------------------------------------
+# Directory (suppliers / workshops)
+# -------------------------------------------------
+@app.get("/api/directory")
+def list_directory():
+    dtype = request.args.get("type")
+    rows = read_rows("directory")
+    if dtype:
+        rows = [r for r in rows if (r.get("type") or "").lower() == dtype.lower()]
+    return jsonify(rows)
+
+
+@app.post("/api/directory")
+def add_directory():
+    guard = require_login()
+    if guard:
+        return guard
+    data = request.json or {}
+    dtype = (data.get("type") or "").strip().lower()
+    name = (data.get("name") or "").strip()
+
+    if dtype not in {"supplier", "workshop"} or not name:
+        return jsonify({"error": "missing_fields"}), 400
+
+    row = {
+        "id": next_id("directory"),
+        "type": dtype,
+        "name": name,
+        "email": (data.get("email") or "").strip(),
+        "phone": (data.get("phone") or "").strip(),
+        "address": (data.get("address") or "").strip(),
+        "created_by": current_user()["username"],
+        "created_at": now_iso()
+    }
+    append_row("directory", row)
+    log_action("directory_add", f"{dtype}:{name}")
+    return jsonify(row)
+
+
+@app.post("/api/directory/quick")
+def add_directory_quick():
+    return add_directory()
+
+
+# -------------------------------------------------
+# Requisitions
+# -------------------------------------------------
 @app.get("/api/requisitions")
-def req_list():
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Requisitions"]; rows = _sheet_rows(ws)
+def list_requisitions():
+    rows = read_rows("requisitions")
     for r in rows:
-        r["id"] = int(r["id"])
-        r["total_amount"] = float(r.get("total_amount") or 0.0)
+        r["amount_usd"] = float(r.get("amount_usd") or 0)
+        r["amount_original"] = float(r.get("amount_original") or 0)
         r["paid"] = int(r.get("paid") or 0)
-        r["category"] = (r.get("category") or "").strip()
         r["delivered"] = int(r.get("delivered") or 0)
-        r["status"] = (r.get("status") or "open").strip().lower()
-        r["currency"] = (r.get("currency") or "USD").upper()
-        if r.get("original_amount") is None:
-            r["original_amount"] = r["total_amount"]
-        else:
-            r["original_amount"] = float(r.get("original_amount") or 0.0)
-    return jsonify(sorted(rows, key=lambda x: x["id"], reverse=True))
+    return jsonify(rows)
+
 
 @app.post("/api/requisitions")
-def req_add():
-    need = require_login()
-    if need: return need
-    d = request.json or {}
-    amount_raw = d.get("amount", d.get("total_amount"))
-    required_base = ["number","vessel","supplier","date_ordered","category"]
-    if any(not d.get(k) for k in required_base) or amount_raw in (None, "", []):
-        return jsonify({"error":"missing_fields"}), 400
+def add_requisition():
+    guard = require_login()
+    if guard:
+        return guard
 
-    category_abbr = (d.get("category") or "").strip()
-    currency = (d.get("currency") or "USD").upper()
+    data = request.json or {}
+    number = (data.get("number") or "").strip()
+    vessel = (data.get("vessel") or "").strip()
+    category = (data.get("category") or "").strip().upper()
+    supplier = (data.get("supplier") or "").strip()
+    date_ordered = data.get("date_ordered") or ""
+    expected = data.get("expected") or ""
+    amount = float(data.get("amount") or 0)
+    currency = (data.get("currency") or "USD").strip().upper()
+    paid = 1 if data.get("paid") else 0
+    delivered = 1 if data.get("delivered") else 0
+    status = (data.get("status") or "open").strip().lower()
+    po_number = (data.get("po_number") or "").strip()
+    remarks = (data.get("remarks") or "").strip()
+    urgency = (data.get("urgency") or "normal").strip().lower()
 
-    with WB_LOCK:
-        wb = _open_wb()
-        ws_req = wb["Requisitions"]; rows = _sheet_rows(ws_req)
+    if not number or not vessel or not category or not supplier or not date_ordered or amount <= 0:
+        return jsonify({"error": "missing_fields"}), 400
 
-        num_lower = d["number"].strip().lower()
-        if any((r.get("number") or "").strip().lower() == num_lower for r in rows):
-            return jsonify({"error":"duplicate_number"}), 400
+    cats = read_rows("categories")
+    if not any((c.get("abbr") or "").upper() == category for c in cats):
+        return jsonify({"error": "unknown_category"}), 400
 
-        # validate category abbreviation
-        ws_cat = wb["Categories"]
-        cat_rows = _sheet_rows(ws_cat)
-        abbr_lower = category_abbr.lower()
-        if not any((r.get("abbr") or "").strip().lower() == abbr_lower for r in cat_rows):
-            return jsonify({"error": "unknown_category"}), 400
+    reqs = read_rows("requisitions")
+    if any((r.get("number") or "") == number for r in reqs):
+        return jsonify({"error": "duplicate_number"}), 409
 
-        original_amount = float(amount_raw)
-        usd_amount = convert_to_usd(original_amount, currency)
+    usd = round(to_usd(amount, currency), 2)
 
-        new_id = _next_id(rows)
-        ws_req.append([
-            new_id,
-            d["number"].strip(),
-            d["vessel"].strip(),
-            d["supplier"],
-            d["date_ordered"],
-            d.get("expected") or "",
-            usd_amount,                     # stored in USD
-            1 if d.get("paid") else 0,
-            category_abbr,
-            0,                              # delivered
-            "open",                         # status
-            currency,
-            original_amount,
-        ])
-        _save_wb(wb)
-    return jsonify({"ok": True})
+    row = {
+        "id": next_id("requisitions"),
+        "number": number,
+        "vessel": vessel,
+        "category": category,
+        "supplier": supplier,
+        "date_ordered": date_ordered,
+        "expected": expected,
+        "amount_original": amount,
+        "currency": currency,
+        "amount_usd": usd,
+        "paid": paid,
+        "delivered": delivered,
+        "status": status,
+        "po_number": po_number,
+        "remarks": remarks,
+        "urgency": urgency,
+        "created_by": current_user()["username"],
+        "created_at": now_iso(),
+        "updated_at": now_iso()
+    }
+    append_row("requisitions", row)
+    log_action("requisition_add", number)
+    return jsonify(row)
 
-@app.patch("/api/requisitions/<int:rid>/toggle_paid")
-def req_toggle_paid(rid):
-    need = require_login()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Requisitions"]
-        idx = _find_row_index_by(ws, "id", rid)
-        if not idx: return jsonify({"error":"not_found"}), 404
-        headers = [c.value for c in ws[1]]
-        col = headers.index("paid") + 1
-        cur = int(ws.cell(row=idx, column=col).value or 0)
-        ws.cell(row=idx, column=col, value=0 if cur else 1)
-        _save_wb(wb)
-    return jsonify({"ok": True})
 
 @app.patch("/api/requisitions/<int:rid>")
-def req_update(rid):
-    need = require_login()
-    if need: return need
-    patch = request.json or {}
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Requisitions"]; rows = _sheet_rows(ws)
-        idx = _find_row_index_by(ws, "id", rid)
-        if not idx: return jsonify({"error":"not_found"}), 404
-        headers = [c.value for c in ws[1]]
+def edit_requisition(rid: int):
+    guard = require_login()
+    if guard:
+        return guard
 
-        cur = next((r for r in rows if int(r["id"]) == rid), None)
+    reqs = read_rows("requisitions")
+    row = next((r for r in reqs if int(r["id"]) == rid), None)
+    if not row:
+        return jsonify({"error": "not_found"}), 404
+    if not can_edit_row(row):
+        return jsonify({"error": "not_allowed"}), 403
 
-        # uniqueness for number
-        if "number" in patch:
-            new_num = (patch["number"] or "").strip()
-            if not new_num:
-                return jsonify({"error":"number_required"}), 400
-            for r in rows:
-                if int(r["id"]) == rid:
-                    continue
-                if (r.get("number") or "").strip().lower() == new_num.lower():
-                    return jsonify({"error":"duplicate_number"}), 400
-            ws.cell(row=idx, column=headers.index("number")+1, value=new_num)
+    data = request.json or {}
+    updates: Dict[str, Any] = {}
 
-        # category validation if changed
-        if "category" in patch:
-            category_abbr = (patch["category"] or "").strip()
-            ws_cat = wb["Categories"]
-            cat_rows = _sheet_rows(ws_cat)
-            abbr_lower = category_abbr.lower()
-            if not any((r.get("abbr") or "").strip().lower() == abbr_lower for r in cat_rows):
-                return jsonify({"error": "unknown_category"}), 400
-            ws.cell(row=idx, column=headers.index("category")+1, value=category_abbr)
+    for k in ["number", "vessel", "category", "supplier", "date_ordered",
+              "expected", "status", "po_number", "remarks", "urgency"]:
+        if k in data:
+            val = data[k]
+            if isinstance(val, str):
+                val = val.strip()
+            if k == "category":
+                val = val.upper()
+            updates[k] = val
 
-        # amount + currency
-        if any(k in patch for k in ("amount", "total_amount", "currency")):
-            cur_currency = (cur.get("currency") or "USD").upper() if cur else "USD"
-            cur_orig = float(cur.get("original_amount") or cur.get("total_amount") or 0.0) if cur else 0.0
-            amount_raw = patch.get("amount", patch.get("total_amount", cur_orig))
-            currency = (patch.get("currency") or cur_currency).upper()
+    if "paid" in data:
+        updates["paid"] = 1 if data["paid"] else 0
+    if "delivered" in data:
+        updates["delivered"] = 1 if data["delivered"] else 0
 
-            original_amount = float(amount_raw)
-            usd_amount = convert_to_usd(original_amount, currency)
+    if "amount" in data or "currency" in data:
+        amount_new = float(data.get("amount") or row.get("amount_original") or 0)
+        currency_new = (data.get("currency") or row.get("currency") or "USD").upper()
+        updates["amount_original"] = amount_new
+        updates["currency"] = currency_new
+        updates["amount_usd"] = round(to_usd(amount_new, currency_new), 2)
 
-            ws.cell(row=idx, column=headers.index("total_amount")+1, value=usd_amount)
-            if "currency" in headers:
-                ws.cell(row=idx, column=headers.index("currency")+1, value=currency)
-            if "original_amount" in headers:
-                ws.cell(row=idx, column=headers.index("original_amount")+1, value=original_amount)
+    updates["updated_at"] = now_iso()
 
-        # numeric toggles
-        if "paid" in patch:
-            ws.cell(row=idx, column=headers.index("paid")+1,
-                    value=1 if patch["paid"] else 0)
-        if "delivered" in patch:
-            ws.cell(row=idx, column=headers.index("delivered")+1,
-                    value=1 if patch["delivered"] else 0)
+    if not update_row_by_id("requisitions", rid, updates):
+        return jsonify({"error": "not_found"}), 404
 
-        # status
-        if "status" in patch:
-            st = (patch["status"] or "").strip().lower()
-            if st not in ("open","cancelled"):
-                return jsonify({"error":"bad_status"}), 400
-            ws.cell(row=idx, column=headers.index("status")+1, value=st)
-
-        # other fields
-        for key in ("vessel","supplier","date_ordered","expected"):
-            if key in patch and key in headers:
-                ws.cell(row=idx, column=headers.index(key)+1, value=patch[key] or "")
-
-        _save_wb(wb)
+    log_action("requisition_edit", str(rid))
     return jsonify({"ok": True})
+
+
+@app.patch("/api/requisitions/<int:rid>/toggle_paid")
+def toggle_paid_req(rid: int):
+    guard = require_login()
+    if guard:
+        return guard
+
+    reqs = read_rows("requisitions")
+    row = next((r for r in reqs if int(r["id"]) == rid), None)
+    if not row:
+        return jsonify({"error": "not_found"}), 404
+    if not can_edit_row(row):
+        return jsonify({"error": "not_allowed"}), 403
+
+    new_paid = 0 if int(row.get("paid") or 0) else 1
+    update_row_by_id("requisitions", rid, {"paid": new_paid, "updated_at": now_iso()})
+    log_action("requisition_toggle_paid", str(rid))
+    return jsonify({"ok": True})
+
 
 @app.delete("/api/requisitions/<int:rid>")
-def req_delete(rid):
-    need = require_login()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Requisitions"]
-        idx = _find_row_index_by(ws, "id", rid)
-        if idx:
-            ws.delete_rows(idx); _save_wb(wb)
+def delete_requisition(rid: int):
+    guard = require_login()
+    if guard:
+        return guard
+    u = current_user()
+    if not u or u["role"] != "admin":
+        return jsonify({"error": "not_allowed"}), 403
+
+    if not delete_row_by_id("requisitions", rid):
+        return jsonify({"error": "not_found"}), 404
+    log_action("requisition_delete", str(rid))
     return jsonify({"ok": True})
 
-# ===== Landings =====
+
+# -------------------------------------------------
+# Landings
+# -------------------------------------------------
 @app.get("/api/landings")
-def land_list():
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Landings"]; rows = _sheet_rows(ws)
+def list_landings():
+    rows = read_rows("landings")
     for r in rows:
-        r["id"] = int(r["id"])
-        r["amount"] = float(r.get("amount") or 0.0)
+        r["amount_usd"] = float(r.get("amount_usd") or 0)
+        r["amount_original"] = float(r.get("amount_original") or 0)
         r["paid"] = int(r.get("paid") or 0)
-        r["expected"] = r.get("expected") or ""
-        r["landed_date"] = r.get("landed_date") or ""
-        r["status"] = (r.get("status") or "open").strip().lower()
         r["delivered"] = int(r.get("delivered") or 0)
-        r["currency"] = (r.get("currency") or "USD").upper()
-        if r.get("amount_original") is None:
-            r["amount_original"] = r["amount"]
-        else:
-            r["amount_original"] = float(r.get("amount_original") or 0.0)
-    return jsonify(sorted(rows, key=lambda x: x["id"], reverse=True))
+    return jsonify(rows)
+
 
 @app.post("/api/landings")
-def land_add():
-    need = require_login()
-    if need: return need
-    d = request.json or {}
-    amount_raw = d.get("amount")
-    required = ["vessel","item","workshop"]
-    if any(not d.get(k) for k in required) or amount_raw in (None, "", []):
-        return jsonify({"error":"missing_fields"}), 400
+def add_landing():
+    guard = require_login()
+    if guard:
+        return guard
 
-    currency = (d.get("currency") or "USD").upper()
-    original_amount = float(amount_raw)
-    usd_amount = convert_to_usd(original_amount, currency)
+    data = request.json or {}
+    vessel = (data.get("vessel") or "").strip()
+    item = (data.get("item") or data.get("description") or "").strip()
+    workshop = (data.get("workshop") or "").strip()
+    expected = data.get("expected") or ""
+    landed_date = data.get("landed_date") or ""
+    amount = float(data.get("amount") or 0)
+    currency = (data.get("currency") or "USD").strip().upper()
+    paid = 1 if data.get("paid") else 0
+    delivered = 1 if data.get("delivered") else 0
+    status = (data.get("status") or "open").strip().lower()
 
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Landings"]; rows = _sheet_rows(ws)
-        new_id = _next_id(rows)
-        ws.append([
-            new_id,
-            d["vessel"].strip(),
-            d["item"].strip(),
-            d["workshop"],
-            usd_amount,                    # stored in USD
-            1 if d.get("paid") else 0,
-            d.get("expected") or "",
-            d.get("landed_date") or "",
-            "open",
-            0,                             # delivered
-            currency,
-            original_amount,
-        ])
-        _save_wb(wb)
-    return jsonify({"ok": True})
+    if not vessel or not item or not workshop or amount <= 0:
+        return jsonify({"error": "missing_fields"}), 400
 
-@app.patch("/api/landings/<int:lid>/toggle_paid")
-def land_toggle_paid(lid):
-    need = require_login()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Landings"]
-        idx = _find_row_index_by(ws, "id", lid)
-        if not idx: return jsonify({"error":"not_found"}), 404
-        headers = [c.value for c in ws[1]]
-        col = headers.index("paid") + 1
-        cur = int(ws.cell(row=idx, column=col).value or 0)
-        ws.cell(row=idx, column=col, value=0 if cur else 1)
-        _save_wb(wb)
-    return jsonify({"ok": True})
+    usd = round(to_usd(amount, currency), 2)
+
+    row = {
+        "id": next_id("landings"),
+        "vessel": vessel,
+        "item": item,
+        "workshop": workshop,
+        "expected": expected,
+        "landed_date": landed_date,
+        "amount_original": amount,
+        "currency": currency,
+        "amount_usd": usd,
+        "paid": paid,
+        "delivered": delivered,
+        "status": status,
+        "created_by": current_user()["username"],
+        "created_at": now_iso(),
+        "updated_at": now_iso()
+    }
+    append_row("landings", row)
+    log_action("landing_add", f"{vessel}:{item}")
+    return jsonify(row)
+
 
 @app.patch("/api/landings/<int:lid>")
-def land_update(lid):
-    need = require_login()
-    if need: return need
-    patch = request.json or {}
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Landings"]; rows = _sheet_rows(ws)
-        idx = _find_row_index_by(ws, "id", lid)
-        if not idx: return jsonify({"error":"not_found"}), 404
-        headers = [c.value for c in ws[1]]
+def edit_landing(lid: int):
+    guard = require_login()
+    if guard:
+        return guard
 
-        cur = next((r for r in rows if int(r["id"]) == lid), None)
+    lands = read_rows("landings")
+    row = next((r for r in lands if int(r["id"]) == lid), None)
+    if not row:
+        return jsonify({"error": "not_found"}), 404
+    if not can_edit_row(row):
+        return jsonify({"error": "not_allowed"}), 403
 
-        # amount + currency
-        if any(k in patch for k in ("amount", "currency")):
-            cur_currency = (cur.get("currency") or "USD").upper() if cur else "USD"
-            cur_orig = float(cur.get("amount_original") or cur.get("amount") or 0.0) if cur else 0.0
-            amount_raw = patch.get("amount", cur_orig)
-            currency = (patch.get("currency") or cur_currency).upper()
+    data = request.json or {}
+    updates: Dict[str, Any] = {}
 
-            original_amount = float(amount_raw)
-            usd_amount = convert_to_usd(original_amount, currency)
+    for k in ["vessel", "item", "workshop", "expected", "landed_date", "status"]:
+        if k in data:
+            val = data[k]
+            if isinstance(val, str):
+                val = val.strip()
+            updates[k] = val
 
-            ws.cell(row=idx, column=headers.index("amount")+1, value=usd_amount)
-            if "currency" in headers:
-                ws.cell(row=idx, column=headers.index("currency")+1, value=currency)
-            if "amount_original" in headers:
-                ws.cell(row=idx, column=headers.index("amount_original")+1, value=original_amount)
+    if "paid" in data:
+        updates["paid"] = 1 if data["paid"] else 0
+    if "delivered" in data:
+        updates["delivered"] = 1 if data["delivered"] else 0
 
-        if "paid" in patch:
-            ws.cell(row=idx, column=headers.index("paid")+1,
-                    value=1 if patch["paid"] else 0)
-        if "delivered" in patch:
-            ws.cell(row=idx, column=headers.index("delivered")+1,
-                    value=1 if patch["delivered"] else 0)
+    if "amount" in data or "currency" in data:
+        amount_new = float(data.get("amount") or row.get("amount_original") or 0)
+        currency_new = (data.get("currency") or row.get("currency") or "USD").upper()
+        updates["amount_original"] = amount_new
+        updates["currency"] = currency_new
+        updates["amount_usd"] = round(to_usd(amount_new, currency_new), 2)
 
-        if "status" in patch:
-            st = (patch["status"] or "").strip().lower()
-            if st not in ("open","cancelled"):
-                return jsonify({"error":"bad_status"}), 400
-            ws.cell(row=idx, column=headers.index("status")+1, value=st)
+    updates["updated_at"] = now_iso()
 
-        for key in ("vessel","item","workshop","expected","landed_date"):
-            if key in patch and key in headers:
-                ws.cell(row=idx, column=headers.index(key)+1, value=patch[key] or "")
+    if not update_row_by_id("landings", lid, updates):
+        return jsonify({"error": "not_found"}), 404
 
-        _save_wb(wb)
+    log_action("landing_edit", str(lid))
     return jsonify({"ok": True})
+
+
+@app.patch("/api/landings/<int:lid>/toggle_paid")
+def toggle_paid_land(lid: int):
+    guard = require_login()
+    if guard:
+        return guard
+
+    lands = read_rows("landings")
+    row = next((r for r in lands if int(r["id"]) == lid), None)
+    if not row:
+        return jsonify({"error": "not_found"}), 404
+    if not can_edit_row(row):
+        return jsonify({"error": "not_allowed"}), 403
+
+    new_paid = 0 if int(row.get("paid") or 0) else 1
+    update_row_by_id("landings", lid, {"paid": new_paid, "updated_at": now_iso()})
+    log_action("landing_toggle_paid", str(lid))
+    return jsonify({"ok": True})
+
 
 @app.delete("/api/landings/<int:lid>")
-def land_delete(lid):
-    need = require_login()
-    if need: return need
-    with WB_LOCK:
-        wb = _open_wb(); ws = wb["Landings"]
-        idx = _find_row_index_by(ws, "id", lid)
-        if idx:
-            ws.delete_rows(idx); _save_wb(wb)
+def delete_landing(lid: int):
+    guard = require_login()
+    if guard:
+        return guard
+    u = current_user()
+    if not u or u["role"] != "admin":
+        return jsonify({"error": "not_allowed"}), 403
+
+    if not delete_row_by_id("landings", lid):
+        return jsonify({"error": "not_found"}), 404
+    log_action("landing_delete", str(lid))
     return jsonify({"ok": True})
 
-# ===== Serve SPA =====
-@app.get("/")
-def root():
-    return send_from_directory("static", "index.html")
 
+# -------------------------------------------------
+# Run local
+# -------------------------------------------------
 if __name__ == "__main__":
-    _ensure_workbook()
-    app.run(host="0.0.0.0", port=8000, debug=True)
-
-
-
-
-
-
-
-
+    ensure_db()
+    app.run(host="0.0.0.0", port=5000, debug=True)
