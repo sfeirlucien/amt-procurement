@@ -221,7 +221,8 @@
           <table id="overviewReqTable">
             <thead>
               <tr>
-                <th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+                <th>Number</th>
+            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
                 <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
               </tr>
             </thead>
@@ -253,6 +254,10 @@
             <label>Requisition Number
               <input type="text" id="reqNumber" />
             </label>
+          </div>
+          <div class="form-group">
+            <label for="reqDescription">Description</label>
+            <input type="text" id="reqDescription" class="form-control" placeholder="Short description">
           </div>
           <div class="flex-1">
             <label>Vessel
@@ -359,7 +364,8 @@
         <table id="reqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>ID</th><th>Number</th>
+            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
               <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
             </tr>
@@ -373,7 +379,8 @@
         <table id="reqCancelledTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>ID</th><th>Number</th>
+            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
           </thead>
@@ -559,7 +566,8 @@
         <table id="deliveredReqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>ID</th><th>Number</th>
+            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
           </thead>
@@ -1223,7 +1231,7 @@ async function loadAllRequisitions(){
     if((r.status||"open")==="cancelled") statusClass="status-cancelled";
     if(r.delivered) statusClass="status-delivered";
 
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
@@ -1307,6 +1315,7 @@ document.getElementById("clearReqFilterBtn").onclick=async ()=>{
 
 document.getElementById("saveReqBtn").onclick=async ()=>{
   const number=document.getElementById("reqNumber").value.trim();
+  const description = document.getElementById("reqDescription").value.trim();
   const vessel=document.getElementById("reqVessel").value.trim();
   const category=document.getElementById("reqCategory").value.trim();
   const supplier=document.getElementById("reqSupplierSelect").value.trim();
@@ -1344,7 +1353,7 @@ async function loadOverviewRequisitions(){
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
       <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
@@ -1481,7 +1490,7 @@ async function fillCancelledTables(){
   reqBody.innerHTML=""; landBody.innerHTML="";
   allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     reqBody.appendChild(tr);
@@ -1523,7 +1532,7 @@ async function loadDeliveredRequisitions(){
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     tbody.appendChild(tr);
