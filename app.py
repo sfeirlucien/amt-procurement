@@ -148,19 +148,32 @@ def ensure_db() -> None:
 
     wb.save(DB_FILE)
 
+    # -------------------------------
+    # FIX: ensure at least one valid admin exists
+    # -------------------------------
+    all_users = read_rows("users")
+
     def has_valid_admin(us: List[Dict[str, Any]]) -> bool:
         for u in us:
             if (u.get("role") or "").lower() == "admin" and (u.get("password_hash") or "").strip():
                 return True
         return False
 
-    if (not users) or (not has_valid_admin(users)):
-        append_row("users", {
-            "username": DEFAULT_ADMIN["username"],
-            "password_hash": hash_pw(DEFAULT_ADMIN["password"]),
-            "role": DEFAULT_ADMIN["role"],
-            "created_at": now_iso()
-        })
+    if not all_users or not has_valid_admin(all_users):
+        # Clear users sheet completely (repair)
+        for r_idx in range(ws.max_row, 1, -1):
+            ws.delete_rows(r_idx, 1)
+
+        # Add correct admin
+        ws.append([
+            DEFAULT_ADMIN["username"],
+            hash_pw(DEFAULT_ADMIN["password"]),
+            "admin",
+            now_iso()
+        ])
+
+        wb.save(DB_FILE)
+
 
 
 def get_wb() -> Workbook:
