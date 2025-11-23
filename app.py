@@ -20,8 +20,22 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.secret_key = "SECRET_KEY_987654321"
 
-# IMPORTANT for login/session with frontend hosted elsewhere
-CORS(app, supports_credentials=True)
+# ✅ REQUIRED so browser stores your session cookie across domains
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None",  # allow cross-site cookie
+    SESSION_COOKIE_SECURE=True       # required when SameSite=None (HTTPS)
+)
+
+# ✅ CORS must allow credentials + a specific origin (NOT "*")
+CORS(app, supports_credentials=True, origins=[
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    # 🔥 put your real frontend URL here:
+    # "https://your-frontend-domain.com"
+])
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAIN_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
@@ -920,3 +934,4 @@ def api_backups_delete(filename):
 # ============================================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
