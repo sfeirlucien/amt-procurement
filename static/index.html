@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="icon" type="image/png" href="static/ICON.jpg">
   <meta charset="UTF-8" />
   <title>AMT Procurement</title>
@@ -264,6 +265,27 @@
     </div>
 
     <div>
+  <label>Quarter
+    <select id="ovQuarterFilter">
+      <option value="">All quarters</option>
+      <option value="Q1">Q1 (Jan–Mar)</option>
+      <option value="Q2">Q2 (Apr–Jun)</option>
+      <option value="Q3">Q3 (Jul–Sep)</option>
+      <option value="Q4">Q4 (Oct–Dec)</option>
+    </select>
+  </label>
+</div>
+    
+<div>
+  <label>Category
+    <select id="ovCategoryFilter">
+      <option value="">All categories</option>
+    </select>
+  </label>
+</div>
+
+
+    <div>
       <label>Year
         <select id="ovYearFilter">
           <option value="">All years</option>
@@ -337,7 +359,33 @@
         </div>
       </div>
     </div>
+########
+    <div class="card" style="margin-top:12px;">
+  <h2>Spend Visuals</h2>
 
+  <div class="summary-grid" style="margin-top:10px;">
+    <div class="summary-item" style="min-height:260px;">
+      <div class="summary-label">Paid vs Unpaid</div>
+      <canvas id="chartPaidUnpaid" height="180"></canvas>
+    </div>
+
+    <div class="summary-item" style="min-height:260px;">
+      <div class="summary-label">Spend per Vessel</div>
+      <canvas id="chartVessel" height="180"></canvas>
+    </div>
+
+    <div class="summary-item" style="min-height:260px;">
+      <div class="summary-label">Spend per Category</div>
+      <canvas id="chartCategory" height="180"></canvas>
+    </div>
+  </div>
+
+  <h3 style="margin-top:16px;">Top 5 Suppliers (Selected Period)</h3>
+  <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;">
+    <li>—</li>
+  </ul>
+</div>
+#########
     <!-- REQUISITIONS -->
     <div id="tab-requisitions" class="hidden">
       <div class="card">
@@ -850,6 +898,16 @@ let editingLandId = null;
 let editingCatId = null;
 let dirPopupType = null;
 let currencyList = ["USD"];
+let chartPaidUnpaid = null;
+let chartVessel = null;
+let chartCategory = null;
+
+function quarterOfMonth(m){ // m = 1..12
+  if (m <= 3) return "Q1";
+  if (m <= 6) return "Q2";
+  if (m <= 9) return "Q3";
+  return "Q4";
+}
 
 /* ========= Currencies (from backend) ========= */
 async function loadCurrencies() {
@@ -923,6 +981,15 @@ async function refreshSession() {
 
 async function loadOverviewTotalsFilters() {
   // ensure data exists
+    // Fill Category dropdown from both sheets
+  const cats = new Set();
+  reqs.forEach(r => cats.add((r.category || "").trim()));
+  lands.forEach(r => cats.add((r.category || "").trim()));
+
+  const catSel = document.getElementById("ovCategoryFilter");
+  catSel.innerHTML = `<option value="">All categories</option>` +
+    [...cats].filter(c => c).sort().map(c => `<option value="${c}">${c}</option>`).join("");
+
   let reqs = allReqs;
   let lands = allLandings;
   if (!reqs.length) {
@@ -966,24 +1033,31 @@ function updateOverviewPaidTotals(reqs, lands) {
   const paidF = document.getElementById("ovPaidFilter").value;      // "", "1", "0"
   const monthF = document.getElementById("ovMonthFilter").value;    // "", "1".."12"
   const yearF = document.getElementById("ovYearFilter").value;      // "", "2025"...
+  const quarterF = document.getElementById("ovQuarterFilter").value; 
+  const categoryF = document.getElementById("ovCategoryFilter").value;
 
   let filtered = [];
 
   if (!typeF || typeF === "req") filtered = filtered.concat(reqs.map(r => ({
-    _type: "req",
-    vessel: r.vessel,
-    paid: Number(r.paid || 0),
-    amount: Number(r.total_amount || 0),
-    date: r.date_ordered
-  })));
+  _type: "req",
+  vessel: r.vessel,
+  category: r.category,
+  supplier: r.supplier,
+  paid: Number(r.paid || 0),
+  amount: Number(r.total_amount || 0),
+  date: r.date_ordered
+})));
 
   if (!typeF || typeF === "land") filtered = filtered.concat(lands.map(r => ({
-    _type: "land",
-    vessel: r.vessel,
-    paid: Number(r.paid || 0),
-    amount: Number(r.amount || 0),
-    date: r.landed_date
-  })));
+  _type: "land",
+  vessel: r.vessel,
+  category: r.category,
+  supplier: r.supplier || r.workshop,   // in landings supplier may be workshop
+  paid: Number(r.paid || 0),
+  amount: Number(r.amount || 0),
+  date: r.landed_date
+})));
+
 
   // Apply filters
   filtered = filtered.filter(x => {
@@ -993,8 +1067,22 @@ function updateOverviewPaidTotals(reqs, lands) {
     const dt = parseDateSafe(x.date);
     if (!dt) return false;
 
-    if (yearF && String(dt.getFullYear()) !== yearF) return false;
-    if (monthF && String(dt.getMonth() + 1) !== monthF) return false;
+    const mm = dt.getMonth() + 1;
+    const yy = dt.getFullYear();
+    const qq = quarterOfMonth(mm);
+
+    if (yearF && String(yy) !== yearF) return false;
+
+    // If month is selected, month used.
+    if (monthF) {
+      if (String(mm) !== monthF) return false;
+    } else if (quarterF) {
+      // If no month but quarter selected, quarter used
+      if (qq !== quarterF) return false;
+    }
+
+    if (categoryF && (x.category || "") !== categoryF) return false;
+
 
     return true;
   });
@@ -1036,7 +1124,75 @@ document.getElementById("ovClearTotalsBtn").onclick = async () => {
   document.getElementById("ovPaidFilter").value = "";
   document.getElementById("ovMonthFilter").value = "";
   document.getElementById("ovYearFilter").value = "";
+  document.getElementById("ovQuarterFilter").value = "";
+  document.getElementById("ovCategoryFilter").value = "";
+
   await loadOverviewTotalsFilters();
+    // ===== Charts (Feature 4) =====
+
+  // Paid vs unpaid
+  const paidSum = paidOnly.reduce((s,x)=>s+x.amount,0);
+  const unpaidSum = allTotal - paidSum;
+
+  if (chartPaidUnpaid) chartPaidUnpaid.destroy();
+  chartPaidUnpaid = new Chart(document.getElementById("chartPaidUnpaid"), {
+    type: "doughnut",
+    data: {
+      labels: ["Paid", "Unpaid"],
+      datasets: [{ data: [paidSum, unpaidSum] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+
+  // Spend per vessel (bar)
+  const vesselMap = {};
+  filtered.forEach(x=>{
+    const v = x.vessel || "Unknown";
+    vesselMap[v] = (vesselMap[v] || 0) + x.amount;
+  });
+  const vesselPairs = Object.entries(vesselMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  if (chartVessel) chartVessel.destroy();
+  chartVessel = new Chart(document.getElementById("chartVessel"), {
+    type: "bar",
+    data: {
+      labels: vesselPairs.map(p=>p[0]),
+      datasets: [{ label: "USD", data: vesselPairs.map(p=>p[1]) }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+
+  // Spend per category (pie)
+  const catMap = {};
+  filtered.forEach(x=>{
+    const c = x.category || "Uncategorized";
+    catMap[c] = (catMap[c] || 0) + x.amount;
+  });
+  const catPairs = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  if (chartCategory) chartCategory.destroy();
+  chartCategory = new Chart(document.getElementById("chartCategory"), {
+    type: "pie",
+    data: {
+      labels: catPairs.map(p=>p[0]),
+      datasets: [{ data: catPairs.map(p=>p[1]) }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+
+  // ===== Top 5 suppliers (Feature 6) =====
+  const supMap = {};
+  filtered.forEach(x=>{
+    const sname = x.supplier || "Unknown";
+    supMap[sname] = (supMap[sname] || 0) + x.amount;
+  });
+  const topSup = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const ul = document.getElementById("ovTopSuppliers");
+  ul.innerHTML = topSup.length
+    ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("")
+    : "<li>—</li>";
+
 };
 
     
@@ -2147,4 +2303,5 @@ async function updateSummaryCounts() {
 
 </body>
 </html>
+
 
