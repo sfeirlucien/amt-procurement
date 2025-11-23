@@ -2,289 +2,222 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>AMT Procurement</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/png" href="static/ICON.jpg">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-
-    :root {
-      --bg:#f5f7fb;
-      --card:#ffffff;
-      --ink:#0f172a;
-      --muted:#64748b;
-      --primary:#2563eb;
-      --primary-ink:#ffffff;
-      --border:#e5e7eb;
-      --radius:12px;
-      --shadow:0 6px 18px rgba(15,23,42,0.06);
-    }
-    body { background:var(--bg); color:var(--ink); }
-
-    .tabs { position:sticky; top:0; z-index:20; }
-    .tab { transition:all .15s ease; }
-    .tab:hover { color:#fff; background:#0b1220; }
-
-    .card { border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid var(--border); }
-    .card h2 { font-weight:700; letter-spacing:.2px; }
-
-    /* Dashboard squares */
-    .summary-grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap:12px;
-    }
-    .summary-item{
-      background:linear-gradient(180deg,#fff, #f8fafc);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:14px;
-      min-height:110px;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-    }
-    .summary-label{ color:var(--muted); font-size:12px; }
-    .summary-value{ font-size:26px; font-weight:800; }
-
-    /* Tables in overview */
-    .table-wrap{ overflow:auto; border:1px solid var(--border); border-radius:12px; }
-    table thead th{
-      position:sticky; top:0;
-      background:#f1f5f9;
-      font-weight:700;
-      color:#0f172a;
-    }
-    table tbody tr:nth-child(even){ background:#fafafa; }
-    table tbody tr:hover{ background:#eef2ff; }
-
-    .two-col{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
-    }
-    @media (max-width: 900px){
-      .two-col{ grid-template-columns:1fr; }
-    }
-    
-
-    :root{
-      --bg:#f5f6f8; --card:#ffffff; --ink:#111827; --muted:#6b7280;
-      --primary:#2563eb; --primary-dark:#1d4ed8; --danger:#b91c1c;
-      --tab:#111827; --tab-active:#1f2937; --tab-text:#9ca3af; --tab-text-active:#fff;
-      --border:#e5e7eb;
-    }
-    *{box-sizing:border-box;}
-    body{margin:0;font-family:Arial, sans-serif;background:var(--bg);color:var(--ink);}
-    header{
-      background:var(--tab-active);color:#fff;padding:10px 16px;display:flex;
-      justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:10;
-    }
-    header .left{display:flex;align-items:center;gap:12px;}
-    header img{height:40px;border-radius:4px;}
-    header h1{margin:0;font-size:20px;}
-    header .user-info{font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-    button{
-      padding:7px 12px;font-size:13px;border-radius:6px;border:none;cursor:pointer;
-      background:var(--primary);color:white;transition:0.15s;
-    }
-    button:hover{background:var(--primary-dark);}
-    button.secondary{background:#6b7280;}
-    button.secondary:hover{background:#4b5563;}
-    button.danger{background:var(--danger);}
-    button.danger:hover{filter:brightness(0.9);}
-
-    .tabs{display:flex;background:var(--tab);flex-wrap:wrap;}
-    .tab{
-      padding:10px 16px;color:var(--tab-text);cursor:pointer;font-size:14px;
-      user-select:none;border-bottom:2px solid transparent;
-    }
-    .tab.active{
-      background:var(--tab-active);color:var(--tab-text-active);border-bottom:2px solid var(--primary);
-    }
-    .container{padding:16px;max-width:1200px;margin:0 auto;}
-    .card{
-      background:var(--card);padding:16px;margin-bottom:16px;border-radius:8px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid var(--border);
-    }
-    .card h2{margin:0 0 12px 0;font-size:18px;}
-    .hidden{display:none !important;}
-    label{display:block;font-size:13px;margin-bottom:6px;color:var(--ink);}
-    input, select{
-      width:100%;padding:8px 9px;font-size:13px;border-radius:6px;border:1px solid var(--border);
-      background:#fff;
-    }
-    .error{color:var(--danger);font-size:12px;margin-top:6px;}
-
-    /* login modal card */
-    #loginCard{
-      max-width:320px;margin:12px auto;position:relative;z-index:20;
-    }
-    .row{display:flex;gap:12px;flex-wrap:wrap;}
-    .row > div{flex:1 1 140px;}
-
-    /* tab panels */
-    .tab-panel{display:none;}
-    .tab-panel.active{display:block;}
+    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
+    header { background:#1f2937; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:20px; }
+    header .user-info { font-size:14px; display:flex; align-items:center; gap:8px;}
+    .tabs { display:flex; background:#111827; flex-wrap:wrap; }
+    .tab { padding:10px 16px; color:#9ca3af; cursor:pointer; font-size:14px; user-select:none; }
+    .tab.active { background:#1f2937; color:#fff; }
+    .container { padding:16px; max-width:1200px; margin:0 auto; }
+    .card { background:#fff; padding:16px; margin-bottom:16px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    .card h2 { margin-top:0; font-size:18px; }
+    .flex-row { display:flex; gap:16px; flex-wrap:wrap; }
+    .flex-1 { flex:1 1 0; min-width:260px; }
+    label { display:block; font-size:13px; margin-bottom:6px; }
+    input, select { width:100%; padding:6px 8px; margin-top:2px; box-sizing:border-box; font-size:13px; }
+    button { padding:6px 10px; font-size:13px; border-radius:4px; border:none; cursor:pointer; background:#2563eb; color:#fff; }
+    button.secondary { background:#6b7280; }
+    button.danger { background:#b91c1c; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { border:1px solid #e5e7eb; padding:6px 8px; text-align:left; }
+    th { background:#f3f4f6; }
+    .tag { display:inline-block; padding:2px 6px; border-radius:999px; font-size:11px; }
+    .tag.green { background:#dcfce7; color:#166534; }
+    .tag.red { background:#fee2e2; color:#b91c1c; }
+    .tag.gray { background:#e5e7eb; color:#374151; }
+    .error { color:#b91c1c; font-size:12px; margin-top:4px; }
+    .hidden { display:none; }
+    #loginCard { max-width:320px; margin:12px auto; position:relative; z-index:10; }
+    .summary-grid { display:flex; flex-wrap:wrap; gap:10px; }
+    .summary-item { flex:1 1 180px; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; font-size:13px; }
+    .summary-label { color:#6b7280; font-size:12px; }
+    .summary-value { font-size:18px; font-weight:bold; margin-top:4px; }
+    .filter-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; align-items:flex-end; }
+    .filter-row > div { min-width:140px; flex:1 1 120px; }
+    .status-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
+    .status-open { background:#eef2ff; color:#4f46e5; }
+    .status-cancelled { background:#fee2e2; color:#b91c1c; }
+    .status-delivered { background:#dcfce7; color:#166534; }
+    .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.2); padding:16px; max-width:400px; width:90%; z-index:50; }
+    #dirPopupBackdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:40; }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="left">
-    <img src="static/logo.png" alt="AMT Logo">
+  <div style="display:flex; align-items:center; gap:12px;">
+    <img src="static/logo.png" alt="AMT Logo" style="height:40px; width:auto; border-radius:4px;">
     <h1>AMT Procurement</h1>
   </div>
-  <div class="user-info" id="userInfo">Not logged in <button id="showLoginBtn" type="button">Login</button></div>
+  <div class="user-info" id="userInfo"></div>
 </header>
 
-<!-- Login Card -->
 <div id="loginCard" class="card hidden">
   <h2>Login</h2>
-  <div class="row">
-    <div>
-      <label>Username</label>
-      <input id="loginUsername" type="text" autocomplete="username">
-    </div>
-  </div>
-  <div class="row">
-    <div>
-      <label>Password</label>
-      <input id="loginPassword" type="password" autocomplete="current-password">
-    </div>
-  </div>
-  <div style="margin-top:10px;display:flex;gap:8px;">
-    <button id="loginBtn">Login</button>
-    <button id="loginCancelBtn" class="secondary" type="button">Close</button>
-  </div>
+  <label>Username
+    <input type="text" id="loginUsername" />
+  </label>
+  <label>Password
+    <input type="password" id="loginPassword" />
+  </label>
+  <button id="loginBtn">Login</button>
   <div id="loginError" class="error"></div>
 </div>
 
-<!-- Tabs -->
-<div class="tabs">
-  <div class="tab active" data-tab="overview">Overview</div>
-  <div class="tab" data-tab="requisitions">Requisitions</div>
-  <div class="tab" data-tab="landings">Landings</div>
-  <div class="tab" data-tab="directory">Directory</div>
-  <div class="tab" data-tab="delivered">Delivered</div>
-  <div class="tab hidden" data-tab="admin" id="adminTab">Admin</div>
+<div id="dirPopupBackdrop" class="hidden"></div>
+<div id="dirPopup" class="popup hidden">
+  <h3 id="dirPopupTitle">New entry</h3>
+  <label>Name
+    <input type="text" id="dirPopupName" />
+  </label>
+  <label>Email
+    <input type="email" id="dirPopupEmail" />
+  </label>
+  <label>Phone
+    <input type="text" id="dirPopupPhone" />
+  </label>
+  <label>Location / Address
+    <input type="text" id="dirPopupAddress" />
+  </label>
+  <div id="dirPopupError" class="error"></div>
+  <div style="margin-top:10px; text-align:right;">
+    <button id="dirPopupCancelBtn" class="secondary">Cancel</button>
+    <button id="dirPopupSaveBtn">Save</button>
+  </div>
 </div>
 
-<div class="container">
-  
-  
-  <!-- OVERVIEW -->
-  <div id="tab-overview" class="tab-panel">
-    <div class="card">
-      <h2>Dashboard</h2>
-      <div class="summary-grid">
-        <div class="summary-item">
-          <div class="summary-label">Open Requisitions (not delivered)</div>
-          <div class="summary-value" id="summaryOpenReqNotDel">0</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">Open Requisitions (unpaid)</div>
-          <div class="summary-value" id="summaryOpenReqUnpaid">0</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">Open Landed Items (not delivered)</div>
-          <div class="summary-value" id="summaryOpenLandNotDel">0</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">Open Landed Items (unpaid)</div>
-          <div class="summary-value" id="summaryOpenLandUnpaid">0</div>
-        </div>
-      </div>
-    </div>
+<div id="app">
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">Overview</div>
+    <div class="tab" data-tab="requisitions">Requisitions</div>
+    <div class="tab" data-tab="landings">Landings</div>
+    <div class="tab" data-tab="directory">Directory</div>
+    <div class="tab" data-tab="delivered">Delivered</div>
+    <div class="tab hidden" data-tab="admin" id="adminTab">Admin</div>
+  </div>
 
-    <div class="card" style="margin-top:12px;">
-      <h2>Paid Totals (Filters)</h2>
+  <div class="container tab-content">
 
-      <div class="row">
-        <div>
-          <label>Type</label>
-          <select id="ovTypeFilter">
-            <option value="">All</option>
-            <option value="req">Requisitions</option>
-            <option value="land">Workshops (Landed Items)</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Vessel</label>
-          <select id="ovVesselFilter">
-            <option value="">All</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Paid?</label>
-          <select id="ovPaidFilter">
-            <option value="">All</option>
-            <option value="1">Paid</option>
-            <option value="0">Unpaid</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Month</label>
-          <select id="ovMonthFilter">
-            <option value="">All months</option>
-            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
-            <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
-            <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
-            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Quarter</label>
-          <select id="ovQuarterFilter">
-            <option value="">All quarters</option>
-            <option value="Q1">Q1</option><option value="Q2">Q2</option>
-            <option value="Q3">Q3</option><option value="Q4">Q4</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Category</label>
-          <select id="ovCategoryFilter"><option value="">All categories</option></select>
-        </div>
-
-        <div>
-          <label>Year</label>
-          <select id="ovYearFilter"><option value="">All years</option></select>
-        </div>
-      </div>
-
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button id="ovApplyTotalsBtn" type="button">Apply</button>
-        <button id="ovClearTotalsBtn" class="secondary" type="button">Clear</button>
-      </div>
-
-      <div class="summary-grid" style="margin-top:12px;">
-        <div class="summary-item" style="min-height:90px;">
-          <div class="summary-label">Total Paid (Selected Period)</div>
-          <div class="summary-value" id="ovPaidPeriodTotal">0.00</div>
-        </div>
-        <div class="summary-item" style="min-height:90px;">
-          <div class="summary-label">Total Amount (Filter Result)</div>
-          <div class="summary-value" id="ovAllTotal">0.00</div>
-        </div>
-      </div>
-
-      <h3 style="margin-top:14px;">Top 5 Suppliers (Selected Period)</h3>
-      <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;">
-        <li>—</li>
-      </ul>
-    </div>
-
-    <div class="two-col" style="margin-top:12px;">
+    <!-- OVERVIEW -->
+    <div id="tab-overview">
       <div class="card">
-        <h2 style="display:flex;justify-content:space-between;align-items:center;">
-          Recent Requisitions
-          <span style="font-size:12px;color:var(--muted);font-weight:500;">Last 10</span>
-        </h2>
-        <div class="table-wrap">
+        <h2>Dashboard</h2>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">Open Requisitions (not delivered)</div>
+            <div class="summary-value" id="summaryOpenReqNotDel">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Open Requisitions (unpaid)</div>
+            <div class="summary-value" id="summaryOpenReqUnpaid">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Open Landed Items (not delivered)</div>
+            <div class="summary-value" id="summaryOpenLandNotDel">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Open Landed Items (unpaid)</div>
+            <div class="summary-value" id="summaryOpenLandUnpaid">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Paid Totals (Filters)</h2>
+        <div class="filter-row">
+          <div>
+            <label>Type
+              <select id="ovTypeFilter">
+                <option value="">All</option>
+                <option value="req">Requisitions</option>
+                <option value="land">Workshops (Landed Items)</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Vessel
+              <select id="ovVesselFilter">
+                <option value="">All</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Paid?
+              <select id="ovPaidFilter">
+                <option value="">All</option>
+                <option value="1">Paid</option>
+                <option value="0">Unpaid</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Month
+              <select id="ovMonthFilter">
+                <option value="">All months</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Quarter
+              <select id="ovQuarterFilter">
+                <option value="">All quarters</option>
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4">Q4</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Category
+              <select id="ovCategoryFilter">
+                <option value="">All categories</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Year
+              <select id="ovYearFilter">
+                <option value="">All years</option>
+              </select>
+            </label>
+          </div>
+          <div style="align-self:flex-end;">
+            <button id="ovApplyTotalsBtn">Apply</button>
+            <button id="ovClearTotalsBtn" class="secondary">Clear</button>
+          </div>
+        </div>
+
+        <div class="summary-grid" style="margin-top:10px;">
+          <div class="summary-item">
+            <div class="summary-label">Total Paid (Selected Period)</div>
+            <div class="summary-value" id="ovPaidMonthTotal">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Total Paid (Selected Year)</div>
+            <div class="summary-value" id="ovPaidYearTotal">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Total Amount (Filter Result)</div>
+            <div class="summary-value" id="ovAllTotal">0</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top:16px;">Top 5 Suppliers (Selected Period)</h3>
+        <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;">
+          <li>—</li>
+        </ul>
+      </div>
+
+      <div class="flex-row">
+        <div class="card flex-1">
+          <h2>Recent Requisitions</h2>
           <table id="overviewReqTable">
             <thead>
               <tr>
@@ -295,19 +228,14 @@
             <tbody></tbody>
           </table>
         </div>
-      </div>
-
-      <div class="card">
-        <h2 style="display:flex;justify-content:space-between;align-items:center;">
-          Recent Landed Items
-          <span style="font-size:12px;color:var(--muted);font-weight:500;">Last 10</span>
-        </h2>
-        <div class="table-wrap">
+        <div class="card flex-1">
+          <h2>Recent Landed Items</h2>
           <table id="overviewLandTable">
             <thead>
               <tr>
                 <th>Vessel</th><th>Description</th><th>Workshop</th>
-                <th>Landed</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
+                <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
+                <th>Paid</th><th>Delivered</th><th>Status</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -315,406 +243,138 @@
         </div>
       </div>
     </div>
-  </div>
 
+    <!-- REQUISITIONS -->
+    <div id="tab-requisitions" class="hidden">
+      <div class="card">
+        <h2 id="reqFormTitle">Add Requisition</h2>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Requisition Number
+              <input type="text" id="reqNumber" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Vessel
+              <select id="reqVessel"></select>
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Category (Abbreviation)
+              <select id="reqCategory"></select>
+            </label>
+          </div>
+        </div>
 
-  <!-- REQUISITIONS -->
-  <div id="tab-requisitions" class="tab-panel">
-    <!-- Add / Edit form -->
-    <div class="card">
-      <h2 id="reqFormTitle">Add Requisition</h2>
-      <div class="row">
-        <div>
-          <label>Requisition Number *</label>
-          <input type="text" id="reqNumber" placeholder="e.g. GH.S.026.25">
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Supplier
+              <div style="display:flex; gap:8px;">
+                <select id="reqSupplierSelect" style="flex:1;"></select>
+                <button id="newSupplierBtn" type="button">New</button>
+              </div>
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Date Ordered
+              <input type="date" id="reqDateOrdered" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Expected Date
+              <input type="date" id="reqExpected" />
+            </label>
+          </div>
         </div>
-        <div>
-          <label>Vessel *</label>
-          <select id="reqVessel"></select>
+
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Amount
+              <input type="number" id="reqTotal" step="0.01" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Currency
+              <select id="reqCurrency"></select>
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>
+              <input type="checkbox" id="reqPaid" /> Paid
+            </label>
+          </div>
         </div>
-        <div>
-          <label>Category (Abbreviation) *</label>
-          <select id="reqCategory"></select>
+
+        <div style="margin-top:8px;">
+          <button id="saveReqBtn">Save Requisition</button>
+          <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
+        </div>
+        <div id="reqError" class="error"></div>
+      </div>
+
+      <div class="card">
+        <h2>Filter Requisitions</h2>
+        <div class="filter-row">
+          <div>
+            <label>Status
+              <select id="filterReqStatus">
+                <option value="">All</option>
+                <option value="open">Open</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Paid
+              <select id="filterReqPaid">
+                <option value="">All</option>
+                <option value="1">Paid</option>
+                <option value="0">Unpaid</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Delivered
+              <select id="filterReqDelivered">
+                <option value="">All</option>
+                <option value="1">Delivered</option>
+                <option value="0">Not delivered</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Search (number / vessel / supplier)
+              <input type="text" id="filterReqSearch" placeholder="Search..." />
+            </label>
+          </div>
+          <div style="align-self:flex-end;">
+            <button id="applyReqFilterBtn">Apply</button>
+            <button id="clearReqFilterBtn" class="secondary" type="button">Clear</button>
+          </div>
         </div>
       </div>
 
-      <div class="row">
-        <div>
-          <label>Supplier *</label>
-          <select id="reqSupplier"></select>
-        </div>
-        <div>
-          <label>Date Ordered *</label>
-          <input type="date" id="reqDateOrdered">
-        </div>
-        <div>
-          <label>Expected Date</label>
-          <input type="date" id="reqExpected">
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Amount *</label>
-          <input type="number" id="reqAmount" step="0.01" min="0">
-        </div>
-        <div>
-          <label>Currency *</label>
-          <select id="reqCurrency"></select>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:22px;">
-          <input type="checkbox" id="reqPaid" style="width:auto;">
-          <label for="reqPaid" style="margin:0;">Paid</label>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>PO #</label>
-          <input type="text" id="reqPO">
-        </div>
-        <div>
-          <label>Urgency</label>
-          <select id="reqUrgency">
-            <option value="normal">Normal</option>
-            <option value="urgent">Urgent</option>
-          </select>
-        </div>
-        <div>
-          <label>Remarks</label>
-          <input type="text" id="reqRemarks" placeholder="optional">
-        </div>
-      </div>
-
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button id="saveReqBtn">Save Requisition</button>
-        <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
-      </div>
-      <div id="reqError" class="error"></div>
-    </div>
-
-    <!-- Filters -->
-    <div class="card">
-      <h2>Filter Requisitions</h2>
-      <div class="row">
-        <div>
-          <label>Status</label>
-          <select id="filterReqStatus">
-            <option value="">All</option>
-            <option value="open">Open</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-        <div>
-          <label>Paid</label>
-          <select id="filterReqPaid">
-            <option value="">All</option>
-            <option value="1">Paid</option>
-            <option value="0">Unpaid</option>
-          </select>
-        </div>
-        <div>
-          <label>Delivered</label>
-          <select id="filterReqDelivered">
-            <option value="">All</option>
-            <option value="1">Delivered</option>
-            <option value="0">Not delivered</option>
-          </select>
-        </div>
-        <div>
-          <label>Search (number / vessel / supplier)</label>
-          <input type="text" id="filterReqSearch" placeholder="Search...">
-        </div>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;">
-        <button id="applyReqFilterBtn" type="button">Apply</button>
-        <button id="clearReqFilterBtn" class="secondary" type="button">Clear</button>
-      </div>
-    </div>
-
-    <!-- Main Table -->
-    <div class="card">
-      <h2>All Requisitions</h2>
-      <div style="overflow:auto;">
-        <table id="reqTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div class="card">
+        <h2>All Requisitions</h2>
+        <table id="reqTable">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Number</th>
-              <th>Vessel</th>
-              <th>Category</th>
-              <th>Supplier</th>
-              <th>Ordered</th>
-              <th>Expected</th>
-              <th>Amount (USD)</th>
-              <th>Paid</th>
-              <th>Delivered</th>
-              <th>Status</th>
-              <th>PO #</th>
-              <th>Urgency</th>
-              <th>Remarks</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px;">
-        * Non-admin users can edit only their own rows and cannot delete.
-      </div>
-    </div>
-  </div>
-
-
-  
-  <!-- LANDINGS -->
-  <div id="tab-landings" class="tab-panel">
-    <!-- Add / Edit form -->
-    <div class="card">
-      <h2 id="landFormTitle">Add Landed Item</h2>
-      <div class="row">
-        <div>
-          <label>Vessel *</label>
-          <select id="landVessel"></select>
-        </div>
-        <div>
-          <label>Description / Item *</label>
-          <input type="text" id="landItem" placeholder="e.g. LO pump overhaul">
-        </div>
-        <div>
-          <label>Workshop *</label>
-          <select id="landWorkshop"></select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Expected Delivery Date</label>
-          <input type="date" id="landExpected">
-        </div>
-        <div>
-          <label>Landed Date</label>
-          <input type="date" id="landLanded">
-        </div>
-        <div></div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Amount *</label>
-          <input type="number" id="landAmount" step="0.01" min="0">
-        </div>
-        <div>
-          <label>Currency *</label>
-          <select id="landCurrency"></select>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:22px;">
-          <input type="checkbox" id="landPaid" style="width:auto;">
-          <label for="landPaid" style="margin:0;">Paid</label>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Remarks</label>
-          <input type="text" id="landRemarks" placeholder="optional">
-        </div>
-        <div></div><div></div>
-      </div>
-
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button id="saveLandBtn">Save Landed Item</button>
-        <button id="cancelLandEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
-      </div>
-      <div id="landError" class="error"></div>
-    </div>
-
-    <!-- Filters -->
-    <div class="card">
-      <h2>Filter Landed Items</h2>
-      <div class="row">
-        <div>
-          <label>Status</label>
-          <select id="filterLandStatus">
-            <option value="">All</option>
-            <option value="open">Open</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-        <div>
-          <label>Paid</label>
-          <select id="filterLandPaid">
-            <option value="">All</option>
-            <option value="1">Paid</option>
-            <option value="0">Unpaid</option>
-          </select>
-        </div>
-        <div>
-          <label>Delivered</label>
-          <select id="filterLandDelivered">
-            <option value="">All</option>
-            <option value="1">Delivered</option>
-            <option value="0">Not delivered</option>
-          </select>
-        </div>
-        <div>
-          <label>Search (vessel / item / workshop)</label>
-          <input type="text" id="filterLandSearch" placeholder="Search...">
-        </div>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;">
-        <button id="applyLandFilterBtn" type="button">Apply</button>
-        <button id="clearLandFilterBtn" class="secondary" type="button">Clear</button>
-      </div>
-    </div>
-
-    <!-- Main Table -->
-    <div class="card">
-      <h2>All Landed Items</h2>
-      <div style="overflow:auto;">
-        <table id="landTable" style="width:100%; border-collapse:collapse; font-size:13px;">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Vessel</th>
-              <th>Description</th>
-              <th>Workshop</th>
-              <th>Expected</th>
-              <th>Landed Date</th>
-              <th>Amount (USD)</th>
-              <th>Paid</th>
-              <th>Delivered</th>
-              <th>Status</th>
-              <th>Remarks</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px;">
-        * Non-admin users can edit only their own rows and cannot delete.
-      </div>
-    </div>
-  </div>
-
-
-  
-  <!-- DIRECTORY -->
-  <div id="tab-directory" class="tab-panel">
-    <div class="card">
-      <h2>Suppliers & Workshops</h2>
-
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-        <button id="dirAddSupplierBtn" type="button">Add Supplier</button>
-        <button id="dirAddWorkshopBtn" class="secondary" type="button">Add Workshop</button>
-      </div>
-
-      <div style="overflow:auto;">
-        <table id="dirTable" style="width:100%; border-collapse:collapse; font-size:13px;">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Type</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>Actions</th>
+              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
+              <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
 
-      <div style="color:var(--muted);font-size:12px;margin-top:6px;">
-        * Non-admin users can add/edit their own entries. Delete is admin only.
-      </div>
-    </div>
-
-    <!-- Popup / modal -->
-    <div id="dirBackdrop" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:40;"></div>
-    <div id="dirPopup" class="card hidden" 
-         style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-                width:92%; max-width:420px; z-index:50;">
-      <h2 id="dirPopupTitle" style="margin-bottom:10px;">New Entry</h2>
-
-      <div class="row">
-        <div>
-          <label>Name *</label>
-          <input type="text" id="dirName">
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Email</label>
-          <input type="email" id="dirEmail">
-        </div>
-        <div>
-          <label>Phone</label>
-          <input type="text" id="dirPhone">
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Location / Address</label>
-          <input type="text" id="dirAddress">
-        </div>
-      </div>
-
-      <div id="dirError" class="error"></div>
-
-      <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
-        <button id="dirCancelBtn" class="secondary" type="button">Cancel</button>
-        <button id="dirSaveBtn" type="button">Save</button>
-      </div>
-    </div>
-  </div>
-
-
-  
-  <!-- DELIVERED -->
-  <div id="tab-delivered" class="tab-panel">
-    <div class="card">
-      <h2>Delivered Requisitions</h2>
-      <div class="row">
-        <div>
-          <label>Paid</label>
-          <select id="filterDelReqPaid">
-            <option value="">All</option>
-            <option value="1">Paid</option>
-            <option value="0">Unpaid</option>
-          </select>
-        </div>
-        <div>
-          <label>Search (number / vessel / supplier)</label>
-          <input type="text" id="filterDelReqSearch" placeholder="Search...">
-        </div>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;">
-        <button id="applyDelReqFilterBtn" type="button">Apply</button>
-        <button id="clearDelReqFilterBtn" class="secondary" type="button">Clear</button>
-      </div>
-
-      <div style="overflow:auto;margin-top:10px;">
-        <table id="delReqTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div class="card">
+        <h2>Cancelled / Deleted Requisitions</h2>
+        <table id="reqCancelledTable">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Number</th>
-              <th>Vessel</th>
-              <th>Category</th>
-              <th>Supplier</th>
-              <th>Ordered</th>
-              <th>Expected</th>
-              <th>Amount (USD)</th>
-              <th>Paid</th>
-              <th>Status</th>
-              <th>PO #</th>
-              <th>Urgency</th>
-              <th>Remarks</th>
+              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -722,84 +382,374 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2>Delivered Landed Items</h2>
-      <div class="row">
-        <div>
-          <label>Paid</label>
-          <select id="filterDelLandPaid">
-            <option value="">All</option>
-            <option value="1">Paid</option>
-            <option value="0">Unpaid</option>
-          </select>
+    <!-- LANDINGS -->
+    <div id="tab-landings" class="hidden">
+      <div class="card">
+        <h2 id="landFormTitle">Add Landed Item</h2>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Vessel
+              <select id="landVessel"></select>
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Description
+              <input type="text" id="landDescription" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Workshop
+              <div style="display:flex; gap:8px;">
+                <select id="landWorkshopSelect" style="flex:1;"></select>
+                <button id="newWorkshopBtn" type="button">New</button>
+              </div>
+            </label>
+          </div>
         </div>
-        <div>
-          <label>Search (vessel / item / workshop)</label>
-          <input type="text" id="filterDelLandSearch" placeholder="Search...">
+
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Expected Delivery Date
+              <input type="date" id="landExpected" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Landed Date
+              <input type="date" id="landLanded" />
+            </label>
+          </div>
         </div>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;">
-        <button id="applyDelLandFilterBtn" type="button">Apply</button>
-        <button id="clearDelLandFilterBtn" class="secondary" type="button">Clear</button>
+
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Amount
+              <input type="number" id="landAmount" step="0.01" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Currency
+              <select id="landCurrency"></select>
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>
+              <input type="checkbox" id="landPaid" /> Paid
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <button id="saveLandingBtn">Save Landed Item</button>
+          <button id="cancelLandEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
+        </div>
+        <div id="landError" class="error"></div>
       </div>
 
-      <div style="overflow:auto;margin-top:10px;">
-        <table id="delLandTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div class="card">
+        <h2>Filter Landed Items</h2>
+        <div class="filter-row">
+          <div>
+            <label>Status
+              <select id="filterLandingStatus">
+                <option value="">All</option>
+                <option value="open">Open</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Paid
+              <select id="filterLandingPaid">
+                <option value="">All</option>
+                <option value="1">Paid</option>
+                <option value="0">Unpaid</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Delivered
+              <select id="filterLandingDelivered">
+                <option value="">All</option>
+                <option value="1">Delivered</option>
+                <option value="0">Not delivered</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Search (vessel / description / workshop)
+              <input type="text" id="filterLandingSearch" placeholder="Search..." />
+            </label>
+          </div>
+          <div style="align-self:flex-end;">
+            <button id="applyLandingFilterBtn">Apply</button>
+            <button id="clearLandingFilterBtn" class="secondary" type="button">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>All Landed Items</h2>
+        <table id="landingTable">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Vessel</th>
-              <th>Description</th>
-              <th>Workshop</th>
-              <th>Expected</th>
-              <th>Landed Date</th>
-              <th>Amount (USD)</th>
-              <th>Paid</th>
-              <th>Status</th>
-              <th>Remarks</th>
+              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
+              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th>
+              <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Cancelled / Deleted Landed Items</h2>
+        <table id="landingCancelledTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
+              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
     </div>
-  </div>
 
-
-  <!-- ADMIN -->
-  <div id="tab-admin" class="tab-panel">
-    <div class="card">
-      <h2>Admin</h2>
-      <p style="color:var(--muted);margin:0;">
-        Admin UI (categories, vessels, users) will be added in Step 7.
-      </p>
+    <!-- DIRECTORY -->
+    <div id="tab-directory" class="hidden">
+      <div class="card">
+        <h2>Suppliers & Workshops</h2>
+        <div style="margin-bottom:8px;">
+          <button id="dirNewSupplierBtn">Add Supplier</button>
+          <button id="dirNewWorkshopBtn" class="secondary" type="button">Add Workshop</button>
+        </div>
+        <table id="directoryTable">
+          <thead>
+            <tr><th>ID</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- DELIVERED -->
+    <div id="tab-delivered" class="hidden">
+      <div class="card">
+        <h2>Delivered Requisitions</h2>
+        <div class="filter-row">
+          <div>
+            <label>Paid
+              <select id="filterDeliveredReqPaid">
+                <option value="">All</option>
+                <option value="1">Paid</option>
+                <option value="0">Unpaid</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Search (number / vessel / supplier)
+              <input type="text" id="filterDeliveredReqSearch" placeholder="Search..." />
+            </label>
+          </div>
+          <div style="align-self:flex-end;">
+            <button id="applyDeliveredReqFilterBtn">Apply</button>
+            <button id="clearDeliveredReqFilterBtn" class="secondary" type="button">Clear</button>
+          </div>
+        </div>
+        <table id="deliveredReqTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Number</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Delivered Landed Items</h2>
+        <div class="filter-row">
+          <div>
+            <label>Paid
+              <select id="filterDeliveredLandPaid">
+                <option value="">All</option>
+                <option value="1">Paid</option>
+                <option value="0">Unpaid</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Search (vessel / description / workshop)
+              <input type="text" id="filterDeliveredLandSearch" placeholder="Search..." />
+            </label>
+          </div>
+          <div style="align-self:flex-end;">
+            <button id="applyDeliveredLandFilterBtn">Apply</button>
+            <button id="clearDeliveredLandFilterBtn" class="secondary" type="button">Clear</button>
+          </div>
+        </div>
+        <table id="deliveredLandTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
+              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div id="tab-admin" class="hidden">
+      <div class="card">
+        <h2>Categories</h2>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Category Name
+              <input type="text" id="catName" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Abbreviation
+              <input type="text" id="catAbbr" />
+            </label>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <button id="addCatBtn">Save Category</button>
+          <button id="cancelCatEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
+        </div>
+        <div class="error" id="catError"></div>
+        <table id="catTable" style="margin-top:10px;">
+          <thead><tr><th>ID</th><th>Name</th><th>Abbreviation</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Vessels</h2>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Vessel Name
+              <input type="text" id="vesselName" />
+            </label>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <button id="addVesselBtn">Save Vessel</button>
+          <button id="cancelVesselEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
+        </div>
+        <div class="error" id="vesselError"></div>
+        <table id="vesselTable" style="margin-top:10px;">
+          <thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Users</h2>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>Username
+              <input type="text" id="adminUsername"/>
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Password
+              <input type="password" id="adminPassword"/>
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>Role
+              <select id="adminRole">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
+                <option value="finance">Finance</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <button id="saveUserBtn">Save User</button>
+        </div>
+        <div id="adminUserError" class="error"></div>
+        <table id="userTable" style="margin-top:10px;">
+          <thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
-/* ================== API helper ================== */
+/* ========= Helpers ========= */
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, {
-    headers: {"Content-Type":"application/json"},
+    headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
     ...options
   });
   if (!res.ok) {
-    let err = {error:"unknown"};
-    try { err = await res.json(); } catch {}
+    let err;
+    try { err = await res.json(); } catch { err = { error: "unknown" }; }
     throw err;
   }
   return res.json();
 }
 
 let currentUser = null;
+let allReqs = [];
+let allLandings = [];
+let vessels = [];
+let editingReqId = null;
+let editingLandId = null;
+let editingCatId = null;
+let editingVesselId = null;
+let dirPopupType = null;
+let currencyList = ["USD"];
 
-/* ================== Session / Login UI ================== */
+function quarterOfMonth(m){
+  if (m <= 3) return "Q1";
+  if (m <= 6) return "Q2";
+  if (m <= 9) return "Q3";
+  return "Q4";
+}
+function parseDateSafe(d) {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+/* ========= Currencies ========= */
+async function loadCurrencies() {
+  try {
+    const res = await apiFetch("/api/currencies");
+    currencyList = res.currencies || ["USD"];
+  } catch (e) {
+    console.warn("FX error, fallback to defaults", e);
+    currencyList = ["USD","EUR","AED","GBP","LBP"];
+  }
+  const reqCurSel = document.getElementById("reqCurrency");
+  const landCurSel = document.getElementById("landCurrency");
+  reqCurSel.innerHTML = ""; landCurSel.innerHTML = "";
+  currencyList.forEach(cur => {
+    const o1 = document.createElement("option"); o1.value = cur; o1.textContent = cur; reqCurSel.appendChild(o1);
+    const o2 = document.createElement("option"); o2.value = cur; o2.textContent = cur; landCurSel.appendChild(o2);
+  });
+  if (!reqCurSel.value) reqCurSel.value = "USD";
+  if (!landCurSel.value) landCurSel.value = "USD";
+}
+
+/* ========= Session / Header / Login ========= */
 async function refreshSession() {
   try {
     currentUser = await apiFetch("/api/session");
-  } catch (e) {
+  } catch {
     currentUser = null;
   }
 
@@ -809,1370 +759,816 @@ async function refreshSession() {
   if (currentUser && currentUser.username) {
     userInfo.innerHTML = `
       Logged in as <strong>${currentUser.username}</strong> (${currentUser.role})
-      <button id="logoutBtn" type="button">Logout</button>
+      <button id="logoutBtn">Logout</button>
     `;
     document.getElementById("logoutBtn").onclick = async () => {
-      await apiFetch("/api/logout", { method: "POST" });
+      await apiFetch("/api/logout", { method:"POST" });
       currentUser = null;
+      loginCard.classList.add("hidden");
       await refreshSession();
-    };
-    if (loginCard) loginCard.classList.add("hidden");
-  } else {
-    userInfo.innerHTML = `Not logged in <button id="showLoginBtn" type="button">Login</button>`;
-    const showBtn = document.getElementById("showLoginBtn");
-    if (showBtn && loginCard) {
-      showBtn.onclick = () => loginCard.classList.toggle("hidden");
-    }
-  }
-
-  // Admin tab visibility
-  const adminTab = document.getElementById("adminTab");
-  const isAdmin = currentUser && currentUser.role === "admin";
-  if (adminTab) {
-    if (isAdmin) adminTab.classList.remove("hidden");
-    else adminTab.classList.add("hidden");
-  }
-
-  // enable/disable admin inputs + load admin tables if admin
-  if (typeof setAdminInputsEnabled === "function") setAdminInputsEnabled();
-  if (isAdmin) {
-    if (typeof renderCategories === "function") renderCategories();
-    if (typeof renderVessels === "function") renderVessels();
-    if (typeof renderUsers === "function") renderUsers();
-  }
-}
-
-
-  const userInfo = document.getElementById("userInfo");
-  const loginCard = document.getElementById("loginCard");
-  const adminTab = document.getElementById("adminTab");
-
-  if (currentUser && currentUser.username) {
-    userInfo.innerHTML = `
-      Logged in as <strong>${currentUser.username}</strong> (${currentUser.role})
-      <button id="logoutBtn" class="secondary" type="button">Logout</button>
-    `;
-    document.getElementById("logoutBtn").onclick = async () => {
-      await apiFetch("/api/logout", {method:"POST"});
-      currentUser = null;
-      await refreshSession();
+      await afterDataLoad();
     };
     loginCard.classList.add("hidden");
   } else {
     userInfo.innerHTML = `
       Not logged in
-      <button id="showLoginBtn" type="button">Login</button>
+      <button id="showLoginBtn">Login</button>
     `;
     document.getElementById("showLoginBtn").onclick = () => {
       loginCard.classList.toggle("hidden");
-      document.getElementById("loginError").textContent = "";
     };
   }
 
-  // Admin tab visibility
+  // Show/hide Admin tab
+  const isAdmin = currentUser && currentUser.role === "admin";
+  const adminTab = document.getElementById("adminTab");
   if (adminTab) {
-    if (currentUser && currentUser.role === "admin") {
-      adminTab.classList.remove("hidden");
-    } else {
-      adminTab.classList.add("hidden");
-      // if user was on admin tab, kick them to overview
-      const activeTab = document.querySelector(".tab.active");
-      if (activeTab && activeTab.dataset.tab === "admin") {
-        switchTab("overview");
-      }
-    }
+    if (isAdmin) adminTab.classList.remove("hidden");
+    else adminTab.classList.add("hidden");
   }
 
-  // enable/disable admin inputs
-  if (typeof setAdminInputsEnabled === 'function') setAdminInputsEnabled();
-  // if admin tab visible, load admin tables
-  if (currentUser && currentUser.role === 'admin') {
-    if (typeof renderCategories === 'function') renderCategories();
-    if (typeof renderVessels === 'function') renderVessels();
-    if (typeof renderUsers === 'function') renderUsers();
-  }
-
+  // Disable admin-only inputs for non-admin
+  ["catName","catAbbr","addCatBtn","cancelCatEditBtn",
+   "adminUsername","adminPassword","adminRole","saveUserBtn",
+   "vesselName","addVesselBtn","cancelVesselEditBtn"].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.disabled = !isAdmin && (id!=="adminRole");
+  });
 }
 
 document.getElementById("loginBtn").onclick = async () => {
   const u = document.getElementById("loginUsername").value.trim();
   const p = document.getElementById("loginPassword").value;
-  const err = document.getElementById("loginError");
-  err.textContent = "";
-
-  if (!u || !p) {
-    err.textContent = "Enter username and password.";
-    return;
-  }
-
+  const errDiv = document.getElementById("loginError");
+  errDiv.textContent = "";
   try {
     await apiFetch("/api/login", {
       method:"POST",
-      body: JSON.stringify({username:u, password:p})
+      body: JSON.stringify({ username:u, password:p })
     });
+    document.getElementById("loginCard").classList.add("hidden");
     document.getElementById("loginUsername").value = "";
     document.getElementById("loginPassword").value = "";
-    document.getElementById("loginCard").classList.add("hidden");
     await refreshSession();
+    await afterDataLoad(true);
   } catch(e) {
-    err.textContent = (e.error === "invalid_credentials") ?
-      "Invalid username or password." : "Login failed.";
+    if (e.error === "invalid_credentials") errDiv.textContent = "Invalid username or password.";
+    else errDiv.textContent = "Login failed.";
   }
 };
 
-document.getElementById("loginCancelBtn").onclick = () => {
-  document.getElementById("loginCard").classList.add("hidden");
-};
-
-/* ================== Tabs ================== */
-function switchTab(tabName){
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-
-  const tabBtn = document.querySelector(`.tab[data-tab="${tabName}"]`);
-  const tabPanel = document.getElementById(`tab-${tabName}`);
-  if (!tabBtn || !tabPanel) return;
-
-  tabBtn.classList.add("active");
-  tabPanel.classList.add("active");
-}
-
+/* ========= Tabs ========= */
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     if (tab.classList.contains("hidden")) return;
-    switchTab(tab.dataset.tab);
+    const t = tab.dataset.tab;
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll("[id^='tab-']").forEach(div => div.classList.add("hidden"));
+    tab.classList.add("active");
+    document.getElementById(`tab-${t}`).classList.remove("hidden");
   });
 });
 
+/* ========= Overview Totals Filters ========= */
+async function loadOverviewTotalsFilters() {
+  let reqs = allReqs, lands = allLandings;
+  if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
+  if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
 
-/* =========================================================
-   STEP 3: REQUISITIONS UI + LOGIC
-   ========================================================= */
+  // Month dropdown 1..12
+  const monthSel = document.getElementById("ovMonthFilter");
+  monthSel.innerHTML = `<option value="">All months</option>` +
+    Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");
 
-let allReqs = [];
-let editingReqId = null;
-let currencyList = ["USD"];
-let categories = [];
-let vessels = [];
-let suppliers = [];
+  // Categories
+  const cats = new Set();
+  reqs.forEach(r => cats.add((r.category || "").trim()));
+  lands.forEach(r => cats.add((r.category || "").trim()));
+  const catSel = document.getElementById("ovCategoryFilter");
+  catSel.innerHTML = `<option value="">All categories</option>` +
+    [...cats].filter(Boolean).sort().map(c=>`<option value="${c}">${c}</option>`).join("");
 
-// currency + dropdowns
-async function loadCurrencies() {
-  try {
-    const res = await apiFetch("/api/currencies");
-    currencyList = res.currencies || ["USD"];
-  } catch {
-    currencyList = ["USD", "EUR", "AED", "GBP", "LBP"];
-  }
-  const sel = document.getElementById("reqCurrency");
-  if (!sel) return;
-  sel.innerHTML = currencyList.map(c=>`<option value="${c}">${c}</option>`).join("");
-  sel.value = "USD";
+  // Vessels
+  const vset = new Set();
+  reqs.forEach(r => vset.add((r.vessel || "").trim()));
+  lands.forEach(r => vset.add((r.vessel || "").trim()));
+  const vesselSel = document.getElementById("ovVesselFilter");
+  vesselSel.innerHTML = `<option value="">All</option>` +
+    [...vset].filter(Boolean).sort().map(v=>`<option value="${v}">${v}</option>`).join("");
+
+  // Years
+  const years = new Set();
+  reqs.forEach(r => { const dt=parseDateSafe(r.date_ordered); if (dt) years.add(dt.getFullYear()); });
+  lands.forEach(r => { const dt=parseDateSafe(r.landed_date); if (dt) years.add(dt.getFullYear()); });
+  const yearSel = document.getElementById("ovYearFilter");
+  yearSel.innerHTML = `<option value="">All years</option>` +
+    [...years].sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join("");
+
+  updateOverviewPaidTotals(reqs, lands);
 }
 
-// categories dropdown (from backend)
-async function loadCategories() {
-  try { categories = await apiFetch("/api/categories"); }
-  catch { categories = []; }
-  const sel = document.getElementById("reqCategory");
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Select category</option>' +
-    categories.map(c=>`<option value="${c.abbr}">${c.abbr} - ${c.name}</option>`).join("");
-}
+function updateOverviewPaidTotals(reqs, lands) {
+  const typeF = document.getElementById("ovTypeFilter").value;
+  const vesselF = document.getElementById("ovVesselFilter").value;
+  const paidF = document.getElementById("ovPaidFilter").value;
+  const monthF = document.getElementById("ovMonthFilter").value;
+  const yearF = document.getElementById("ovYearFilter").value;
+  const quarterF = document.getElementById("ovQuarterFilter").value;
+  const categoryF = document.getElementById("ovCategoryFilter").value;
 
-// vessels dropdown (from backend)
-async function loadVessels() {
-  try { vessels = await apiFetch("/api/vessels"); }
-  catch { vessels = []; }
-  const sel = document.getElementById("reqVessel");
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Select vessel</option>' +
-    vessels.map(v=>`<option value="${v.name}">${v.name}</option>`).join("");
-}
+  let filtered = [];
+  if (!typeF || typeF==="req") filtered = filtered.concat(reqs.map(r=>({
+    _type:"req", vessel:r.vessel, category:r.category, supplier:r.supplier,
+    paid:Number(r.paid||0), amount:Number(r.total_amount||0), date:r.date_ordered
+  })));
+  if (!typeF || typeF==="land") filtered = filtered.concat(lands.map(r=>({
+    _type:"land", vessel:r.vessel, category:r.category, supplier:r.supplier||r.workshop,
+    paid:Number(r.paid||0), amount:Number(r.amount||0), date:r.landed_date
+  })));
 
-// suppliers dropdown (directory suppliers)
-async function loadSuppliers() {
-  try { suppliers = await apiFetch("/api/directory?type=supplier"); }
-  catch { suppliers = []; }
-  const sel = document.getElementById("reqSupplier");
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Select supplier</option>' +
-    suppliers.map(s=>`<option value="${s.name}">${s.name}</option>`).join("");
-}
-
-function paidTag(v){
-  return v ? '<span style="padding:2px 6px;border-radius:999px;font-size:11px;background:#dcfce7;color:#166534;">Paid</span>'
-           : '<span style="padding:2px 6px;border-radius:999px;font-size:11px;background:#fee2e2;color:#b91c1c;">Unpaid</span>';
-}
-function deliveredTag(v){
-  return v ? '<span style="padding:2px 6px;border-radius:999px;font-size:11px;background:#dcfce7;color:#166534;">Delivered</span>'
-           : '<span style="padding:2px 6px;border-radius:999px;font-size:11px;background:#e5e7eb;color:#374151;">Open</span>';
-}
-
-// Load + render requisitions
-async function loadAllRequisitions() {
-  try { allReqs = await apiFetch("/api/requisitions"); }
-  catch { allReqs = []; }
-
-  const statusF = document.getElementById("filterReqStatus").value;
-  const paidF = document.getElementById("filterReqPaid").value;
-  const delF = document.getElementById("filterReqDelivered").value;
-  const search = document.getElementById("filterReqSearch").value.toLowerCase().trim();
-
-  const tbody = document.querySelector("#reqTable tbody");
-  tbody.innerHTML = "";
-
-  allReqs.forEach(r => {
-    const matchesStatus = !statusF || (r.status || "open") === statusF;
-    const matchesPaid = paidF === "" || String(r.paid || 0) === paidF;
-    const matchesDel = delF === "" || String(r.delivered || 0) === delF;
-    const matchesSearch =
-      !search ||
-      (r.number || "").toLowerCase().includes(search) ||
-      (r.vessel || "").toLowerCase().includes(search) ||
-      (r.supplier || "").toLowerCase().includes(search);
-
-    if (!(matchesStatus && matchesPaid && matchesDel && matchesSearch)) return;
-
-    const canEdit = currentUser && (currentUser.role === "admin" || r.created_by === currentUser.username);
-    const canDelete = currentUser && currentUser.role === "admin";
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${r.number || ""}</td>
-      <td>${r.vessel || ""}</td>
-      <td>${r.category || ""}</td>
-      <td>${r.supplier || ""}</td>
-      <td>${r.date_ordered || ""}</td>
-      <td>${r.expected || ""}</td>
-      <td>${Number(r.amount_usd || 0).toFixed(2)}</td>
-      <td>${paidTag(r.paid)}</td>
-      <td>${deliveredTag(r.delivered)}</td>
-      <td>${r.status || "open"}</td>
-      <td>${r.po_number || ""}</td>
-      <td>${r.urgency || "normal"}</td>
-      <td>${r.remarks || ""}</td>
-      <td style="white-space:nowrap;">
-        <button class="secondary edit-req" data-id="${r.id}" ${!canEdit?'disabled':''}>Edit</button>
-        <button class="secondary toggle-paid-req" data-id="${r.id}" ${!canEdit?'disabled':''}>Paid</button>
-        <button class="secondary toggle-del-req" data-id="${r.id}" ${!canEdit?'disabled':''}>Delivered</button>
-        <button class="danger cancel-req" data-id="${r.id}" ${!canEdit?'disabled':''}>Cancel</button>
-        <button class="danger delete-req" data-id="${r.id}" ${!canDelete?'disabled':''}>Delete</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
+  filtered = filtered.filter(x=>{
+    if (vesselF && (x.vessel||"")!==vesselF) return false;
+    if (paidF!=="" && String(x.paid)!==paidF) return false;
+    const dt=parseDateSafe(x.date); if(!dt) return false;
+    const mm=dt.getMonth()+1, yy=dt.getFullYear(), qq=quarterOfMonth(mm);
+    if (yearF && String(yy)!==yearF) return false;
+    if (monthF) { if(String(mm)!==monthF) return false; }
+    else if (quarterF) { if(qq!==quarterF) return false; }
+    if (categoryF && (x.category||"")!==categoryF) return false;
+    return true;
   });
 
-  attachReqActions();
-}
+  const allTotal = filtered.reduce((s,x)=>s+x.amount,0);
+  const paidOnly = filtered.filter(x=>x.paid===1);
+  const paidMonthTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
 
-function attachReqActions(){
-  document.querySelectorAll(".edit-req").forEach(btn=>{
-    btn.onclick = () => {
-      const id = Number(btn.dataset.id);
-      const row = allReqs.find(x=>Number(x.id)===id);
-      if (!row) return;
-      editingReqId = id;
-
-      document.getElementById("reqFormTitle").textContent = "Edit Requisition";
-      document.getElementById("saveReqBtn").textContent = "Update Requisition";
-      document.getElementById("cancelReqEditBtn").classList.remove("hidden");
-
-      document.getElementById("reqNumber").value = row.number || "";
-      document.getElementById("reqVessel").value = row.vessel || "";
-      document.getElementById("reqCategory").value = row.category || "";
-      document.getElementById("reqSupplier").value = row.supplier || "";
-      document.getElementById("reqDateOrdered").value = row.date_ordered || "";
-      document.getElementById("reqExpected").value = row.expected || "";
-      document.getElementById("reqAmount").value = row.amount_original || 0;
-      document.getElementById("reqCurrency").value = row.currency || "USD";
-      document.getElementById("reqPaid").checked = !!row.paid;
-      document.getElementById("reqPO").value = row.po_number || "";
-      document.getElementById("reqUrgency").value = row.urgency || "normal";
-      document.getElementById("reqRemarks").value = row.remarks || "";
-      window.scrollTo({top:0, behavior:"smooth"});
-    };
-  });
-
-  document.querySelectorAll(".toggle-paid-req").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      try{
-        await apiFetch(`/api/requisitions/${id}/toggle_paid`, {method:"PATCH"});
-        await loadAllRequisitions();
-      }catch{ alert("Error toggling paid"); }
-    };
-  });
-
-  document.querySelectorAll(".toggle-del-req").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      try{
-        await apiFetch(`/api/requisitions/${id}`, {
-          method:"PATCH",
-          body: JSON.stringify({ delivered: true })
-        });
-        await loadAllRequisitions();
-      }catch{ alert("Error marking delivered"); }
-    };
-  });
-
-  document.querySelectorAll(".cancel-req").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      if (!confirm("Cancel this requisition?")) return;
-      try{
-        await apiFetch(`/api/requisitions/${id}`, {
-          method:"PATCH",
-          body: JSON.stringify({ status:"cancelled" })
-        });
-        await loadAllRequisitions();
-      }catch{ alert("Error cancelling"); }
-    };
-  });
-
-  document.querySelectorAll(".delete-req").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      if (!confirm("Delete this requisition permanently?")) return;
-      try{
-        await apiFetch(`/api/requisitions/${id}`, {method:"DELETE"});
-        await loadAllRequisitions();
-      }catch{ alert("Error deleting (admin only)"); }
-    };
-  });
-}
-
-// cancel edit
-document.getElementById("cancelReqEditBtn").onclick = () => {
-  editingReqId = null;
-  document.getElementById("reqFormTitle").textContent = "Add Requisition";
-  document.getElementById("saveReqBtn").textContent = "Save Requisition";
-  document.getElementById("cancelReqEditBtn").classList.add("hidden");
-
-  ["reqNumber","reqAmount","reqPO","reqRemarks"].forEach(id=>document.getElementById(id).value="");
-  ["reqVessel","reqCategory","reqSupplier"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("reqDateOrdered").value="";
-  document.getElementById("reqExpected").value="";
-  document.getElementById("reqCurrency").value="USD";
-  document.getElementById("reqPaid").checked=false;
-  document.getElementById("reqUrgency").value="normal";
-};
-
-// save requisition
-document.getElementById("saveReqBtn").onclick = async () => {
-  const err = document.getElementById("reqError");
-  err.textContent = "";
-
-  const payload = {
-    number: document.getElementById("reqNumber").value.trim(),
-    vessel: document.getElementById("reqVessel").value.trim(),
-    category: document.getElementById("reqCategory").value.trim(),
-    supplier: document.getElementById("reqSupplier").value.trim(),
-    date_ordered: document.getElementById("reqDateOrdered").value,
-    expected: document.getElementById("reqExpected").value,
-    amount: parseFloat(document.getElementById("reqAmount").value || "0"),
-    currency: document.getElementById("reqCurrency").value || "USD",
-    paid: document.getElementById("reqPaid").checked,
-    po_number: document.getElementById("reqPO").value.trim(),
-    urgency: document.getElementById("reqUrgency").value,
-    remarks: document.getElementById("reqRemarks").value.trim(),
-  };
-
-  if (!payload.number || !payload.vessel || !payload.category || !payload.supplier || !payload.date_ordered || !payload.amount){
-    err.textContent = "Please fill all required fields (*)";
-    return;
+  let paidYearTotal = 0;
+  if (yearF) {
+    paidYearTotal = paidOnly.filter(x=>{
+      const dt=parseDateSafe(x.date);
+      return dt && String(dt.getFullYear())===yearF;
+    }).reduce((s,x)=>s+x.amount,0);
+  } else {
+    paidYearTotal = paidMonthTotal;
   }
 
-  try{
-    if (editingReqId){
-      await apiFetch(`/api/requisitions/${editingReqId}`, {
-        method:"PATCH",
-        body: JSON.stringify(payload)
-      });
-    } else {
-      await apiFetch("/api/requisitions", {
-        method:"POST",
-        body: JSON.stringify(payload)
-      });
-    }
-    document.getElementById("cancelReqEditBtn").onclick();
-    await loadAllRequisitions();
-  }catch(e){
-    if (e.error==="duplicate_number") err.textContent="This requisition number already exists.";
-    else if (e.error==="unknown_category") err.textContent="Unknown category.";
-    else if (e.error==="login_required") err.textContent="Please login first.";
-    else if (e.error==="not_allowed") err.textContent="You can edit only your own rows.";
-    else err.textContent="Error saving requisition.";
-  }
-};
+  document.getElementById("ovAllTotal").textContent = allTotal.toFixed(2);
+  document.getElementById("ovPaidMonthTotal").textContent = paidMonthTotal.toFixed(2);
+  document.getElementById("ovPaidYearTotal").textContent = paidYearTotal.toFixed(2);
 
-// filter buttons
-document.getElementById("applyReqFilterBtn").onclick = loadAllRequisitions;
-document.getElementById("clearReqFilterBtn").onclick = async () => {
-  document.getElementById("filterReqStatus").value="";
-  document.getElementById("filterReqPaid").value="";
-  document.getElementById("filterReqDelivered").value="";
-  document.getElementById("filterReqSearch").value="";
-  await loadAllRequisitions();
-};
-
-
-
-/* =========================================================
-   STEP 4: LANDINGS UI + LOGIC
-   ========================================================= */
-
-let allLandings = [];
-let editingLandId = null;
-let workshops = [];
-
-// reuse vessels list from Step 3. fill landing vessel select
-function fillLandingVessels(){
-  const sel = document.getElementById("landVessel");
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Select vessel</option>' +
-    vessels.map(v=>`<option value="${v.name}">${v.name}</option>`).join("");
+  // Top suppliers
+  const supMap = {};
+  filtered.forEach(x=>{
+    const sname=x.supplier||"Unknown";
+    supMap[sname]=(supMap[sname]||0)+x.amount;
+  });
+  const topSup = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const ul=document.getElementById("ovTopSuppliers");
+  ul.innerHTML = topSup.length ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("") : "<li>—</li>";
 }
 
-// workshops dropdown (directory workshops)
-async function loadWorkshops() {
-  try { workshops = await apiFetch("/api/directory?type=workshop"); }
-  catch { workshops = []; }
-  const sel = document.getElementById("landWorkshop");
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Select workshop</option>' +
-    workshops.map(w=>`<option value="${w.name}">${w.name}</option>`).join("");
-}
-
-// landing currency dropdown uses same currencyList
-function fillLandingCurrencies(){
-  const sel = document.getElementById("landCurrency");
-  if (!sel) return;
-  sel.innerHTML = currencyList.map(c=>`<option value="${c}">${c}</option>`).join("");
-  sel.value = "USD";
-}
-
-// Load + render landed items
-async function loadAllLandings() {
-  try { allLandings = await apiFetch("/api/landings"); }
-  catch { allLandings = []; }
-
-  const statusF = document.getElementById("filterLandStatus").value;
-  const paidF = document.getElementById("filterLandPaid").value;
-  const delF = document.getElementById("filterLandDelivered").value;
-  const search = document.getElementById("filterLandSearch").value.toLowerCase().trim();
-
-  const tbody = document.querySelector("#landTable tbody");
-  tbody.innerHTML = "";
-
-  allLandings.forEach(r => {
-    const matchesStatus = !statusF || (r.status || "open") === statusF;
-    const matchesPaid = paidF === "" || String(r.paid || 0) === paidF;
-    const matchesDel = delF === "" || String(r.delivered || 0) === delF;
-    const matchesSearch =
-      !search ||
-      (r.vessel || "").toLowerCase().includes(search) ||
-      (r.item || "").toLowerCase().includes(search) ||
-      (r.workshop || "").toLowerCase().includes(search);
-
-    if (!(matchesStatus && matchesPaid && matchesDel && matchesSearch)) return;
-
-    const canEdit = currentUser && (currentUser.role === "admin" || r.created_by === currentUser.username);
-    const canDelete = currentUser && currentUser.role === "admin";
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${r.vessel || ""}</td>
-      <td>${r.item || ""}</td>
-      <td>${r.workshop || ""}</td>
-      <td>${r.expected || ""}</td>
-      <td>${r.landed_date || ""}</td>
-      <td>${Number(r.amount_usd || 0).toFixed(2)}</td>
-      <td>${paidTag(r.paid)}</td>
-      <td>${deliveredTag(r.delivered)}</td>
-      <td>${r.status || "open"}</td>
-      <td>${r.remarks || ""}</td>
-      <td style="white-space:nowrap;">
-        <button class="secondary edit-land" data-id="${r.id}" ${!canEdit?'disabled':''}>Edit</button>
-        <button class="secondary toggle-paid-land" data-id="${r.id}" ${!canEdit?'disabled':''}>Paid</button>
-        <button class="secondary toggle-del-land" data-id="${r.id}" ${!canEdit?'disabled':''}>Delivered</button>
-        <button class="danger cancel-land" data-id="${r.id}" ${!canEdit?'disabled':''}>Cancel</button>
-        <button class="danger delete-land" data-id="${r.id}" ${!canDelete?'disabled':''}>Delete</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
+document.getElementById("ovApplyTotalsBtn").onclick = async () => {
+  let reqs = allReqs, lands = allLandings;
+  if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
+  if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
+  updateOverviewPaidTotals(reqs, lands);
+};
+document.getElementById("ovClearTotalsBtn").onclick = async () => {
+  ["ovTypeFilter","ovVesselFilter","ovPaidFilter","ovMonthFilter","ovYearFilter","ovQuarterFilter","ovCategoryFilter"].forEach(id=>{
+    document.getElementById(id).value="";
   });
-
-  attachLandActions();
-}
-
-function attachLandActions(){
-  document.querySelectorAll(".edit-land").forEach(btn=>{
-    btn.onclick = () => {
-      const id = Number(btn.dataset.id);
-      const row = allLandings.find(x=>Number(x.id)===id);
-      if (!row) return;
-      editingLandId = id;
-
-      document.getElementById("landFormTitle").textContent = "Edit Landed Item";
-      document.getElementById("saveLandBtn").textContent = "Update Landed Item";
-      document.getElementById("cancelLandEditBtn").classList.remove("hidden");
-
-      document.getElementById("landVessel").value = row.vessel || "";
-      document.getElementById("landItem").value = row.item || "";
-      document.getElementById("landWorkshop").value = row.workshop || "";
-      document.getElementById("landExpected").value = row.expected || "";
-      document.getElementById("landLanded").value = row.landed_date || "";
-      document.getElementById("landAmount").value = row.amount_original || row.amount || 0;
-      document.getElementById("landCurrency").value = row.currency || "USD";
-      document.getElementById("landPaid").checked = !!row.paid;
-      document.getElementById("landRemarks").value = row.remarks || "";
-      window.scrollTo({top:0, behavior:"smooth"});
-    };
-  });
-
-  document.querySelectorAll(".toggle-paid-land").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      try{
-        await apiFetch(`/api/landings/${id}/toggle_paid`, {method:"PATCH"});
-        await loadAllLandings();
-      }catch{ alert("Error toggling paid"); }
-    };
-  });
-
-  document.querySelectorAll(".toggle-del-land").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      try{
-        await apiFetch(`/api/landings/${id}`, {
-          method:"PATCH",
-          body: JSON.stringify({ delivered: true })
-        });
-        await loadAllLandings();
-      }catch{ alert("Error marking delivered"); }
-    };
-  });
-
-  document.querySelectorAll(".cancel-land").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      if (!confirm("Cancel this landed item?")) return;
-      try{
-        await apiFetch(`/api/landings/${id}`, {
-          method:"PATCH",
-          body: JSON.stringify({ status:"cancelled" })
-        });
-        await loadAllLandings();
-      }catch{ alert("Error cancelling"); }
-    };
-  });
-
-  document.querySelectorAll(".delete-land").forEach(btn=>{
-    btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
-      if (!confirm("Delete this landed item permanently?")) return;
-      try{
-        await apiFetch(`/api/landings/${id}`, {method:"DELETE"});
-        await loadAllLandings();
-      }catch{ alert("Error deleting (admin only)"); }
-    };
-  });
-}
-
-// cancel edit
-document.getElementById("cancelLandEditBtn").onclick = () => {
-  editingLandId = null;
-  document.getElementById("landFormTitle").textContent = "Add Landed Item";
-  document.getElementById("saveLandBtn").textContent = "Save Landed Item";
-  document.getElementById("cancelLandEditBtn").classList.add("hidden");
-
-  ["landItem","landAmount","landRemarks"].forEach(id=>document.getElementById(id).value="");
-  ["landVessel","landWorkshop"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("landExpected").value="";
-  document.getElementById("landLanded").value="";
-  document.getElementById("landCurrency").value="USD";
-  document.getElementById("landPaid").checked=false;
+  await loadOverviewTotalsFilters();
 };
 
-// save landed item
-document.getElementById("saveLandBtn").onclick = async () => {
-  const err = document.getElementById("landError");
-  err.textContent = "";
+/* ========= Directory Options / Popup / Page ========= */
+async function loadDirectoryOptions() {
+  let suppliers=[], workshops=[];
+  try { suppliers=await apiFetch("/api/directory?type=supplier"); } catch {}
+  try { workshops=await apiFetch("/api/directory?type=workshop"); } catch {}
+  const supSel=document.getElementById("reqSupplierSelect");
+  const workSel=document.getElementById("landWorkshopSelect");
+  supSel.innerHTML='<option value="">Select supplier</option>';
+  workSel.innerHTML='<option value="">Select workshop</option>';
+  suppliers.forEach(s=>{ const o=document.createElement("option"); o.value=s.name; o.textContent=s.name; supSel.appendChild(o); });
+  workshops.forEach(w=>{ const o=document.createElement("option"); o.value=w.name; o.textContent=w.name; workSel.appendChild(o); });
+}
 
-  const payload = {
-    vessel: document.getElementById("landVessel").value.trim(),
-    item: document.getElementById("landItem").value.trim(),
-    workshop: document.getElementById("landWorkshop").value.trim(),
-    expected: document.getElementById("landExpected").value,
-    landed_date: document.getElementById("landLanded").value,
-    amount: parseFloat(document.getElementById("landAmount").value || "0"),
-    currency: document.getElementById("landCurrency").value || "USD",
-    paid: document.getElementById("landPaid").checked,
-    remarks: document.getElementById("landRemarks").value.trim(),
-  };
-
-  if (!payload.vessel || !payload.item || !payload.workshop || !payload.amount){
-    err.textContent = "Please fill all required fields (*)";
-    return;
-  }
-
-  try{
-    if (editingLandId){
-      await apiFetch(`/api/landings/${editingLandId}`, {
-        method:"PATCH",
-        body: JSON.stringify(payload)
-      });
-    } else {
-      await apiFetch("/api/landings", {
-        method:"POST",
-        body: JSON.stringify(payload)
-      });
-    }
-    document.getElementById("cancelLandEditBtn").onclick();
-    await loadAllLandings();
-  }catch(e){
-    if (e.error==="login_required") err.textContent="Please login first.";
-    else if (e.error==="not_allowed") err.textContent="You can edit only your own rows.";
-    else err.textContent="Error saving landed item.";
-  }
-};
-
-// filter buttons
-document.getElementById("applyLandFilterBtn").onclick = loadAllLandings;
-document.getElementById("clearLandFilterBtn").onclick = async () => {
-  document.getElementById("filterLandStatus").value="";
-  document.getElementById("filterLandPaid").value="";
-  document.getElementById("filterLandDelivered").value="";
-  document.getElementById("filterLandSearch").value="";
-  await loadAllLandings();
-};
-
-
-
-/* =========================================================
-   STEP 5: DIRECTORY UI + LOGIC
-   ========================================================= */
-
-let directoryRows = [];
-let editingDirId = null;
-let dirPopupType = null; // "supplier" or "workshop"
-
-function showDirPopup(type, row=null){
-  dirPopupType = type;
-  editingDirId = row ? Number(row.id) : null;
-
-  document.getElementById("dirPopupTitle").textContent =
-    (editingDirId ? "Edit " : "New ") + (type === "supplier" ? "Supplier" : "Workshop");
-
-  document.getElementById("dirName").value = row?.name || "";
-  document.getElementById("dirEmail").value = row?.email || "";
-  document.getElementById("dirPhone").value = row?.phone || "";
-  document.getElementById("dirAddress").value = row?.address || "";
-  document.getElementById("dirError").textContent = "";
-
-  document.getElementById("dirBackdrop").classList.remove("hidden");
+function openDirPopup(type){
+  dirPopupType=type;
+  document.getElementById("dirPopupTitle").textContent=type==="supplier"?"New Supplier":"New Workshop";
+  ["dirPopupName","dirPopupEmail","dirPopupPhone","dirPopupAddress"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("dirPopupError").textContent="";
+  document.getElementById("dirPopupBackdrop").classList.remove("hidden");
   document.getElementById("dirPopup").classList.remove("hidden");
 }
-
-function hideDirPopup(){
-  document.getElementById("dirBackdrop").classList.add("hidden");
+function closeDirPopup(){
+  document.getElementById("dirPopupBackdrop").classList.add("hidden");
   document.getElementById("dirPopup").classList.add("hidden");
-  dirPopupType = null;
-  editingDirId = null;
 }
-
-document.getElementById("dirBackdrop").onclick = hideDirPopup;
-document.getElementById("dirCancelBtn").onclick = hideDirPopup;
-
-document.getElementById("dirAddSupplierBtn").onclick = ()=>showDirPopup("supplier");
-document.getElementById("dirAddWorkshopBtn").onclick = ()=>showDirPopup("workshop");
-
-// Load + render directory
-async function loadDirectory(){
-  try { directoryRows = await apiFetch("/api/directory"); }
-  catch { directoryRows = []; }
-
-  const tbody = document.querySelector("#dirTable tbody");
-  tbody.innerHTML = "";
-
-  directoryRows.forEach(r=>{
-    const canEdit = currentUser && (currentUser.role === "admin" || r.created_by === currentUser.username);
-    const canDelete = currentUser && currentUser.role === "admin";
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${r.type}</td>
-      <td>${r.name}</td>
-      <td>${r.email || ""}</td>
-      <td>${r.phone || ""}</td>
-      <td>${r.address || ""}</td>
-      <td style="white-space:nowrap;">
-        <button class="secondary edit-dir" data-id="${r.id}" ${!canEdit?'disabled':''}>Edit</button>
-        <button class="danger delete-dir" data-id="${r.id}" ${!canDelete?'disabled':''}>Delete</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  document.querySelectorAll(".edit-dir").forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = Number(btn.dataset.id);
-      const row = directoryRows.find(x=>Number(x.id)===id);
-      if (!row) return;
-      showDirPopup(row.type, row);
-    };
-  });
-
-  document.querySelectorAll(".delete-dir").forEach(btn=>{
-    btn.onclick = async ()=>{
-      const id = Number(btn.dataset.id);
-      if (!confirm("Delete this entry?")) return;
-      try{
-        await apiFetch(`/api/directory/${id}`, {method:"DELETE"});
-        await loadDirectory();
-        // refresh form dropdowns too
-        await loadSuppliers();
-        await loadWorkshops();
-      }catch{
-        alert("Delete failed (admin only).");
-      }
-    };
-  });
-}
-
-// Save popup
-document.getElementById("dirSaveBtn").onclick = async ()=>{
-  const err = document.getElementById("dirError");
-  err.textContent = "";
-
-  const payload = {
-    type: dirPopupType,
-    name: document.getElementById("dirName").value.trim(),
-    email: document.getElementById("dirEmail").value.trim(),
-    phone: document.getElementById("dirPhone").value.trim(),
-    address: document.getElementById("dirAddress").value.trim(),
-  };
-
-  if (!payload.type || !payload.name){
-    err.textContent = "Name is required.";
-    return;
-  }
-
+document.getElementById("dirPopupCancelBtn").onclick=closeDirPopup;
+document.getElementById("dirPopupSaveBtn").onclick=async ()=>{
+  const name=document.getElementById("dirPopupName").value.trim();
+  const email=document.getElementById("dirPopupEmail").value.trim();
+  const phone=document.getElementById("dirPopupPhone").value.trim();
+  const address=document.getElementById("dirPopupAddress").value.trim();
+  const err=document.getElementById("dirPopupError");
+  err.textContent="";
+  if(!dirPopupType){ err.textContent="Unknown type."; return; }
+  if(!name){ err.textContent="Name is required."; return; }
   try{
-    if (editingDirId){
-      await apiFetch(`/api/directory/${editingDirId}`, {
-        method:"PATCH",
-        body: JSON.stringify(payload)
-      });
-    }else{
-      await apiFetch("/api/directory", {
-        method:"POST",
-        body: JSON.stringify(payload)
-      });
-    }
-    hideDirPopup();
-    await loadDirectory();
-    await loadSuppliers();
-    await loadWorkshops();
-  }catch(e){
-    if (e.error==="login_required") err.textContent="Please login first.";
-    else if (e.error==="not_allowed") err.textContent="You can edit only your own entries.";
-    else err.textContent="Error saving entry.";
-  }
+    await apiFetch("/api/directory/quick",{method:"POST",body:JSON.stringify({type:dirPopupType,name,email,phone,address})});
+    closeDirPopup();
+    await loadDirectoryOptions();
+    await loadDirectoryPage();
+  }catch(e){ err.textContent=e.error==="login_required"?"You must be logged in.":"Error saving."; }
 };
+document.getElementById("newSupplierBtn").onclick=()=>openDirPopup("supplier");
+document.getElementById("newWorkshopBtn").onclick=()=>openDirPopup("workshop");
+document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
+document.getElementById("dirNewWorkshopBtn").onclick=()=>openDirPopup("workshop");
 
-
-
-/* =========================================================
-   STEP 6: DELIVERED UI + LOGIC
-   ========================================================= */
-
-// Delivered Requisitions
-async function loadDeliveredRequisitions(){
-  let rows = allReqs;
-  if (!rows || !rows.length){
-    try{ rows = await apiFetch("/api/requisitions"); }
-    catch{ rows = []; }
-  }
-  const paidF = document.getElementById("filterDelReqPaid").value;
-  const search = document.getElementById("filterDelReqSearch").value.toLowerCase().trim();
-
-  const tbody = document.querySelector("#delReqTable tbody");
-  tbody.innerHTML = "";
-
-  rows.filter(r=>!!r.delivered).forEach(r=>{
-    const matchesPaid = paidF === "" || String(r.paid || 0) === paidF;
-    const matchesSearch =
-      !search ||
-      (r.number||"").toLowerCase().includes(search) ||
-      (r.vessel||"").toLowerCase().includes(search) ||
-      (r.supplier||"").toLowerCase().includes(search);
-    if(!(matchesPaid && matchesSearch)) return;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${r.number||""}</td>
-      <td>${r.vessel||""}</td>
-      <td>${r.category||""}</td>
-      <td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td>
-      <td>${r.expected||""}</td>
-      <td>${Number(r.amount_usd||0).toFixed(2)}</td>
-      <td>${paidTag(r.paid)}</td>
-      <td>${r.status||"open"}</td>
-      <td>${r.po_number||""}</td>
-      <td>${r.urgency||"normal"}</td>
-      <td>${r.remarks||""}</td>
-    `;
+async function loadDirectoryPage(){
+  let rows=[]; try{ rows=await apiFetch("/api/directory"); }catch{}
+  const tbody=document.querySelector("#directoryTable tbody");
+  tbody.innerHTML="";
+  rows.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.id}</td><td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td>${r.address||""}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-document.getElementById("applyDelReqFilterBtn").onclick = loadDeliveredRequisitions;
-document.getElementById("clearDelReqFilterBtn").onclick = async ()=>{
-  document.getElementById("filterDelReqPaid").value="";
-  document.getElementById("filterDelReqSearch").value="";
-  await loadDeliveredRequisitions();
-};
-
-// Delivered Landings
-async function loadDeliveredLandings(){
-  let rows = allLandings;
-  if (!rows || !rows.length){
-    try{ rows = await apiFetch("/api/landings"); }
-    catch{ rows = []; }
+/* ========= Vessels ========= */
+async function loadVessels(){
+  try { vessels=await apiFetch("/api/vessels"); } catch { vessels=[]; }
+  const reqSel=document.getElementById("reqVessel");
+  const landSel=document.getElementById("landVessel");
+  if(reqSel){
+    const cur=reqSel.value;
+    reqSel.innerHTML='<option value="">Select vessel</option>';
+    vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; reqSel.appendChild(o); });
+    if(cur) reqSel.value=cur;
   }
-  const paidF = document.getElementById("filterDelLandPaid").value;
-  const search = document.getElementById("filterDelLandSearch").value.toLowerCase().trim();
-
-  const tbody = document.querySelector("#delLandTable tbody");
-  tbody.innerHTML = "";
-
-  rows.filter(r=>!!r.delivered).forEach(r=>{
-    const matchesPaid = paidF === "" || String(r.paid || 0) === paidF;
-    const matchesSearch =
-      !search ||
-      (r.vessel||"").toLowerCase().includes(search) ||
-      (r.item||"").toLowerCase().includes(search) ||
-      (r.workshop||"").toLowerCase().includes(search);
-    if(!(matchesPaid && matchesSearch)) return;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${r.vessel||""}</td>
-      <td>${r.item||""}</td>
-      <td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td>
-      <td>${r.landed_date||""}</td>
-      <td>${Number(r.amount_usd||0).toFixed(2)}</td>
-      <td>${paidTag(r.paid)}</td>
-      <td>${r.status||"open"}</td>
-      <td>${r.remarks||""}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-document.getElementById("applyDelLandFilterBtn").onclick = loadDeliveredLandings;
-document.getElementById("clearDelLandFilterBtn").onclick = async ()=>{
-  document.getElementById("filterDelLandPaid").value="";
-  document.getElementById("filterDelLandSearch").value="";
-  await loadDeliveredLandings();
-};
-
-
-
-/* =========================================================
-   STEP 7: ADMIN UI + LOGIC (categories, vessels, users)
-   ========================================================= */
-
-let editingCatId = null;
-let editingVesselId = null;
-
-/* ---------- Admin gate helper ---------- */
-function isAdmin(){
-  return currentUser && currentUser.role === "admin";
-}
-function guardAdmin(){
-  if (!isAdmin()){
-    alert("Admin only.");
-    return false;
+  if(landSel){
+    const cur=landSel.value;
+    landSel.innerHTML='<option value="">Select vessel</option>';
+    vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; landSel.appendChild(o); });
+    if(cur) landSel.value=cur;
   }
-  return true;
-}
-
-/* ---------- Categories ---------- */
-async function renderCategories(){
-  let cats = [];
-  try { cats = await apiFetch("/api/categories"); }
-  catch { cats = []; }
-
-  const tbody = document.querySelector("#catTable tbody");
-  tbody.innerHTML = "";
-  cats.forEach(c=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${c.id}</td>
-      <td>${c.name}</td>
-      <td>${c.abbr}</td>
-      <td style="white-space:nowrap;">
-        <button class="secondary edit-cat" data-id="${c.id}">Edit</button>
-        <button class="danger delete-cat" data-id="${c.id}">Delete</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // disable if not admin
-  if (!isAdmin()){
-    document.querySelectorAll(".edit-cat,.delete-cat").forEach(b=>b.disabled=true);
-  }
-
-  document.querySelectorAll(".edit-cat").forEach(btn=>{
-    btn.onclick = ()=>{
-      if (!guardAdmin()) return;
-      const id = Number(btn.dataset.id);
-      const c = cats.find(x=>Number(x.id)===id);
-      if (!c) return;
-      editingCatId = id;
-      document.getElementById("catName").value = c.name;
-      document.getElementById("catAbbr").value = c.abbr;
-      document.getElementById("cancelCatEditBtn").classList.remove("hidden");
-      document.getElementById("saveCatBtn").textContent = "Update Category";
-      window.scrollTo({top:0, behavior:"smooth"});
-    };
-  });
-
-  document.querySelectorAll(".delete-cat").forEach(btn=>{
-    btn.onclick = async ()=>{
-      if (!guardAdmin()) return;
-      const id = Number(btn.dataset.id);
-      if (!confirm("Delete this category?")) return;
-      try{
-        await apiFetch(`/api/categories/${id}`, {method:"DELETE"});
-        await renderCategories();
-        await loadCategories(); // refresh req dropdown
-      }catch(e){
-        alert("Delete failed.");
-      }
-    };
-  });
-}
-
-document.getElementById("saveCatBtn").onclick = async ()=>{
-  if (!guardAdmin()) return;
-  const err = document.getElementById("catError");
-  err.textContent = "";
-
-  const name = document.getElementById("catName").value.trim();
-  const abbr = document.getElementById("catAbbr").value.trim();
-
-  if (!name || !abbr){
-    err.textContent = "Name and abbreviation required.";
-    return;
-  }
-
-  try{
-    if (editingCatId){
-      await apiFetch(`/api/categories/${editingCatId}`, {
-        method:"PATCH", body: JSON.stringify({name, abbr})
-      });
-    }else{
-      await apiFetch("/api/categories", {
-        method:"POST", body: JSON.stringify({name, abbr})
-      });
-    }
-    editingCatId = null;
-    document.getElementById("catName").value="";
-    document.getElementById("catAbbr").value="";
-    document.getElementById("cancelCatEditBtn").classList.add("hidden");
-    document.getElementById("saveCatBtn").textContent = "Save Category";
-    await renderCategories();
-    await loadCategories();
-  }catch(e){
-    if (e.error==="duplicate_abbr") err.textContent="Abbreviation already exists.";
-    else if (e.error==="admin_required") err.textContent="Admin only.";
-    else err.textContent="Error saving category.";
-  }
-};
-
-document.getElementById("cancelCatEditBtn").onclick = ()=>{
-  editingCatId = null;
-  document.getElementById("catName").value="";
-  document.getElementById("catAbbr").value="";
-  document.getElementById("cancelCatEditBtn").classList.add("hidden");
-  document.getElementById("saveCatBtn").textContent = "Save Category";
-};
-
-/* ---------- Vessels ---------- */
-async function renderVessels(){
-  let vs = [];
-  try { vs = await apiFetch("/api/vessels"); }
-  catch { vs = []; }
-
-  vessels = vs; // keep global list updated for dropdowns
-
-  const tbody = document.querySelector("#vesselTable tbody");
-  tbody.innerHTML = "";
-  vs.forEach(v=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${v.id}</td>
-      <td>${v.name}</td>
-      <td style="white-space:nowrap;">
-        <button class="secondary edit-vessel" data-id="${v.id}">Edit</button>
+  // admin table
+  const tbody=document.querySelector("#vesselTable tbody");
+  if(!tbody) return;
+  tbody.innerHTML="";
+  vessels.forEach(v=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${v.id}</td><td>${v.name}</td>
+      <td>
+        <button class="edit-vessel" data-id="${v.id}">Edit</button>
         <button class="danger delete-vessel" data-id="${v.id}">Delete</button>
-      </td>
-    `;
+      </td>`;
     tbody.appendChild(tr);
   });
-
-  if (!isAdmin()){
-    document.querySelectorAll(".edit-vessel,.delete-vessel").forEach(b=>b.disabled=true);
-  }
 
   document.querySelectorAll(".edit-vessel").forEach(btn=>{
-    btn.onclick = ()=>{
-      if (!guardAdmin()) return;
-      const id = Number(btn.dataset.id);
-      const v = vs.find(x=>Number(x.id)===id);
-      if (!v) return;
-      editingVesselId = id;
-      document.getElementById("vesselName").value = v.name;
+    btn.onclick=()=>{
+      const id=+btn.dataset.id;
+      const v=vessels.find(x=>x.id===id);
+      if(!v) return;
+      editingVesselId=id;
+      document.getElementById("vesselName").value=v.name;
       document.getElementById("cancelVesselEditBtn").classList.remove("hidden");
-      document.getElementById("saveVesselBtn").textContent = "Update Vessel";
-      window.scrollTo({top:0, behavior:"smooth"});
     };
   });
-
   document.querySelectorAll(".delete-vessel").forEach(btn=>{
-    btn.onclick = async ()=>{
-      if (!guardAdmin()) return;
-      const id = Number(btn.dataset.id);
-      if (!confirm("Delete this vessel?")) return;
-      try{
-        await apiFetch(`/api/vessels/${id}`, {method:"DELETE"});
-        await renderVessels();
-        await loadVessels();
-        fillLandingVessels();
-      }catch{
-        alert("Delete failed.");
-      }
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      if(!confirm("Delete this vessel?")) return;
+      try{ await apiFetch(`/api/vessels/${id}`,{method:"DELETE"}); await loadVessels(); }catch{ alert("Error deleting vessel."); }
     };
   });
 }
 
-document.getElementById("saveVesselBtn").onclick = async ()=>{
-  if (!guardAdmin()) return;
-  const err = document.getElementById("vesselError");
-  err.textContent = "";
-  const name = document.getElementById("vesselName").value.trim();
-  if (!name){
-    err.textContent = "Vessel name required.";
-    return;
-  }
+document.getElementById("addVesselBtn").onclick=async ()=>{
+  const name=document.getElementById("vesselName").value.trim();
+  const err=document.getElementById("vesselError");
+  err.textContent="";
+  if(!name){ err.textContent="Vessel name required."; return; }
   try{
-    if (editingVesselId){
-      await apiFetch(`/api/vessels/${editingVesselId}`, {
-        method:"PATCH", body: JSON.stringify({name})
-      });
+    if(editingVesselId){
+      await apiFetch(`/api/vessels/${editingVesselId}`,{method:"PATCH",body:JSON.stringify({name})});
     }else{
-      await apiFetch("/api/vessels", {
-        method:"POST", body: JSON.stringify({name})
-      });
+      await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name})});
     }
-    editingVesselId = null;
+    editingVesselId=null;
     document.getElementById("vesselName").value="";
     document.getElementById("cancelVesselEditBtn").classList.add("hidden");
-    document.getElementById("saveVesselBtn").textContent = "Save Vessel";
-    await renderVessels();
     await loadVessels();
-    fillLandingVessels();
   }catch(e){
-    if (e.error==="duplicate_name") err.textContent="This vessel already exists.";
-    else if (e.error==="admin_required") err.textContent="Admin only.";
+    if(e.error==="duplicate_name") err.textContent="This vessel already exists.";
+    else if(e.error==="admin_required") err.textContent="Only admin can manage vessels.";
     else err.textContent="Error saving vessel.";
   }
 };
-
-document.getElementById("cancelVesselEditBtn").onclick = ()=>{
-  editingVesselId = null;
+document.getElementById("cancelVesselEditBtn").onclick=()=>{
+  editingVesselId=null;
   document.getElementById("vesselName").value="";
   document.getElementById("cancelVesselEditBtn").classList.add("hidden");
-  document.getElementById("saveVesselBtn").textContent = "Save Vessel";
 };
 
-/* ---------- Users ---------- */
-async function renderUsers(){
-  let users = [];
-  try { users = await apiFetch("/api/users"); }
-  catch { users = []; }
-
-  const tbody = document.querySelector("#userTable tbody");
-  tbody.innerHTML = "";
-
-  users.forEach(u=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${u.username}</td>
-      <td>${u.role}</td>
-      <td style="white-space:nowrap;">
-        <button class="danger delete-user" data-username="${u.username}">Delete</button>
-      </td>
-    `;
+/* ========= Categories ========= */
+async function loadCategories(){
+  let cats=[]; try{ cats=await apiFetch("/api/categories"); }catch{}
+  const catSelect=document.getElementById("reqCategory");
+  if(catSelect){
+    catSelect.innerHTML='<option value="">Select category</option>';
+    cats.forEach(c=>{ const o=document.createElement("option"); o.value=c.abbr; o.textContent=`${c.abbr} - ${c.name}`; catSelect.appendChild(o); });
+  }
+  const tbody=document.querySelector("#catTable tbody");
+  tbody.innerHTML="";
+  cats.forEach(c=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${c.id}</td><td>${c.name}</td><td>${c.abbr}</td>
+      <td><button class="edit-cat" data-id="${c.id}">Edit</button>
+          <button class="danger delete-cat" data-id="${c.id}">Delete</button></td>`;
     tbody.appendChild(tr);
   });
-
-  if (!isAdmin()){
-    document.querySelectorAll(".delete-user").forEach(b=>b.disabled=true);
-  }
-
-  document.querySelectorAll(".delete-user").forEach(btn=>{
-    btn.onclick = async ()=>{
-      if (!guardAdmin()) return;
-      const username = btn.dataset.username;
-      if (!confirm(`Delete user "${username}"?`)) return;
-      try{
-        await apiFetch(`/api/users/${username}`, {method:"DELETE"});
-        await renderUsers();
-      }catch{
-        alert("Delete failed.");
-      }
+  document.querySelectorAll(".edit-cat").forEach(btn=>{
+    btn.onclick=()=>{
+      const id=+btn.dataset.id;
+      const cat=cats.find(x=>x.id===id);
+      if(!cat) return;
+      editingCatId=id;
+      document.getElementById("catName").value=cat.name;
+      document.getElementById("catAbbr").value=cat.abbr;
+      document.getElementById("cancelCatEditBtn").classList.remove("hidden");
+    };
+  });
+  document.querySelectorAll(".delete-cat").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      if(!confirm("Delete this category?")) return;
+      try{ await apiFetch(`/api/categories/${id}`,{method:"DELETE"}); await loadCategories(); }catch{ alert("Error deleting category."); }
     };
   });
 }
-
-document.getElementById("saveUserBtn").onclick = async ()=>{
-  if (!guardAdmin()) return;
-  const err = document.getElementById("userError");
-  err.textContent = "";
-
-  const username = document.getElementById("adminUsername").value.trim();
-  const password = document.getElementById("adminPassword").value;
-  const role = document.getElementById("adminRole").value;
-
-  if (!username || !password){
-    err.textContent = "Username and password required.";
-    return;
-  }
-
+document.getElementById("addCatBtn").onclick=async ()=>{
+  const name=document.getElementById("catName").value.trim();
+  const abbr=document.getElementById("catAbbr").value.trim();
+  const err=document.getElementById("catError"); err.textContent="";
+  if(!name||!abbr){ err.textContent="Name and abbreviation are required."; return; }
   try{
-    await apiFetch("/api/users", {
-      method:"POST",
-      body: JSON.stringify({username, password, role})
-    });
+    if(editingCatId){
+      await apiFetch(`/api/categories/${editingCatId}`,{method:"PATCH",body:JSON.stringify({name,abbr})});
+    }else{
+      await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name,abbr})});
+    }
+    editingCatId=null;
+    document.getElementById("catName").value="";
+    document.getElementById("catAbbr").value="";
+    document.getElementById("cancelCatEditBtn").classList.add("hidden");
+    await loadCategories(); await loadOverviewTotalsFilters();
+  }catch(e){
+    if(e.error==="duplicate_abbr") err.textContent="Abbreviation already exists.";
+    else if(e.error==="admin_required") err.textContent="Only admin can manage categories.";
+    else err.textContent="Error saving category.";
+  }
+};
+document.getElementById("cancelCatEditBtn").onclick=()=>{
+  editingCatId=null;
+  document.getElementById("catName").value="";
+  document.getElementById("catAbbr").value="";
+  document.getElementById("cancelCatEditBtn").classList.add("hidden");
+};
+
+/* ========= Users ========= */
+async function loadUsersAdmin(){
+  let users=[]; try{ users=await apiFetch("/api/users"); }catch{}
+  const tbody=document.querySelector("#userTable tbody"); tbody.innerHTML="";
+  users.forEach(u=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${u.username}</td><td>${u.role}</td>
+      <td><button class="danger delete-user" data-username="${u.username}">Delete</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.querySelectorAll(".delete-user").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const username=btn.dataset.username;
+      if(!confirm(`Delete user "${username}"?`)) return;
+      try{ await apiFetch(`/api/users/${username}`,{method:"DELETE"}); await loadUsersAdmin(); }catch{ alert("Error deleting user.");}
+    };
+  });
+}
+document.getElementById("saveUserBtn").onclick=async ()=>{
+  const username=document.getElementById("adminUsername").value.trim();
+  const password=document.getElementById("adminPassword").value;
+  const role=document.getElementById("adminRole").value;
+  const err=document.getElementById("adminUserError"); err.textContent="";
+  if(!username||!password){ err.textContent="Username and password are required."; return; }
+  try{
+    await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username,password,role})});
     document.getElementById("adminUsername").value="";
     document.getElementById("adminPassword").value="";
     document.getElementById("adminRole").value="user";
-    await renderUsers();
+    await loadUsersAdmin();
   }catch(e){
-    if (e.error==="admin_required") err.textContent="Admin only.";
+    if(e.error==="admin_required") err.textContent="Only admin can manage users.";
     else err.textContent="Error saving user.";
   }
 };
 
-/* ---------- Enable/disable admin inputs on session refresh ---------- */
-function setAdminInputsEnabled(){
-  const enabled = isAdmin();
-  ["catName","catAbbr","saveCatBtn","cancelCatEditBtn",
-   "vesselName","saveVesselBtn","cancelVesselEditBtn",
-   "adminUsername","adminPassword","adminRole","saveUserBtn"].forEach(id=>{
-     const el = document.getElementById(id);
-     if (el) el.disabled = !enabled;
-   });
-}
+/* ========= Requisitions ========= */
+async function loadAllRequisitions(){
+  let rows=[]; try{ rows=await apiFetch("/api/requisitions"); }catch{}
+  allReqs=rows;
+  const tbody=document.querySelector("#reqTable tbody"); tbody.innerHTML="";
+  const statusFilter=document.getElementById("filterReqStatus").value;
+  const paidFilter=document.getElementById("filterReqPaid").value;
+  const delFilter=document.getElementById("filterReqDelivered").value;
+  const search=document.getElementById("filterReqSearch").value.toLowerCase();
 
+  rows.forEach(r=>{
+    const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
+    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
+    const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
+    const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
+    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
 
+    const tr=document.createElement("tr");
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
+    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
+    let statusClass="status-open";
+    if((r.status||"open")==="cancelled") statusClass="status-cancelled";
+    if(r.delivered) statusClass="status-delivered";
 
-/* =========================================================
-   STEP 8: OVERVIEW TOTALS FILTERS + TOP 5 SUPPLIERS (NO CHARTS)
-   ========================================================= */
-
-function parseDateSafe(d){
-  if(!d) return null;
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? null : dt;
-}
-function quarterOfMonth(m){
-  if (m<=3) return "Q1";
-  if (m<=6) return "Q2";
-  if (m<=9) return "Q3";
-  return "Q4";
-}
-
-async function loadOverviewTotalsFilters(){
-  // Ensure data
-  let reqs = allReqs;
-  let lands = allLandings;
-  if (!reqs || !reqs.length){
-    try{ reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; }
-  }
-  if (!lands || !lands.length){
-    try{ lands = await apiFetch("/api/landings"); } catch { lands=[]; }
-  }
-
-  // Categories from reqs only (landings don't have category in your spec)
-  const catSet = new Set(reqs.map(r=>(r.category||"").trim()).filter(Boolean));
-  const catSel = document.getElementById("ovCategoryFilter");
-  if (catSel){
-    catSel.innerHTML = `<option value="">All categories</option>` +
-      [...catSet].sort().map(c=>`<option value="${c}">${c}</option>`).join("");
-  }
-
-  // Vessels from both
-  const vesselSet = new Set();
-  reqs.forEach(r=>vesselSet.add((r.vessel||"").trim()));
-  lands.forEach(r=>vesselSet.add((r.vessel||"").trim()));
-  const vesselSel = document.getElementById("ovVesselFilter");
-  if (vesselSel){
-    vesselSel.innerHTML = `<option value="">All</option>` +
-      [...vesselSet].filter(Boolean).sort().map(v=>`<option value="${v}">${v}</option>`).join("");
-  }
-
-  // Years from both
-  const yearSet = new Set();
-  reqs.forEach(r=>{
-    const dt = parseDateSafe(r.date_ordered);
-    if (dt) yearSet.add(dt.getFullYear());
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
+      <td>
+        <button class="edit-req" data-id="${r.id}">Edit</button>
+        <button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button>
+        <button class="secondary mark-delivered-req" data-id="${r.id}">Delivered</button>
+        <button class="danger cancel-req" data-id="${r.id}">Cancel</button>
+        <button class="danger delete-req" data-id="${r.id}">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
   });
-  lands.forEach(r=>{
-    const dt = parseDateSafe(r.landed_date);
-    if (dt) yearSet.add(dt.getFullYear());
-  });
-  const yearSel = document.getElementById("ovYearFilter");
-  if (yearSel){
-    yearSel.innerHTML = `<option value="">All years</option>` +
-      [...yearSet].sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join("");
-  }
-
-  updateOverviewPaidTotals(reqs, lands);
+  attachReqRowActions();
 }
 
-function updateOverviewPaidTotals(reqs, lands){
-  const typeF = document.getElementById("ovTypeFilter").value;      // "", "req", "land"
-  const vesselF = document.getElementById("ovVesselFilter").value;  // vessel or ""
-  const paidF = document.getElementById("ovPaidFilter").value;      // "", "1", "0"
-  const monthF = document.getElementById("ovMonthFilter").value;    // "", "1".."12"
-  const quarterF = document.getElementById("ovQuarterFilter").value; 
-  const yearF = document.getElementById("ovYearFilter").value;      // "", "2025"...
-  const categoryF = document.getElementById("ovCategoryFilter").value;
-
-  let filtered = [];
-
-  if (!typeF || typeF==="req"){
-    filtered = filtered.concat(reqs.map(r=>({
-      _type:"req",
-      vessel:r.vessel,
-      category:r.category,
-      supplier:r.supplier,
-      paid:Number(r.paid||0),
-      amount:Number(r.amount_usd||0),
-      date:r.date_ordered
-    })));
-  }
-  if (!typeF || typeF==="land"){
-    filtered = filtered.concat(lands.map(r=>({
-      _type:"land",
-      vessel:r.vessel,
-      category:"", // no category for landings
-      supplier:r.workshop || r.supplier,
-      paid:Number(r.paid||0),
-      amount:Number(r.amount_usd||0),
-      date:r.landed_date
-    })));
-  }
-
-  filtered = filtered.filter(x=>{
-    if (vesselF && (x.vessel||"") !== vesselF) return false;
-    if (paidF!=="" && String(x.paid)!==paidF) return false;
-
-    const dt = parseDateSafe(x.date);
-    if (!dt) return false;
-
-    const mm = dt.getMonth()+1;
-    const yy = dt.getFullYear();
-    const qq = quarterOfMonth(mm);
-
-    if (yearF && String(yy)!==yearF) return false;
-
-    if (monthF){
-      if (String(mm)!==monthF) return false;
-    } else if (quarterF){
-      if (qq!==quarterF) return false;
-    }
-
-    if (categoryF && (x.category||"")!==categoryF) return false;
-
-    return true;
+function attachReqRowActions(){
+  document.querySelectorAll(".toggle-paid-req").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      try{ await apiFetch(`/api/requisitions/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
+      catch{ alert("Error toggling paid."); }
+    };
   });
-
-  const allTotal = filtered.reduce((s,x)=>s + x.amount, 0);
-  const paidOnly = filtered.filter(x=>x.paid===1);
-  const paidPeriodTotal = paidOnly.reduce((s,x)=>s + x.amount, 0);
-
-  document.getElementById("ovAllTotal").textContent = allTotal.toFixed(2);
-  document.getElementById("ovPaidPeriodTotal").textContent = paidPeriodTotal.toFixed(2);
-
-  // Top 5 suppliers
-  const supMap = {};
-  filtered.forEach(x=>{
-    const name = x.supplier || "Unknown";
-    supMap[name] = (supMap[name]||0) + x.amount;
+  document.querySelectorAll(".mark-delivered-req").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      try{ await apiFetch(`/api/requisitions/${id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); }
+      catch{ alert("Error marking delivered."); }
+    };
   });
-  const topSup = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const ul = document.getElementById("ovTopSuppliers");
-  ul.innerHTML = topSup.length
-    ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("")
-    : "<li>—</li>";
+  document.querySelectorAll(".cancel-req").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      if(!confirm("Cancel this requisition?")) return;
+      try{ await apiFetch(`/api/requisitions/${id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }
+      catch{ alert("Error cancelling."); }
+    };
+  });
+  document.querySelectorAll(".delete-req").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      if(!confirm("Permanently delete this requisition?")) return;
+      try{ await apiFetch(`/api/requisitions/${id}`,{method:"DELETE"}); await afterDataLoad(); }
+      catch{ alert("Error deleting."); }
+    };
+  });
+  document.querySelectorAll(".edit-req").forEach(btn=>{
+    btn.onclick=()=>{
+      const id=+btn.dataset.id;
+      const row=allReqs.find(r=>r.id===id); if(!row) return;
+      editingReqId=id;
+      document.getElementById("reqFormTitle").textContent="Edit Requisition";
+      document.getElementById("saveReqBtn").textContent="Update Requisition";
+      document.getElementById("cancelReqEditBtn").classList.remove("hidden");
+      document.getElementById("reqNumber").value=row.number||"";
+      document.getElementById("reqVessel").value=row.vessel||"";
+      document.getElementById("reqCategory").value=row.category||"";
+      document.getElementById("reqSupplierSelect").value=row.supplier||"";
+      document.getElementById("reqDateOrdered").value=row.date_ordered||"";
+      document.getElementById("reqExpected").value=row.expected||"";
+      const orig=(typeof row.original_amount==="number"?row.original_amount:row.total_amount)||0;
+      document.getElementById("reqTotal").value=orig;
+      document.getElementById("reqCurrency").value=row.currency||"USD";
+      document.getElementById("reqPaid").checked=!!row.paid;
+    };
+  });
 }
-
-document.getElementById("ovApplyTotalsBtn").onclick = async ()=>{
-  let reqs = allReqs, lands = allLandings;
-  if (!reqs.length){ try{ reqs = await apiFetch("/api/requisitions"); } catch{ reqs=[]; } }
-  if (!lands.length){ try{ lands = await apiFetch("/api/landings"); } catch{ lands=[]; } }
-  updateOverviewPaidTotals(reqs, lands);
+document.getElementById("cancelReqEditBtn").onclick=()=>{
+  editingReqId=null;
+  document.getElementById("reqFormTitle").textContent="Add Requisition";
+  document.getElementById("saveReqBtn").textContent="Save Requisition";
+  document.getElementById("cancelReqEditBtn").classList.add("hidden");
+  ["reqNumber","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("reqPaid").checked=false;
+  document.getElementById("reqCurrency").value="USD";
 };
-document.getElementById("ovClearTotalsBtn").onclick = async ()=>{
-  document.getElementById("ovTypeFilter").value="";
-  document.getElementById("ovVesselFilter").value="";
-  document.getElementById("ovPaidFilter").value="";
-  document.getElementById("ovMonthFilter").value="";
-  document.getElementById("ovQuarterFilter").value="";
-  document.getElementById("ovCategoryFilter").value="";
-  document.getElementById("ovYearFilter").value="";
-  await loadOverviewTotalsFilters();
+document.getElementById("applyReqFilterBtn").onclick=loadAllRequisitions;
+document.getElementById("clearReqFilterBtn").onclick=async ()=>{
+  ["filterReqStatus","filterReqPaid","filterReqDelivered","filterReqSearch"].forEach(id=>document.getElementById(id).value="");
+  await loadAllRequisitions();
 };
 
+document.getElementById("saveReqBtn").onclick=async ()=>{
+  const number=document.getElementById("reqNumber").value.trim();
+  const vessel=document.getElementById("reqVessel").value.trim();
+  const category=document.getElementById("reqCategory").value.trim();
+  const supplier=document.getElementById("reqSupplierSelect").value.trim();
+  const date_ordered=document.getElementById("reqDateOrdered").value;
+  const expected=document.getElementById("reqExpected").value;
+  const total=document.getElementById("reqTotal").value;
+  const currency=document.getElementById("reqCurrency").value||"USD";
+  const paid=document.getElementById("reqPaid").checked;
+  const err=document.getElementById("reqError"); err.textContent="";
 
-/* ================== Init ================== */
-(async function init(){
-  await refreshSession();
-  await loadCurrencies();
+  if(!number||!vessel||!category||!supplier||!date_ordered||!total){
+    err.textContent="Please fill all required fields."; return;
+  }
+  try{
+    const payload={number,vessel,category,supplier,date_ordered,expected,amount:parseFloat(total),currency,paid};
+    if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
+    else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
+    document.getElementById("cancelReqEditBtn").onclick();
+    await afterDataLoad();
+  }catch(e){
+    if(e.error==="duplicate_number") err.textContent="This requisition number already exists.";
+    else if(e.error==="unknown_category") err.textContent="Invalid category abbreviation.";
+    else if(e.error==="login_required") err.textContent="You must be logged in to add / edit requisitions.";
+    else err.textContent="Error saving requisition.";
+  }
+};
+
+/* ========= Overview Reqs ========= */
+async function loadOverviewRequisitions(){
+  let rows=allReqs;
+  if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
+  const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
+  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
+    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
+    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+      <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
+      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ========= Landings ========= */
+async function loadAllLandings(){
+  let rows=[]; try{ rows=await apiFetch("/api/landings"); }catch{}
+  allLandings=rows;
+  const tbody=document.querySelector("#landingTable tbody"); tbody.innerHTML="";
+  const statusFilter=document.getElementById("filterLandingStatus").value;
+  const paidFilter=document.getElementById("filterLandingPaid").value;
+  const delFilter=document.getElementById("filterLandingDelivered").value;
+  const search=document.getElementById("filterLandingSearch").value.toLowerCase();
+
+  rows.forEach(r=>{
+    const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
+    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
+    const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
+    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
+    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
+
+    const tr=document.createElement("tr");
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
+    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
+    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+
+    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
+      <td>
+        <button class="edit-land" data-id="${r.id}">Edit</button>
+        <button class="secondary toggle-paid-land" data-id="${r.id}">Paid</button>
+        <button class="secondary mark-delivered-land" data-id="${r.id}">Delivered</button>
+        <button class="danger cancel-land" data-id="${r.id}">Cancel</button>
+        <button class="danger delete-land" data-id="${r.id}">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  attachLandingActions();
+}
+function attachLandingActions(){
+  document.querySelectorAll(".toggle-paid-land").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      try{ await apiFetch(`/api/landings/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
+      catch{ alert("Error toggling paid."); }
+    };
+  });
+  document.querySelectorAll(".mark-delivered-land").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      try{ await apiFetch(`/api/landings/${id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); }
+      catch{ alert("Error marking delivered."); }
+    };
+  });
+  document.querySelectorAll(".cancel-land").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      if(!confirm("Cancel this landed item?")) return;
+      try{ await apiFetch(`/api/landings/${id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }
+      catch{ alert("Error cancelling landing."); }
+    };
+  });
+  document.querySelectorAll(".delete-land").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      if(!confirm("Permanently delete this landed item?")) return;
+      try{ await apiFetch(`/api/landings/${id}`,{method:"DELETE"}); await afterDataLoad(); }
+      catch{ alert("Error deleting landing."); }
+    };
+  });
+  document.querySelectorAll(".edit-land").forEach(btn=>{
+    btn.onclick=()=>{
+      const id=+btn.dataset.id;
+      const row=allLandings.find(l=>l.id===id); if(!row) return;
+      editingLandId=id;
+      document.getElementById("landFormTitle").textContent="Edit Landed Item";
+      document.getElementById("saveLandingBtn").textContent="Update Landed Item";
+      document.getElementById("cancelLandEditBtn").classList.remove("hidden");
+      document.getElementById("landVessel").value=row.vessel||"";
+      document.getElementById("landDescription").value=row.item||"";
+      document.getElementById("landWorkshopSelect").value=row.workshop||"";
+      document.getElementById("landExpected").value=row.expected||"";
+      document.getElementById("landLanded").value=row.landed_date||"";
+      const orig=(typeof row.amount_original==="number"?row.amount_original:row.amount)||0;
+      document.getElementById("landAmount").value=orig;
+      document.getElementById("landCurrency").value=row.currency||"USD";
+      document.getElementById("landPaid").checked=!!row.paid;
+    };
+  });
+}
+document.getElementById("cancelLandEditBtn").onclick=()=>{
+  editingLandId=null;
+  document.getElementById("landFormTitle").textContent="Add Landed Item";
+  document.getElementById("saveLandingBtn").textContent="Save Landed Item";
+  document.getElementById("cancelLandEditBtn").classList.add("hidden");
+  ["landVessel","landDescription","landWorkshopSelect","landExpected","landLanded","landAmount"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("landPaid").checked=false;
+  document.getElementById("landCurrency").value="USD";
+};
+document.getElementById("applyLandingFilterBtn").onclick=loadAllLandings;
+document.getElementById("clearLandingFilterBtn").onclick=async ()=>{
+  ["filterLandingStatus","filterLandingPaid","filterLandingDelivered","filterLandingSearch"].forEach(id=>document.getElementById(id).value="");
+  await loadAllLandings();
+};
+document.getElementById("saveLandingBtn").onclick=async ()=>{
+  const vessel=document.getElementById("landVessel").value.trim();
+  const desc=document.getElementById("landDescription").value.trim();
+  const workshop=document.getElementById("landWorkshopSelect").value.trim();
+  const expected=document.getElementById("landExpected").value;
+  const landed=document.getElementById("landLanded").value;
+  const amount=document.getElementById("landAmount").value;
+  const currency=document.getElementById("landCurrency").value||"USD";
+  const paid=document.getElementById("landPaid").checked;
+  const err=document.getElementById("landError"); err.textContent="";
+  if(!vessel||!desc||!workshop||!amount){ err.textContent="Vessel, description, workshop and amount are required."; return; }
+  try{
+    const payload={vessel,item:desc,workshop,amount:parseFloat(amount),currency,expected,landed_date:landed,paid};
+    if(editingLandId) await apiFetch(`/api/landings/${editingLandId}`,{method:"PATCH",body:JSON.stringify(payload)});
+    else await apiFetch("/api/landings",{method:"POST",body:JSON.stringify(payload)});
+    document.getElementById("cancelLandEditBtn").onclick();
+    await afterDataLoad();
+  }catch(e){
+    err.textContent=e.error==="login_required"?"You must be logged in.":"Error saving landed item.";
+  }
+};
+
+/* ========= Cancelled tables ========= */
+async function fillCancelledTables(){
+  const reqBody=document.querySelector("#reqCancelledTable tbody");
+  const landBody=document.querySelector("#landingCancelledTable tbody");
+  reqBody.innerHTML=""; landBody.innerHTML="";
+  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+    reqBody.appendChild(tr);
+  });
+  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+    landBody.appendChild(tr);
+  });
+}
+
+/* ========= Overview Landings ========= */
+async function loadOverviewLandings(){
+  let rows=allLandings;
+  if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
+  const tbody=document.querySelector("#overviewLandTable tbody"); tbody.innerHTML="";
+  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
+    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
+    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ========= Delivered ========= */
+async function loadDeliveredRequisitions(){
+  let rows=allReqs; if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
+  const paidFilter=document.getElementById("filterDeliveredReqPaid").value;
+  const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
+  const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
+  rows.filter(r=>r.delivered).forEach(r=>{
+    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
+    const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
+    if(!(matchesPaid&&matchesSearch)) return;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById("applyDeliveredReqFilterBtn").onclick=loadDeliveredRequisitions;
+document.getElementById("clearDeliveredReqFilterBtn").onclick=async ()=>{
+  ["filterDeliveredReqPaid","filterDeliveredReqSearch"].forEach(id=>document.getElementById(id).value="");
+  await loadDeliveredRequisitions();
+};
+
+async function loadDeliveredLandings(){
+  let rows=allLandings; if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
+  const paidFilter=document.getElementById("filterDeliveredLandPaid").value;
+  const search=document.getElementById("filterDeliveredLandSearch").value.toLowerCase();
+  const tbody=document.querySelector("#deliveredLandTable tbody"); tbody.innerHTML="";
+  rows.filter(r=>r.delivered).forEach(r=>{
+    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
+    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
+    if(!(matchesPaid&&matchesSearch)) return;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById("applyDeliveredLandFilterBtn").onclick=loadDeliveredLandings;
+document.getElementById("clearDeliveredLandFilterBtn").onclick=async ()=>{
+  ["filterDeliveredLandPaid","filterDeliveredLandSearch"].forEach(id=>document.getElementById(id).value="");
+  await loadDeliveredLandings();
+};
+
+/* ========= Summary counts ========= */
+async function updateSummaryCounts(){
+  let reqs=allReqs, lands=allLandings;
+  if(!reqs.length){ try{ reqs=await apiFetch("/api/requisitions"); }catch{ reqs=[]; } }
+  if(!lands.length){ try{ lands=await apiFetch("/api/landings"); }catch{ lands=[]; } }
+
+  document.getElementById("summaryOpenReqNotDel").textContent=reqs.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
+  document.getElementById("summaryOpenReqUnpaid").textContent=reqs.filter(r=>!r.delivered&&!r.paid&&(r.status||"open")==="open").length;
+  document.getElementById("summaryOpenLandNotDel").textContent=lands.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
+  document.getElementById("summaryOpenLandUnpaid").textContent=lands.filter(r=>!r.delivered&&!r.paid&&(r.status||"open")==="open").length;
+}
+
+/* ========= One place to reload everything ========= */
+async function afterDataLoad() {
+  await loadDirectoryOptions();
   await loadCategories();
   await loadVessels();
-  await loadSuppliers();
-  fillLandingVessels();
-  await loadWorkshops();
-  fillLandingCurrencies();
+  await loadDirectoryPage();
+  await loadUsersAdmin();
   await loadAllRequisitions();
   await loadAllLandings();
+  await loadOverviewRequisitions();
+  await loadOverviewLandings();
   await loadDeliveredRequisitions();
   await loadDeliveredLandings();
+  await fillCancelledTables();
+  await updateSummaryCounts();
   await loadOverviewTotalsFilters();
-  await loadDirectory();
-  if (currentUser && currentUser.role === 'admin') {
-    await renderCategories();
-    await renderVessels();
-    await renderUsers();
-  }
-  setAdminInputsEnabled();
+}
+
+/* ========= Init ========= */
+(async function init(){
+  await loadCurrencies();
+  await refreshSession();   // important due to admin tab visibility
+  await afterDataLoad();
 })();
 </script>
 
