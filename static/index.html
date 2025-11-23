@@ -955,7 +955,7 @@ async function refreshSession() {
       <button id="logoutBtn">Logout</button>
     `;
     document.getElementById("logoutBtn").onclick = async () => {
-      await apiFetch("/api/logout", { method:"POST" });
+      try { await apiFetch("/api/logout", { method:"POST" }); } catch {}
       currentUser = null;
       loginCard.classList.add("hidden");
       await refreshSession();
@@ -971,16 +971,26 @@ async function refreshSession() {
     };
   }
 
-  // --- ADMIN TAB SHOW/HIDE ---
   const isAdmin = currentUser && (currentUser.role || "").toLowerCase() === "admin";
 
   const adminTab = document.getElementById("adminTab");
   if (adminTab) {
-    if (isAdmin) adminTab.classList.remove("hidden");
-    else adminTab.classList.add("hidden");
+    if (isAdmin) {
+      adminTab.classList.remove("hidden");
+    } else {
+      adminTab.classList.add("hidden");
+      if (adminTab.classList.contains("active")) {
+        adminTab.classList.remove("active");
+        const overviewTab = document.querySelector('.tab[data-tab="overview"]');
+        if (overviewTab) overviewTab.classList.add("active");
+        document.querySelectorAll("[id^='tab-']").forEach(div => div.classList.add("hidden"));
+        const ov = document.getElementById("tab-overview");
+        if (ov) ov.classList.remove("hidden");
+      }
+    }
   }
 
-  // disable admin-only controls if not admin
+  // disable admin-only inputs if not admin
   ["catName","catAbbr","addCatBtn","cancelCatEditBtn",
    "adminUsername","adminPassword","adminRole","saveUserBtn",
    "vesselName","addVesselBtn","cancelVesselEditBtn"
@@ -989,7 +999,7 @@ async function refreshSession() {
     if (el) el.disabled = !isAdmin;
   });
 
-  // load data
+  // load all data
   await loadDirectoryOptions();
   await loadCategories();
   await loadVessels();
@@ -1005,12 +1015,9 @@ async function refreshSession() {
   await updateSummaryCounts();
 }
  
-
 async function loadOverviewTotalsFilters() {
-  // Ensure data exists
   let reqs = allReqs;
   let lands = allLandings;
-
   if (!reqs.length) {
     try { reqs = await apiFetch("/api/requisitions"); } catch { reqs = []; }
   }
@@ -1018,36 +1025,34 @@ async function loadOverviewTotalsFilters() {
     try { lands = await apiFetch("/api/landings"); } catch { lands = []; }
   }
 
-  // Fill Month dropdown (1..12) if not already filled
+  // Month dropdown 1..12
   const monthSel = document.getElementById("ovMonthFilter");
-  if (monthSel) {
-    monthSel.innerHTML = `<option value="">All months</option>` +
+  if (monthSel && monthSel.children.length <= 1) {
+    monthSel.innerHTML = '<option value="">All months</option>' +
       Array.from({length:12}, (_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");
   }
 
-  // Fill Category dropdown from both sheets
+  // Categories from both sheets
   const cats = new Set();
   reqs.forEach(r => cats.add((r.category || "").trim()));
   lands.forEach(r => cats.add((r.category || "").trim()));
-
   const catSel = document.getElementById("ovCategoryFilter");
   if (catSel) {
     catSel.innerHTML = `<option value="">All categories</option>` +
       [...cats].filter(c => c).sort().map(c => `<option value="${c}">${c}</option>`).join("");
   }
 
-  // Fill Vessel dropdown from both sheets
+  // Vessels from both sheets
   const vesselsSet = new Set();
   reqs.forEach(r => vesselsSet.add((r.vessel || "").trim()));
   lands.forEach(r => vesselsSet.add((r.vessel || "").trim()));
-
   const vesselSel = document.getElementById("ovVesselFilter");
   if (vesselSel) {
     vesselSel.innerHTML = `<option value="">All</option>` +
       [...vesselsSet].filter(v => v).sort().map(v => `<option value="${v}">${v}</option>`).join("");
   }
 
-  // Fill Year dropdown from both sheets
+  // Years from both sheets
   const years = new Set();
   reqs.forEach(r => {
     const dt = parseDateSafe(r.date_ordered);
@@ -1057,50 +1062,50 @@ async function loadOverviewTotalsFilters() {
     const dt = parseDateSafe(r.landed_date);
     if (dt) years.add(dt.getFullYear());
   });
-
   const yearSel = document.getElementById("ovYearFilter");
   if (yearSel) {
     yearSel.innerHTML = `<option value="">All years</option>` +
       [...years].sort((a,b)=>b-a).map(y => `<option value="${y}">${y}</option>`).join("");
   }
 
-  // First compute totals + charts
   updateOverviewPaidTotals(reqs, lands);
 }
 
 function updateOverviewPaidTotals(reqs, lands) {
-  const typeF = document.getElementById("ovTypeFilter").value;      // "", "req", "land"
-  const vesselF = document.getElementById("ovVesselFilter").value;  // vessel or ""
-  const paidF = document.getElementById("ovPaidFilter").value;      // "", "1", "0"
-  const monthF = document.getElementById("ovMonthFilter").value;    // "", "1".."12"
-  const yearF = document.getElementById("ovYearFilter").value;      // "", "2025"...
-  const quarterF = document.getElementById("ovQuarterFilter").value; 
+  const typeF = document.getElementById("ovTypeFilter").value;
+  const vesselF = document.getElementById("ovVesselFilter").value;
+  const paidF = document.getElementById("ovPaidFilter").value;
+  const monthF = document.getElementById("ovMonthFilter").value;
+  const yearF = document.getElementById("ovYearFilter").value;
+  const quarterF = document.getElementById("ovQuarterFilter").value;
   const categoryF = document.getElementById("ovCategoryFilter").value;
 
   let filtered = [];
 
-  if (!typeF || typeF === "req") filtered = filtered.concat(reqs.map(r => ({
-  _type: "req",
-  vessel: r.vessel,
-  category: r.category,
-  supplier: r.supplier,
-  paid: Number(r.paid || 0),
-  amount: Number(r.total_amount || 0),
-  date: r.date_ordered
-})));
+  if (!typeF || typeF === "req") {
+    filtered = filtered.concat(reqs.map(r => ({
+      _type: "req",
+      vessel: r.vessel,
+      category: r.category,
+      supplier: r.supplier,
+      paid: Number(r.paid || 0),
+      amount: Number(r.total_amount || 0),
+      date: r.date_ordered
+    })));
+  }
 
-  if (!typeF || typeF === "land") filtered = filtered.concat(lands.map(r => ({
-  _type: "land",
-  vessel: r.vessel,
-  category: r.category,
-  supplier: r.supplier || r.workshop,   // in landings supplier may be workshop
-  paid: Number(r.paid || 0),
-  amount: Number(r.amount || 0),
-  date: r.landed_date
-})));
+  if (!typeF || typeF === "land") {
+    filtered = filtered.concat(lands.map(r => ({
+      _type: "land",
+      vessel: r.vessel,
+      category: r.category,
+      supplier: r.supplier || r.workshop,
+      paid: Number(r.paid || 0),
+      amount: Number(r.amount || 0),
+      date: r.landed_date
+    })));
+  }
 
-
-  // Apply filters
   filtered = filtered.filter(x => {
     if (vesselF && (x.vessel || "") !== vesselF) return false;
     if (paidF !== "" && String(x.paid) !== paidF) return false;
@@ -1113,39 +1118,29 @@ function updateOverviewPaidTotals(reqs, lands) {
     const qq = quarterOfMonth(mm);
 
     if (yearF && String(yy) !== yearF) return false;
-
-    // If month is selected, month used.
     if (monthF) {
       if (String(mm) !== monthF) return false;
     } else if (quarterF) {
-      // If no month but quarter selected, quarter used
       if (qq !== quarterF) return false;
     }
-
     if (categoryF && (x.category || "") !== categoryF) return false;
-
 
     return true;
   });
 
-  // Totals for the filtered result
-  const allTotal = filtered.reduce((s,x)=>s+x.amount,0);
-
-  // Paid totals for month/year (based on your filters)
+  const allTotal = filtered.reduce((s,x)=>s + x.amount, 0);
   const paidOnly = filtered.filter(x => x.paid === 1);
-  const paidMonthTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
+  const paidMonthTotal = paidOnly.reduce((s,x)=>s + x.amount, 0);
 
-  // Year total ignores month (but respects other filters)
   let paidYearTotal = 0;
   if (yearF) {
     const yearPaid = paidOnly.filter(x => {
       const dt = parseDateSafe(x.date);
       return dt && String(dt.getFullYear()) === yearF;
     });
-    paidYearTotal = yearPaid.reduce((s,x)=>s+x.amount,0);
+    paidYearTotal = yearPaid.reduce((s,x)=>s + x.amount, 0);
   } else {
-    // if no year selected, show paid total overall
-    paidYearTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
+    paidYearTotal = paidMonthTotal;
   }
 
   document.getElementById("ovAllTotal").textContent = allTotal.toFixed(2);
@@ -1153,23 +1148,89 @@ function updateOverviewPaidTotals(reqs, lands) {
   document.getElementById("ovPaidYearTotal").textContent = paidYearTotal.toFixed(2);
 
   // ===== Charts =====
+  try {
+    const paidSum = paidMonthTotal;
+    const unpaidSum = allTotal - paidSum;
 
-  // Paid vs unpaid
-  const paidSum = paidOnly.reduce((s,x)=>s+x.amount,0);
-  const unpaidSum = allTotal - paidSum;
+    if (chartPaidUnpaid) chartPaidUnpaid.destroy();
+    chartPaidUnpaid = new Chart(document.getElementById("chartPaidUnpaid"), {
+      type: "doughnut",
+      data: {
+        labels: ["Paid", "Unpaid"],
+        datasets: [{ data: [paidSum, unpaidSum] }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
 
-  if (chartPaidUnpaid) chartPaidUnpaid.destroy();
-  chartPaidUnpaid = new Chart(document.getElementById("chartPaidUnpaid"), {
-    type: "doughnut",
-    data: {
-      labels: ["Paid", "Unpaid"],
-      datasets: [{ data: [paidSum, unpaidSum] }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
+    const vesselMap = {};
+    filtered.forEach(x => {
+      const v = x.vessel || "Unknown";
+      vesselMap[v] = (vesselMap[v] || 0) + x.amount;
+    });
+    const vesselPairs = Object.entries(vesselMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
 
-  // Spend per vessel (bar)
-  const vesselMap = {};
+    if (chartVessel) chartVessel.destroy();
+    chartVessel = new Chart(document.getElementById("chartVessel"), {
+      type: "bar",
+      data: {
+        labels: vesselPairs.map(p=>p[0]),
+        datasets: [{ label: "USD", data: vesselPairs.map(p=>p[1]) }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    const catMap = {};
+    filtered.forEach(x => {
+      const c = x.category || "Uncategorized";
+      catMap[c] = (catMap[c] || 0) + x.amount;
+    });
+    const catPairs = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+    if (chartCategory) chartCategory.destroy();
+    chartCategory = new Chart(document.getElementById("chartCategory"), {
+      type: "pie",
+      data: {
+        labels: catPairs.map(p=>p[0]),
+        datasets: [{ data: catPairs.map(p=>p[1]) }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // ===== Top suppliers =====
+    const supMap = {};
+    filtered.forEach(x => {
+      const sname = x.supplier || "Unknown";
+      supMap[sname] = (supMap[sname] || 0) + x.amount;
+    });
+    const topSup = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const ul = document.getElementById("ovTopSuppliers");
+    if (ul) {
+      ul.innerHTML = topSup.length
+        ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("")
+        : "<li>—</li>";
+    }
+  } catch (e) {
+    console.warn("Chart update failed", e);
+  }
+}
+document.getElementById("ovApplyTotalsBtn").onclick = async () => {
+  let reqs = allReqs, lands = allLandings;
+  if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
+  if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
+  updateOverviewPaidTotals(reqs, lands);
+};
+
+document.getElementById("ovClearTotalsBtn").onclick = async () => {
+  document.getElementById("ovTypeFilter").value = "";
+  document.getElementById("ovVesselFilter").value = "";
+  document.getElementById("ovPaidFilter").value = "";
+  document.getElementById("ovMonthFilter").value = "";
+  document.getElementById("ovYearFilter").value = "";
+  document.getElementById("ovQuarterFilter").value = "";
+  document.getElementById("ovCategoryFilter").value = "";
+  await loadOverviewTotalsFilters();
+};
+
   filtered.forEach(x=>{
     const v = x.vessel || "Unknown";
     vesselMap[v] = (vesselMap[v] || 0) + x.amount;
@@ -1204,7 +1265,7 @@ function updateOverviewPaidTotals(reqs, lands) {
     options: { responsive: true, maintainAspectRatio: false }
   });
 
-  // ===== Top 5 suppliers =====
+  // ===== Top 5 suppliers (Feature 6) =====
   const supMap = {};
   filtered.forEach(x=>{
     const sname = x.supplier || "Unknown";
@@ -1213,29 +1274,10 @@ function updateOverviewPaidTotals(reqs, lands) {
   const topSup = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
   const ul = document.getElementById("ovTopSuppliers");
-  if (ul) {
-    ul.innerHTML = topSup.length
-      ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("")
-      : "<li>—</li>";
-  }
-}
-document.getElementById("ovApplyTotalsBtn").onclick = async () => {
-  let reqs = allReqs, lands = allLandings;
-  if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
-  if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
-  updateOverviewPaidTotals(reqs, lands);
-};
+  ul.innerHTML = topSup.length
+    ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("")
+    : "<li>—</li>";
 
-document.getElementById("ovClearTotalsBtn").onclick = async () => {
-  document.getElementById("ovTypeFilter").value = "";
-  document.getElementById("ovVesselFilter").value = "";
-  document.getElementById("ovPaidFilter").value = "";
-  document.getElementById("ovMonthFilter").value = "";
-  document.getElementById("ovYearFilter").value = "";
-  document.getElementById("ovQuarterFilter").value = "";
-  document.getElementById("ovCategoryFilter").value = "";
-
-  await loadOverviewTotalsFilters();
 };
 
     
@@ -2469,3 +2511,7 @@ async function updateSummaryCounts() {
 
 </body>
 </html>
+
+
+
+
