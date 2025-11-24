@@ -218,10 +218,35 @@
       <div class="flex-row">
         <div class="card flex-1">
           <h2>Recent Requisitions</h2>
+          <div class="filter-row" style="margin-top:6px;">
+            <div>
+              <label>Sort by
+                <select id="ovReqSortBy">
+                  <option value="id">Newest (ID)</option>
+                  <option value="date_ordered">Date Ordered</option>
+                  <option value="amount_usd">Amount (USD)</option>
+                  <option value="number">Number</option>
+                  <option value="po_number">PO Number</option>
+                  <option value="vessel">Vessel</option>
+                  <option value="supplier">Supplier</option>
+                  <option value="status">Status</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label>Direction
+                <select id="ovReqSortDir">
+                  <option value="desc">Desc</option>
+                  <option value="asc">Asc</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
           <table id="overviewReqTable">
             <thead>
               <tr>
-                <th>Number</th>
+                <th>Number</th><th>PO Number</th>
             <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
                 <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
               </tr>
@@ -231,6 +256,30 @@
         </div>
         <div class="card flex-1">
           <h2>Recent Landed Items</h2>
+          <div class="filter-row" style="margin-top:6px;">
+            <div>
+              <label>Sort by
+                <select id="ovLandSortBy">
+                  <option value="id">Newest (ID)</option>
+                  <option value="landed_date">Landed Date</option>
+                  <option value="expected">Expected Date</option>
+                  <option value="amount_usd">Amount (USD)</option>
+                  <option value="vessel">Vessel</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="status">Status</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label>Direction
+                <select id="ovLandSortDir">
+                  <option value="desc">Desc</option>
+                  <option value="asc">Asc</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
           <table id="overviewLandTable">
             <thead>
               <tr>
@@ -253,6 +302,11 @@
           <div class="flex-1">
             <label>Requisition Number
               <input type="text" id="reqNumber" />
+            </label>
+          </div>
+          <div class="flex-1">
+            <label>PO Number
+              <input type="text" id="reqPONumber" />
             </label>
           </div>
           <div class="form-group">
@@ -361,10 +415,38 @@
 
       <div class="card">
         <h2>All Requisitions</h2>
+        <div class="filter-row" style="margin-top:6px;">
+          <div>
+            <label>Sort by
+              <select id="reqSortBy">
+                <option value="id">Newest (ID)</option>
+                <option value="date_ordered">Date Ordered</option>
+                <option value="expected">Expected Date</option>
+                <option value="amount_usd">Amount (USD)</option>
+                <option value="number">Number</option>
+                <option value="po_number">PO Number</option>
+                <option value="vessel">Vessel</option>
+                <option value="supplier">Supplier</option>
+                <option value="status">Status</option>
+                <option value="paid">Paid</option>
+                <option value="delivered">Delivered</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Direction
+              <select id="reqSortDir">
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <table id="reqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
+              <th>ID</th><th>Number</th><th>PO Number</th>
             <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
               <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
@@ -376,10 +458,36 @@
 
       <div class="card">
         <h2>Cancelled / Deleted Requisitions</h2>
+        <div class="filter-row" style="margin-top:6px;">
+          <div>
+            <label>Sort by
+              <select id="reqCanSortBy">
+                <option value="id">Newest (ID)</option>
+                <option value="date_ordered">Date Ordered</option>
+                <option value="expected">Expected Date</option>
+                <option value="amount_usd">Amount (USD)</option>
+                <option value="number">Number</option>
+                <option value="po_number">PO Number</option>
+                <option value="vessel">Vessel</option>
+                <option value="supplier">Supplier</option>
+                <option value="paid">Paid</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Direction
+              <select id="reqCanSortDir">
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <table id="reqCancelledTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
+              <th>ID</th><th>Number</th><th>PO Number</th>
             <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
@@ -496,6 +604,32 @@
 
       <div class="card">
         <h2>All Landed Items</h2>
+        <div class="filter-row" style="margin-top:6px;">
+          <div>
+            <label>Sort by
+              <select id="landSortBy">
+                <option value="id">Newest (ID)</option>
+                <option value="landed_date">Landed Date</option>
+                <option value="expected">Expected Date</option>
+                <option value="amount_usd">Amount (USD)</option>
+                <option value="vessel">Vessel</option>
+                <option value="workshop">Workshop</option>
+                <option value="status">Status</option>
+                <option value="paid">Paid</option>
+                <option value="delivered">Delivered</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Direction
+              <select id="landSortDir">
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <table id="landingTable">
           <thead>
             <tr>
@@ -510,6 +644,30 @@
 
       <div class="card">
         <h2>Cancelled / Deleted Landed Items</h2>
+        <div class="filter-row" style="margin-top:6px;">
+          <div>
+            <label>Sort by
+              <select id="landCanSortBy">
+                <option value="id">Newest (ID)</option>
+                <option value="landed_date">Landed Date</option>
+                <option value="expected">Expected Date</option>
+                <option value="amount_usd">Amount (USD)</option>
+                <option value="vessel">Vessel</option>
+                <option value="workshop">Workshop</option>
+                <option value="paid">Paid</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Direction
+              <select id="landCanSortDir">
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <table id="landingCancelledTable">
           <thead>
             <tr>
@@ -543,6 +701,33 @@
     <div id="tab-delivered" class="hidden">
       <div class="card">
         <h2>Delivered Requisitions</h2>
+        <div class="filter-row" style="margin-top:6px;">
+          <div>
+            <label>Sort by
+              <select id="delReqSortBy">
+                <option value="id">Newest (ID)</option>
+                <option value="date_ordered">Date Ordered</option>
+                <option value="expected">Expected Date</option>
+                <option value="amount_usd">Amount (USD)</option>
+                <option value="number">Number</option>
+                <option value="po_number">PO Number</option>
+                <option value="vessel">Vessel</option>
+                <option value="supplier">Supplier</option>
+                <option value="paid">Paid</option>
+                <option value="status">Status</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Direction
+              <select id="delReqSortDir">
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="filter-row">
           <div>
             <label>Paid
@@ -566,7 +751,7 @@
         <table id="deliveredReqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
+              <th>ID</th><th>Number</th><th>PO Number</th>
             <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
@@ -577,6 +762,31 @@
 
       <div class="card">
         <h2>Delivered Landed Items</h2>
+        <div class="filter-row" style="margin-top:6px;">
+          <div>
+            <label>Sort by
+              <select id="delLandSortBy">
+                <option value="id">Newest (ID)</option>
+                <option value="landed_date">Landed Date</option>
+                <option value="expected">Expected Date</option>
+                <option value="amount_usd">Amount (USD)</option>
+                <option value="vessel">Vessel</option>
+                <option value="workshop">Workshop</option>
+                <option value="paid">Paid</option>
+                <option value="status">Status</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Direction
+              <select id="delLandSortDir">
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="filter-row">
           <div>
             <label>Paid
@@ -750,10 +960,44 @@ function quarterOfMonth(m){
   if (m <= 9) return "Q3";
   return "Q4";
 }
-function parseDateSafe(d) {
-  if (!d) return null;
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? null : dt;
+function parseDateSafe\(d\) \{
+  if \(!d\) return null;
+  const dt = new Date\(d\);
+  return isNaN\(dt\.getTime\(\)\) \? null : dt;
+\}
+
+/* ========= Sorting helpers ========= */
+function sortRows(rows, key, dir="desc"){
+  const out = rows.slice();
+  const mul = dir==="asc" ? 1 : -1;
+
+  function valFor(r){
+    if(key==="amount_usd"||key==="total_amount"||key==="amount"||key==="paid"||key==="delivered"||key==="id"){
+      return Number(r[key]||0);
+    }
+    if(key==="date_ordered"||key==="expected"||key==="landed_date"){
+      const dt=parseDateSafe(r[key]);
+      return dt ? dt.getTime() : 0;
+    }
+    return String(r[key]||"").toLowerCase();
+  }
+
+  out.sort((a,b)=>{
+    const va=valFor(a), vb=valFor(b);
+    if(va<vb) return -1*mul;
+    if(va>vb) return 1*mul;
+    return 0;
+  });
+  return out;
+}
+
+function getSort(idBy, idDir, fallbackBy="id", fallbackDir="desc"){
+  const byEl=document.getElementById(idBy);
+  const dirEl=document.getElementById(idDir);
+  return {
+    by: (byEl && byEl.value) || fallbackBy,
+    dir: (dirEl && dirEl.value) || fallbackDir
+  };
 }
 
 /* ========= Currencies ========= */
@@ -1022,6 +1266,12 @@ async function loadDirectoryPage(){
   let rows=[]; try{ rows=await apiFetch("/api/directory"); }catch{}
   const tbody=document.querySelector("#directoryTable tbody");
   tbody.innerHTML="";
+  const {by:reqBy, dir:reqDir}=getSort("reqSortBy","reqSortDir","id","desc");
+  rows = sortRows(rows, reqBy, reqDir);
+
+  const {by:landBy, dir:landDir}=getSort("landSortBy","landSortDir","id","desc");
+  rows = sortRows(rows, landBy, landDir);
+
   rows.forEach(r=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td>${r.address||""}</td>`;
@@ -1231,7 +1481,7 @@ async function loadAllRequisitions(){
     if((r.status||"open")==="cancelled") statusClass="status-cancelled";
     if(r.delivered) statusClass="status-delivered";
 
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
@@ -1286,6 +1536,7 @@ function attachReqRowActions(){
       document.getElementById("saveReqBtn").textContent="Update Requisition";
       document.getElementById("cancelReqEditBtn").classList.remove("hidden");
       document.getElementById("reqNumber").value=row.number||"";
+      document.getElementById("reqPONumber").value=row.po_number||"";
       document.getElementById("reqVessel").value=row.vessel||"";
       document.getElementById("reqCategory").value=row.category||"";
       document.getElementById("reqSupplierSelect").value=row.supplier||"";
@@ -1303,7 +1554,7 @@ document.getElementById("cancelReqEditBtn").onclick=()=>{
   document.getElementById("reqFormTitle").textContent="Add Requisition";
   document.getElementById("saveReqBtn").textContent="Save Requisition";
   document.getElementById("cancelReqEditBtn").classList.add("hidden");
-  ["reqNumber","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
+  ["reqNumber","reqPONumber","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("reqPaid").checked=false;
   document.getElementById("reqCurrency").value="USD";
 };
@@ -1315,6 +1566,7 @@ document.getElementById("clearReqFilterBtn").onclick=async ()=>{
 
 document.getElementById("saveReqBtn").onclick=async ()=>{
   const number=document.getElementById("reqNumber").value.trim();
+  const po_number=document.getElementById("reqPONumber").value.trim();
   const description = document.getElementById("reqDescription").value.trim();
   const vessel=document.getElementById("reqVessel").value.trim();
   const category=document.getElementById("reqCategory").value.trim();
@@ -1330,7 +1582,7 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
     err.textContent="Please fill all required fields."; return;
   }
   try{
-    const payload={number,vessel,category,supplier,date_ordered,expected,amount:parseFloat(total),currency,paid};
+    const payload={number,po_number,vessel,category,supplier,date_ordered,expected,amount:parseFloat(total),currency,paid};
     if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
     else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
     document.getElementById("cancelReqEditBtn").onclick();
@@ -1348,12 +1600,14 @@ async function loadOverviewRequisitions(){
   let rows=allReqs;
   if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
-  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
+  const {by:ovLandBy, dir:ovLandDir}=getSort("ovLandSortBy","ovLandSortDir","id","desc");
+  const sorted = sortRows(rows, ovLandBy, ovLandDir).slice(0,10);
+  sorted.forEach(r=>{
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
       <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
@@ -1488,14 +1742,20 @@ async function fillCancelledTables(){
   const reqBody=document.querySelector("#reqCancelledTable tbody");
   const landBody=document.querySelector("#landingCancelledTable tbody");
   reqBody.innerHTML=""; landBody.innerHTML="";
-  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
+  let cancelledReqs = allReqs.filter(r=>(r.status||"open")==="cancelled");
+  const {by:reqCanBy, dir:reqCanDir}=getSort("reqCanSortBy","reqCanSortDir","id","desc");
+  cancelledReqs = sortRows(cancelledReqs, reqCanBy, reqCanDir);
+  cancelledReqs.forEach(r=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     reqBody.appendChild(tr);
   });
-  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
+  let cancelledLands = allLandings.filter(r=>(r.status||"open")==="cancelled");
+  const {by:landCanBy, dir:landCanDir}=getSort("landCanSortBy","landCanSortDir","id","desc");
+  cancelledLands = sortRows(cancelledLands, landCanBy, landCanDir);
+  cancelledLands.forEach(r=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
       <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
@@ -1509,7 +1769,9 @@ async function loadOverviewLandings(){
   let rows=allLandings;
   if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewLandTable tbody"); tbody.innerHTML="";
-  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
+  const {by:ovLandBy, dir:ovLandDir}=getSort("ovLandSortBy","ovLandSortDir","id","desc");
+  const sorted = sortRows(rows, ovLandBy, ovLandDir).slice(0,10);
+  sorted.forEach(r=>{
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
@@ -1527,12 +1789,15 @@ async function loadDeliveredRequisitions(){
   const paidFilter=document.getElementById("filterDeliveredReqPaid").value;
   const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
   const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
-  rows.filter(r=>r.delivered).forEach(r=>{
+  let deliveredLands = rows.filter(r=>r.delivered);
+  const {by:delLandBy, dir:delLandDir}=getSort("delLandSortBy","delLandSortDir","id","desc");
+  deliveredLands = sortRows(deliveredLands, delLandBy, delLandDir);
+  deliveredLands.forEach(r=>{
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     tbody.appendChild(tr);
@@ -1549,7 +1814,10 @@ async function loadDeliveredLandings(){
   const paidFilter=document.getElementById("filterDeliveredLandPaid").value;
   const search=document.getElementById("filterDeliveredLandSearch").value.toLowerCase();
   const tbody=document.querySelector("#deliveredLandTable tbody"); tbody.innerHTML="";
-  rows.filter(r=>r.delivered).forEach(r=>{
+  let deliveredLands = rows.filter(r=>r.delivered);
+  const {by:delLandBy, dir:delLandDir}=getSort("delLandSortBy","delLandSortDir","id","desc");
+  deliveredLands = sortRows(deliveredLands, delLandBy, delLandDir);
+  deliveredLands.forEach(r=>{
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
@@ -1681,7 +1949,33 @@ document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>
 });
 
 
-/* ========= Init ========= */
+
+/* ========= Sort listeners ========= */
+["ovReqSortBy","ovReqSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=loadOverviewRequisitions;
+});
+["ovLandSortBy","ovLandSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=loadOverviewLandings;
+});
+["reqSortBy","reqSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=loadAllRequisitions;
+});
+["reqCanSortBy","reqCanSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=fillCancelledTables;
+});
+["landSortBy","landSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=loadAllLandings;
+});
+["landCanSortBy","landCanSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=fillCancelledTables;
+});
+["delReqSortBy","delReqSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=loadDeliveredRequisitions;
+});
+["delLandSortBy","delLandSortDir"].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.onchange=loadDeliveredLandings;
+});
+/\* ========= Init ========= \*/
 (async function init(){
   await loadCurrencies();
   await refreshSession();   // important due to admin tab visibility
