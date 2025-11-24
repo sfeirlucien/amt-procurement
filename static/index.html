@@ -1213,6 +1213,74 @@ document.getElementById("ovClearTotalsBtn").onclick = async () => {
     document.getElementById(id).value="";
   });
   await loadOverviewTotalsFilters();
+
+  // Inject sort controls (UI only)
+  injectSortUI("overviewReqTable", [
+    {key:"number",label:"Requisition Number"},
+    {key:"po_number",label:"PO Number"},
+    {key:"vessel",label:"Vessel"},
+    {key:"supplier",label:"Supplier"},
+    {key:"date_ordered",label:"Ordered Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], loadOverviewRequisitions);
+
+  injectSortUI("overviewLandTable", [
+    {key:"vessel",label:"Vessel"},
+    {key:"workshop",label:"Workshop"},
+    {key:"landed_date",label:"Landed Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], loadOverviewLandings);
+
+  injectSortUI("reqTable", [
+    {key:"number",label:"Requisition Number"},
+    {key:"po_number",label:"PO Number"},
+    {key:"vessel",label:"Vessel"},
+    {key:"supplier",label:"Supplier"},
+    {key:"date_ordered",label:"Ordered Date"},
+    {key:"expected",label:"Expected Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], loadAllRequisitions);
+
+  injectSortUI("reqCancelledTable", [
+    {key:"number",label:"Requisition Number"},
+    {key:"po_number",label:"PO Number"},
+    {key:"vessel",label:"Vessel"},
+    {key:"supplier",label:"Supplier"},
+    {key:"date_ordered",label:"Ordered Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], fillCancelledTables);
+
+  injectSortUI("landingTable", [
+    {key:"vessel",label:"Vessel"},
+    {key:"workshop",label:"Workshop"},
+    {key:"expected",label:"Expected Date"},
+    {key:"landed_date",label:"Landed Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], loadAllLandings);
+
+  injectSortUI("landingCancelledTable", [
+    {key:"vessel",label:"Vessel"},
+    {key:"workshop",label:"Workshop"},
+    {key:"landed_date",label:"Landed Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], fillCancelledTables);
+
+  injectSortUI("deliveredReqTable", [
+    {key:"number",label:"Requisition Number"},
+    {key:"po_number",label:"PO Number"},
+    {key:"vessel",label:"Vessel"},
+    {key:"supplier",label:"Supplier"},
+    {key:"date_ordered",label:"Ordered Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], loadDeliveredRequisitions);
+
+  injectSortUI("deliveredLandTable", [
+    {key:"vessel",label:"Vessel"},
+    {key:"workshop",label:"Workshop"},
+    {key:"landed_date",label:"Landed Date"},
+    {key:"amount_usd",label:"Amount (USD)"}
+  ], loadDeliveredLandings);
+
 };
 
 /* ========= Directory Options / Popup / Page ========= */
@@ -1457,6 +1525,64 @@ document.getElementById("saveUserBtn").onclick=async ()=>{
   }
 };
 
+
+/* ========= Sorting helpers (non-destructive UI injection) ========= */
+const sortState = {}; // { tableId: {key, dir} }
+
+function applySort(rows, key, dir){
+  if(!key) return rows;
+  const mult = (dir==="desc") ? -1 : 1;
+  return [...rows].sort((a,b)=>{
+    const av = (a?.[key] ?? "");
+    const bv = (b?.[key] ?? "");
+    // numbers first if both numeric
+    const an = parseFloat(av); const bn = parseFloat(bv);
+    const bothNum = !isNaN(an) && !isNaN(bn);
+    if(bothNum) return (an-bn)*mult;
+    return String(av).localeCompare(String(bv))*mult;
+  });
+}
+
+function injectSortUI(tableId, fields, onChangeReload){
+  const table = document.getElementById(tableId);
+  if(!table) return;
+  // avoid double insert
+  if(table.previousElementSibling && table.previousElementSibling.classList.contains("sort-row")) return;
+
+  const row = document.createElement("div");
+  row.className = "filter-row sort-row";
+  row.style.marginBottom = "6px";
+  row.innerHTML = `
+    <div>
+      <label>Sort by
+        <select class="sort-key"></select>
+      </label>
+    </div>
+    <div>
+      <label>Direction
+        <select class="sort-dir">
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+      </label>
+    </div>
+  `;
+  const keySel = row.querySelector(".sort-key");
+  keySel.innerHTML = `<option value="">Default</option>` + fields.map(f=>`<option value="${f.key}">${f.label}</option>`).join("");
+  const dirSel = row.querySelector(".sort-dir");
+
+  const state = sortState[tableId] || {key:"", dir:"asc"};
+  keySel.value = state.key || "";
+  dirSel.value = state.dir || "asc";
+
+  keySel.onchange = dirSel.onchange = ()=>{
+    sortState[tableId] = {key:keySel.value, dir:dirSel.value};
+    if(typeof onChangeReload === "function") onChangeReload();
+  };
+
+  table.parentElement.insertBefore(row, table);
+}
+
 /* ========= Requisitions ========= */
 async function loadAllRequisitions(){
   let rows=[]; try{ rows=await apiFetch("/api/requisitions"); }catch{}
@@ -1467,13 +1593,17 @@ async function loadAllRequisitions(){
   const delFilter=document.getElementById("filterReqDelivered").value;
   const search=document.getElementById("filterReqSearch").value.toLowerCase();
 
-  rows.forEach(r=>{
+  let filtered = rows.filter(r=>{
     const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
-    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
+    return (matchesStatus&&matchesPaid&&matchesDel&&matchesSearch);
+  });
 
+  filtered = applySort(filtered, (sortState.reqTable||{}).key, (sortState.reqTable||{}).dir);
+
+  filtered.forEach(r=>{
     const tr=document.createElement("tr");
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
@@ -1537,6 +1667,7 @@ function attachReqRowActions(){
       document.getElementById("cancelReqEditBtn").classList.remove("hidden");
       document.getElementById("reqNumber").value=row.number||"";
       document.getElementById("reqPONumber").value=row.po_number||"";
+      document.getElementById("reqPONumber").value=row.po_number||"";
       document.getElementById("reqVessel").value=row.vessel||"";
       document.getElementById("reqCategory").value=row.category||"";
       document.getElementById("reqSupplierSelect").value=row.supplier||"";
@@ -1576,6 +1707,7 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
   const total=document.getElementById("reqTotal").value;
   const currency=document.getElementById("reqCurrency").value||"USD";
   const paid=document.getElementById("reqPaid").checked;
+  const poNumber=document.getElementById("reqPONumber").value.trim();
   const err=document.getElementById("reqError"); err.textContent="";
 
   if(!number||!vessel||!category||!supplier||!date_ordered||!total){
@@ -1624,20 +1756,26 @@ async function loadAllLandings(){
   const delFilter=document.getElementById("filterLandingDelivered").value;
   const search=document.getElementById("filterLandingSearch").value.toLowerCase();
 
-  rows.forEach(r=>{
+  let filtered = rows.filter(r=>{
     const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
     const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
-    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
+    return (matchesStatus&&matchesPaid&&matchesDel&&matchesSearch);
+  });
 
+  filtered = applySort(filtered, (sortState.landingTable||{}).key, (sortState.landingTable||{}).dir);
+
+  filtered.forEach(r=>{
     const tr=document.createElement("tr");
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    let statusClass="status-open";
+    if((r.status||"open")==="cancelled") statusClass="status-cancelled";
+    if(r.delivered) statusClass="status-delivered";
 
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-land" data-id="${r.id}">Edit</button>
@@ -1648,7 +1786,7 @@ async function loadAllLandings(){
       </td>`;
     tbody.appendChild(tr);
   });
-  attachLandingActions();
+  attachLandingRowActions();
 }
 function attachLandingActions(){
   document.querySelectorAll(".toggle-paid-land").forEach(btn=>{
