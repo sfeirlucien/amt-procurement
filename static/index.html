@@ -7,6 +7,10 @@
   <link rel="icon" type="image/png" href="static/ICON.jpg">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    .status-cancelled {
+  background:#fee2e2;
+  color:#b91c1c;
+}
     body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
     header { background:#1f2937; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
     header h1 { margin:0; font-size:20px; }
@@ -107,14 +111,14 @@
     <!-- OVERVIEW -->
     <div id="tab-overview">
       <div class="card">
-        <h2>Dashboard</h2>
+        <h2>Dashboard — Purchase Orders Overview</h2>
         <div class="summary-grid">
           <div class="summary-item">
-            <div class="summary-label">Open Requisitions (not delivered)</div>
+            <div class="summary-label">Open POs (not delivered)</div>
             <div class="summary-value" id="summaryOpenReqNotDel">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label">Open Requisitions (unpaid)</div>
+            <div class="summary-label">Open POs (unpaid)</div>
             <div class="summary-value" id="summaryOpenReqUnpaid">0</div>
           </div>
           <div class="summary-item">
@@ -194,20 +198,28 @@
           </div>
         </div>
 
-        <div class="summary-grid" style="margin-top:10px;">
-          <div class="summary-item">
-            <div class="summary-label">Total Paid (Selected Period)</div>
-            <div class="summary-value" id="ovPaidMonthTotal">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Total Paid (Selected Year)</div>
-            <div class="summary-value" id="ovPaidYearTotal">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Total Amount (Filter Result)</div>
-            <div class="summary-value" id="ovAllTotal">0</div>
-          </div>
-        </div>
+<div class="summary-grid" style="margin-top:10px;">
+  <div class="summary-item">
+    <div class="summary-label">Total Paid (Selected Period)</div>
+    <div class="summary-value" id="ovPaidMonthTotal">0</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-label">Total Paid (Selected Year)</div>
+    <div class="summary-value" id="ovPaidYearTotal">0</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-label">Total UnPaid (Selected Period)</div>
+    <div class="summary-value" id="ovUnpaidMonthTotal">0</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-label">Total UnPaid (Selected Year)</div>
+    <div class="summary-value" id="ovUnpaidYearTotal">0</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-label">Total Amount (Filter Result)</div>
+    <div class="summary-value" id="ovAllTotal">0</div>
+  </div>
+</div>
 
         <h3 style="margin-top:16px;">Top 5 Suppliers (Selected Period)</h3>
         <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;">
@@ -215,164 +227,200 @@
         </ul>
       </div>
 
-      <div class="flex-row">
-        <div class="card flex-1">
-          <h2>Recent Requisitions</h2>
-          <div class="filter-row" style="margin-top:6px;">
-            <div>
-              <label>Sort by
-                <select id="ovReqSortBy">
-                  <option value="id">Newest (ID)</option>
-                  <option value="date_ordered">Date Ordered</option>
-                  <option value="amount_usd">Amount (USD)</option>
-                  <option value="number">Number</option>
-                  <option value="po_number">PO Number</option>
-                  <option value="vessel">Vessel</option>
-                  <option value="supplier">Supplier</option>
-                  <option value="status">Status</option>
-                </select>
-              </label>
-            </div>
-            <div>
-              <label>Direction
-                <select id="ovReqSortDir">
-                  <option value="desc">Desc</option>
-                  <option value="asc">Asc</option>
-                </select>
-              </label>
-            </div>
-          </div>
+      <!-- RECENT ORDERS (POs) SECTION -->
+<div class="card flex-1">
+  <h2>Recent Orders (POs)</h2>
 
-          <table id="overviewReqTable">
-            <thead>
-              <tr>
-                <th>Number</th><th>PO Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-                <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="card flex-1">
-          <h2>Recent Landed Items</h2>
-          <div class="filter-row" style="margin-top:6px;">
-            <div>
-              <label>Sort by
-                <select id="ovLandSortBy">
-                  <option value="id">Newest (ID)</option>
-                  <option value="landed_date">Landed Date</option>
-                  <option value="expected">Expected Date</option>
-                  <option value="amount_usd">Amount (USD)</option>
-                  <option value="vessel">Vessel</option>
-                  <option value="workshop">Workshop</option>
-                  <option value="status">Status</option>
-                </select>
-              </label>
-            </div>
-            <div>
-              <label>Direction
-                <select id="ovLandSortDir">
-                  <option value="desc">Desc</option>
-                  <option value="asc">Asc</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
-          <table id="overviewLandTable">
-            <thead>
-              <tr>
-                <th>Vessel</th><th>Description</th><th>Workshop</th>
-                <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
-                <th>Paid</th><th>Delivered</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
+  <div class="filter-row" style="margin-top:6px;">
+    <div>
+      <label>Sort by
+        <select id="ovReqSortBy">
+          <option value="id">Newest (ID)</option>
+          <option value="date_ordered">Date Ordered</option>
+          <option value="amount_usd">Amount (USD)</option>
+          <option value="number">Number</option>
+          <option value="po_number">PO Number</option>
+          <option value="vessel">Vessel</option>
+          <option value="supplier">Supplier</option>
+          <option value="status">Status</option>
+        </select>
+      </label>
     </div>
+    <div>
+      <label>Direction
+        <select id="ovReqSortDir">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <table id="overviewReqTable">
+    <thead>
+      <tr>
+        <th>Number</th>
+        <th>PO Number</th>
+        <th>Description</th>
+        <th>Vessel</th>
+        <th>Category</th>
+        <th>Supplier</th>
+        <th>Ordered</th>
+        <th>Amount (USD)</th>
+        <th>Paid</th>
+        <th>Delivered</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- RECENT LANDED ITEMS SECTION (PLACED BELOW ORDERS) -->
+<div class="card flex-1" style="margin-top:16px;">
+  <h2>Recent Landed Items</h2>
+
+  <div class="filter-row" style="margin-top:6px;">
+    <div>
+      <label>Sort by
+        <select id="ovLandSortBy">
+          <option value="id">Newest (ID)</option>
+          <option value="landed_date">Landed Date</option>
+          <option value="expected">Expected Date</option>
+          <option value="amount_usd">Amount (USD)</option>
+          <option value="vessel">Vessel</option>
+          <option value="workshop">Workshop</option>
+          <option value="status">Status</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label>Direction
+        <select id="ovLandSortDir">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <table id="overviewLandTable">
+    <thead>
+      <tr>
+        <th>Vessel</th>
+        <th>Description</th>
+        <th>Workshop</th>
+        <th>Expected</th>
+        <th>Landed</th>
+        <th>Amount (USD)</th>
+        <th>Paid</th>
+        <th>Delivered</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
     <!-- REQUISITIONS -->
     <div id="tab-requisitions" class="hidden">
       <div class="card">
-        <h2 id="reqFormTitle">Add Requisition</h2>
+        <h2 id="reqFormTitle">Add Ordered Requisition</h2>
         <div class="flex-row">
-          <div class="flex-1">
-            <label>Requisition Number
-              <input type="text" id="reqNumber" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>PO Number
-              <input type="text" id="reqPONumber" />
-            </label>
-          </div>
-          <div class="form-group">
-            <label for="reqDescription">Description</label>
-            <input type="text" id="reqDescription" class="form-control" placeholder="Short description">
-          </div>
-          <div class="flex-1">
-            <label>Vessel
-              <select id="reqVessel"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Category (Abbreviation)
-              <select id="reqCategory"></select>
-            </label>
-          </div>
-        </div>
+
+  <!-- PO Number (25%) -->
+  <div class="flex-1" style="flex-basis:25%;">
+    <label>PO Number
+      <input type="text" id="reqPONumber" />
+    </label>
+  </div>
+
+  <!-- Requisition Number (20%) -->
+  <div class="flex-1" style="flex-basis:20%;">
+    <label>Requisition Number
+      <input type="text" id="reqNumber" />
+    </label>
+  </div>
+
+  <!-- Description (35%) -->
+  <div class="flex-1" style="flex-basis:35%;">
+    <label>Description
+      <input type="text" id="reqDescription" placeholder="Short description" />
+    </label>
+  </div>
+
+  <!-- Vessel (20%) -->
+  <div class="flex-1" style="flex-basis:20%;">
+    <label>Vessel
+      <select id="reqVessel"></select>
+    </label>
+  </div>
+
+</div>
+
+
+<div class="flex-row">
+
+  <div class="flex-1">
+    <label>Category (Abbreviation)
+      <select id="reqCategory"></select>
+    </label>
+  </div>
+
+  <div class="flex-1">
+    <label>Supplier
+      <div style="display:flex; gap:8px;">
+        <select id="reqSupplierSelect" style="flex:1;"></select>
+        <button id="newSupplierBtn" type="button">New</button>
+      </div>
+    </label>
+  </div>
+
+  <div class="flex-1">
+    <label>Date Ordered
+      <input type="date" id="reqDateOrdered" />
+    </label>
+  </div>
+
+  <div class="flex-1">
+    <label>Expected Date
+      <input type="date" id="reqExpected" />
+    </label>
+  </div>
+
+</div>
+
 
         <div class="flex-row">
-          <div class="flex-1">
-            <label>Supplier
-              <div style="display:flex; gap:8px;">
-                <select id="reqSupplierSelect" style="flex:1;"></select>
-                <button id="newSupplierBtn" type="button">New</button>
-              </div>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Date Ordered
-              <input type="date" id="reqDateOrdered" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Expected Date
-              <input type="date" id="reqExpected" />
-            </label>
-          </div>
-        </div>
 
-        <div class="flex-row">
-          <div class="flex-1">
-            <label>Amount
-              <input type="number" id="reqTotal" step="0.01" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Currency
-              <select id="reqCurrency"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>
-              <input type="checkbox" id="reqPaid" /> Paid
-            </label>
-          </div>
-        </div>
+  <div class="flex-1">
+    <label>Amount
+      <input type="number" id="reqTotal" step="0.01" />
+    </label>
+  </div>
+
+  <div class="flex-1">
+    <label>Currency
+      <select id="reqCurrency"></select>
+    </label>
+  </div>
+
+  <div class="flex-1" style="padding-top:22px;">
+    <label><input type="checkbox" id="reqPaid" /> Paid</label>
+  </div>
+
+</div>
+
 
         <div style="margin-top:8px;">
-          <button id="saveReqBtn">Save Requisition</button>
+          <button id="saveReqBtn">Save Order</button>
           <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
         </div>
         <div id="reqError" class="error"></div>
       </div>
 
       <div class="card">
-        <h2>Filter Requisitions</h2>
+        <h2>Filter Orders</h2>
         <div class="filter-row">
           <div>
             <label>Status
@@ -414,7 +462,7 @@
       </div>
 
       <div class="card">
-        <h2>All Requisitions</h2>
+        <h2>All Orders</h2>
         <div class="filter-row" style="margin-top:6px;">
           <div>
             <label>Sort by
@@ -1177,6 +1225,22 @@ function updateOverviewPaidTotals(reqs, lands) {
   const allTotal = filtered.reduce((s,x)=>s+x.amount,0);
   const paidOnly = filtered.filter(x=>x.paid===1);
   const paidMonthTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
+  const unpaidOnly = filtered.filter(x => x.paid === 0);
+const unpaidMonthTotal = unpaidOnly.reduce((s, x) => s + x.amount, 0);
+
+let unpaidYearTotal = 0;
+if (yearF) {
+  unpaidYearTotal = unpaidOnly.filter(x => {
+    const dt = parseDateSafe(x.date);
+    return dt && String(dt.getFullYear()) === yearF;
+  }).reduce((s, x) => s + x.amount, 0);
+} else {
+  unpaidYearTotal = unpaidMonthTotal;
+}
+
+document.getElementById("ovUnpaidMonthTotal").textContent = unpaidMonthTotal.toFixed(2);
+document.getElementById("ovUnpaidYearTotal").textContent = unpaidYearTotal.toFixed(2);
+
 
   let paidYearTotal = 0;
   if (yearF) {
@@ -1335,11 +1399,7 @@ async function loadDirectoryPage(){
   let rows=[]; try{ rows=await apiFetch("/api/directory"); }catch{}
   const tbody=document.querySelector("#directoryTable tbody");
   tbody.innerHTML="";
-  const {by:reqBy, dir:reqDir}=getSort("reqSortBy","reqSortDir","id","desc");
-  rows = sortRows(rows, reqBy, reqDir);
 
-  const {by:landBy, dir:landDir}=getSort("landSortBy","landSortDir","id","desc");
-  rows = sortRows(rows, landBy, landDir);
 
   rows.forEach(r=>{
     const tr=document.createElement("tr");
@@ -1612,7 +1672,7 @@ async function loadAllRequisitions(){
     if((r.status||"open")==="cancelled") statusClass="status-cancelled";
     if(r.delivered) statusClass="status-delivered";
 
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.item || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
@@ -1666,10 +1726,10 @@ function attachReqRowActions(){
       document.getElementById("reqFormTitle").textContent="Edit Requisition";
       document.getElementById("saveReqBtn").textContent="Update Requisition";
       document.getElementById("cancelReqEditBtn").classList.remove("hidden");
-      document.getElementById("reqNumber").value=row.number||"";
-      document.getElementById("reqPONumber").value=row.po_number||"";
-      document.getElementById("reqPONumber").value=row.po_number||"";
-      document.getElementById("reqVessel").value=row.vessel||"";
+document.getElementById("reqNumber").value = row.number || "";
+document.getElementById("reqPONumber").value = row.po_number || "";
+document.getElementById("reqDescription").value = row.description || "";
+document.getElementById("reqVessel").value = row.vessel || "";
       document.getElementById("reqCategory").value=row.category||"";
       document.getElementById("reqSupplierSelect").value=row.supplier||"";
       document.getElementById("reqDateOrdered").value=row.date_ordered||"";
@@ -1715,7 +1775,7 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
     err.textContent="Please fill all required fields."; return;
   }
   try{
-    const payload={number,po_number,vessel,category,supplier,date_ordered,expected,amount:parseFloat(total),currency,paid};
+    const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, paid};
     if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
     else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
     document.getElementById("cancelReqEditBtn").onclick();
@@ -1733,14 +1793,14 @@ async function loadOverviewRequisitions(){
   let rows=allReqs;
   if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
-  const {by:ovLandBy, dir:ovLandDir}=getSort("ovLandSortBy","ovLandSortDir","id","desc");
-  const sorted = sortRows(rows, ovLandBy, ovLandDir).slice(0,10);
+const {by:ovReqBy, dir:ovReqDir} = getSort("ovReqSortBy", "ovReqSortDir", "id", "desc");
+const sorted = sortRows(rows, ovReqBy, ovReqDir).slice(0,10);
   sorted.forEach(r=>{
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.number}</td><td>${r.po_number||""}</td><td>${r.item || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
       <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
@@ -1789,7 +1849,7 @@ async function loadAllLandings(){
   });
   attachLandingRowActions();
 }
-function attachLandingActions(){
+function attachLandingRowActions(){
   document.querySelectorAll(".toggle-paid-land").forEach(btn=>{
     btn.onclick=async ()=>{
       const id=+btn.dataset.id;
@@ -1886,9 +1946,10 @@ async function fillCancelledTables(){
   cancelledReqs = sortRows(cancelledReqs, reqCanBy, reqCanDir);
   cancelledReqs.forEach(r=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.item || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+      <td>${r.paid ? "Paid" : "Unpaid"}</td>
+<td><span class="status-pill status-cancelled">cancelled</span></td>`;
     reqBody.appendChild(tr);
   });
   let cancelledLands = allLandings.filter(r=>(r.status||"open")==="cancelled");
@@ -1898,7 +1959,8 @@ async function fillCancelledTables(){
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
       <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+      <td>${r.paid ? "Paid" : "Unpaid"}</td>
+<td><span class="status-pill status-cancelled">cancelled</span></td>`;
     landBody.appendChild(tr);
   });
 }
@@ -1929,16 +1991,17 @@ async function loadDeliveredRequisitions(){
   const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
   const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
   let deliveredLands = rows.filter(r=>r.delivered);
-  const {by:delLandBy, dir:delLandDir}=getSort("delLandSortBy","delLandSortDir","id","desc");
-  deliveredLands = sortRows(deliveredLands, delLandBy, delLandDir);
+  const {by:delReqBy, dir:delReqDir} = getSort("delReqSortBy", "delReqSortDir", "id", "desc");
+  deliveredLands = sortRows(deliveredLands, delReqBy, delReqDir);
   deliveredLands.forEach(r=>{
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.item || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+      <td>${r.paid ? "Paid" : "Unpaid"}</td>
+<td><span class="status-pill status-cancelled">cancelled</span></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1958,12 +2021,16 @@ async function loadDeliveredLandings(){
   deliveredLands = sortRows(deliveredLands, delLandBy, delLandDir);
   deliveredLands.forEach(r=>{
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
+    const matchesSearch=!search
+  || (r.vessel || "").toLowerCase().includes(search)
+  || (r.item || "").toLowerCase().includes(search)
+  || (r.workshop || "").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
       <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+      <td>${r.paid ? "Paid" : "Unpaid"}</td>
+<td><span class="status-pill status-cancelled">cancelled</span></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -2000,7 +2067,9 @@ async function afterDataLoad() {
   await loadDeliveredLandings();
   await fillCancelledTables();
   await updateSummaryCounts();
-  await loadOverviewTotalsFilters();
+await loadOverviewTotalsFilters();
+await loadBackupsAdmin();   // ✅ refresh backups if admin
+}
 }
 
 
