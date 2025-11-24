@@ -960,11 +960,12 @@ function quarterOfMonth(m){
   if (m <= 9) return "Q3";
   return "Q4";
 }
-function parseDateSafe\(d\) \{
-  if \(!d\) return null;
-  const dt = new Date\(d\);
-  return isNaN\(dt\.getTime\(\)\) \? null : dt;
-\}
+function parseDateSafe(d) {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
 
 /* ========= Sorting helpers ========= */
 function sortRows(rows, key, dir="desc"){
@@ -1605,7 +1606,6 @@ async function loadAllRequisitions(){
 
   filtered.forEach(r=>{
     const tr=document.createElement("tr");
-    const amt = (typeof r.total_amount==="number" ? r.total_amount : (r.amount||0));
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open";
@@ -1613,7 +1613,7 @@ async function loadAllRequisitions(){
     if(r.delivered) statusClass="status-delivered";
 
     tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${amt.toFixed(2)}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-req" data-id="${r.id}">Edit</button>
@@ -1733,16 +1733,15 @@ async function loadOverviewRequisitions(){
   let rows=allReqs;
   if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
-  const {by:ovReqBy, dir:ovReqDir}=getSort("ovReqSortBy","ovReqSortDir","id","desc");
-  const sorted = sortRows(rows, ovReqBy, ovReqDir).slice(0,10);
+  const {by:ovLandBy, dir:ovLandDir}=getSort("ovLandSortBy","ovLandSortDir","id","desc");
+  const sorted = sortRows(rows, ovLandBy, ovLandDir).slice(0,10);
   sorted.forEach(r=>{
-    const amt = (typeof r.total_amount==="number" ? r.total_amount : (r.amount||0));
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${amt.toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
+      <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
       <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
   });
@@ -1770,7 +1769,6 @@ async function loadAllLandings(){
 
   filtered.forEach(r=>{
     const tr=document.createElement("tr");
-    const amt = (typeof r.total_amount==="number" ? r.total_amount : (r.amount||0));
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open";
@@ -1778,7 +1776,7 @@ async function loadAllLandings(){
     if(r.delivered) statusClass="status-delivered";
 
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${amt.toFixed(2)}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-land" data-id="${r.id}">Edit</button>
@@ -1889,7 +1887,7 @@ async function fillCancelledTables(){
   cancelledReqs.forEach(r=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${amt.toFixed(2)}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     reqBody.appendChild(tr);
   });
@@ -1898,9 +1896,8 @@ async function fillCancelledTables(){
   cancelledLands = sortRows(cancelledLands, landCanBy, landCanDir);
   cancelledLands.forEach(r=>{
     const tr=document.createElement("tr");
-    const amt = (typeof r.total_amount==="number" ? r.total_amount : (r.amount||0));
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${amt.toFixed(2)}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     landBody.appendChild(tr);
   });
@@ -1911,16 +1908,15 @@ async function loadOverviewLandings(){
   let rows=allLandings;
   if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewLandTable tbody"); tbody.innerHTML="";
-  const {by:ovReqBy, dir:ovReqDir}=getSort("ovReqSortBy","ovReqSortDir","id","desc");
-  const sorted = sortRows(rows, ovReqBy, ovReqDir).slice(0,10);
+  const {by:ovLandBy, dir:ovLandDir}=getSort("ovLandSortBy","ovLandSortDir","id","desc");
+  const sorted = sortRows(rows, ovLandBy, ovLandDir).slice(0,10);
   sorted.forEach(r=>{
-    const amt = (typeof r.total_amount==="number" ? r.total_amount : (r.amount||0));
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${amt.toFixed(2)}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
   });
@@ -1941,7 +1937,7 @@ async function loadDeliveredRequisitions(){
     if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${amt.toFixed(2)}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     tbody.appendChild(tr);
   });
@@ -1962,22 +1958,12 @@ async function loadDeliveredLandings(){
   deliveredLands = sortRows(deliveredLands, delLandBy, delLandDir);
   deliveredLands.forEach(r=>{
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesSearch=!search
-      || (r.vessel || "").toLowerCase().includes(search)
-      || (r.item || "").toLowerCase().includes(search)
-      || (r.workshop || "").toLowerCase().includes(search);
+    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
-
-    let statusClass="status-open";
-    if((r.status||"open")==="cancelled") statusClass="status-cancelled";
-    if(r.delivered) statusClass="status-delivered";
-
     const tr=document.createElement("tr");
-    const amt = (typeof r.total_amount==="number" ? r.total_amount : (r.amount||0));
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${amt.toFixed(2)}</td>
-      <td>${r.paid ? "Paid" : "Unpaid"}</td>
-      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -2128,7 +2114,7 @@ document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>
 ["delLandSortBy","delLandSortDir"].forEach(id=>{
   const el=document.getElementById(id); if(el) el.onchange=loadDeliveredLandings;
 });
-/\* ========= Init ========= \*/
+/* ========= Init ========= \*/
 (async function init(){
   await loadCurrencies();
   await refreshSession();   // important due to admin tab visibility
