@@ -977,19 +977,26 @@
 
 <script>
 /* ========= Helpers ========= */
-async function apiFetch(url, options = {}) {
+const API_BASE = "https://amt-procurement.onrender.com";
+async function apiFetch(path, options = {}) {
+  const url = API_BASE + path;
+
   const res = await fetch(url, {
+    method: options.method || "GET",
     headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
-    ...options
+    credentials: "include",
+    body: options.body || undefined
   });
+
   if (!res.ok) {
     let err;
-    try { err = await res.json(); } catch { err = { error: "unknown" }; }
-    throw err;
+    try { err = await res.json(); } catch {};
+    throw err || { error: "request_failed" };
   }
+
   return res.json();
 }
+
 
 let currentUser = null;
 let allReqs = [];
