@@ -1956,7 +1956,8 @@ async function fillCancelledTables(){
     tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.po_number||""}</td><td>${r.item || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid ? "Paid" : "Unpaid"}</td>
-<td><span class="status-pill status-cancelled">cancelled</span></td>`;
+      <td><span class="status-pill status-delivered">Delivered</span></td>`;
+
     reqBody.appendChild(tr);
   });
   let cancelledLands = allLandings.filter(r=>(r.status||"open")==="cancelled");
