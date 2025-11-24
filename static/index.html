@@ -960,11 +960,12 @@ function quarterOfMonth(m){
   if (m <= 9) return "Q3";
   return "Q4";
 }
-function parseDateSafe\(d\) \{
-  if \(!d\) return null;
-  const dt = new Date\(d\);
-  return isNaN\(dt\.getTime\(\)\) \? null : dt;
-\}
+function parseDateSafe(d) {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
 
 /* ========= Sorting helpers ========= */
 function sortRows(rows, key, dir="desc"){
@@ -2113,7 +2114,7 @@ document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>
 ["delLandSortBy","delLandSortDir"].forEach(id=>{
   const el=document.getElementById(id); if(el) el.onchange=loadDeliveredLandings;
 });
-/\* ========= Init ========= \*/
+/* ========= Init ========= \*/
 (async function init(){
   await loadCurrencies();
   await refreshSession();   // important due to admin tab visibility
