@@ -978,6 +978,7 @@
 <script>
 /* ========= Helpers ========= */
 const API_BASE = "https://amt-procurement.onrender.com";
+
 async function apiFetch(path, options = {}) {
   const url = API_BASE + path;
 
@@ -996,6 +997,7 @@ async function apiFetch(path, options = {}) {
 
   return res.json();
 }
+
 
 
 let currentUser = null;
@@ -1968,7 +1970,8 @@ async function fillCancelledTables(){
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
       <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
       <td>${r.paid ? "Paid" : "Unpaid"}</td>
-<td><span class="status-pill status-cancelled">cancelled</span></td>`;
+<td><span class="status-pill status-delivered">Delivered</span></td>
+
     landBody.appendChild(tr);
   });
 }
@@ -2133,7 +2136,8 @@ async function loadBackupsAdmin(){
 }
 
 document.getElementById("downloadBackupBtn")?.addEventListener("click", ()=>{
-  window.open("/api/backup", "_blank");
+  window.open(API_BASE + "/api/backups/" + ..., "_blank");
+
 });
 
 document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>{
