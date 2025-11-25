@@ -16,7 +16,7 @@
     .tab.active { background:#1f2937; color:#fff; }
     .container { padding:16px; max-width:1200px; margin:0 auto; }
     .card { background:#fff; padding:16px; margin-bottom:16px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-    .card h2 { margin-top:0; font-size:18px; }
+    .card h2 { margin-top:0; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
     .flex-row { display:flex; gap:16px; flex-wrap:wrap; }
     .flex-1 { flex:1 1 0; min-width:260px; }
     label { display:block; font-size:13px; margin-bottom:6px; }
@@ -31,6 +31,7 @@
     .tag.green { background:#dcfce7; color:#166534; }
     .tag.red { background:#fee2e2; color:#b91c1c; }
     .tag.gray { background:#e5e7eb; color:#374151; }
+    .text-red-bold { color:#b91c1c; font-weight:bold; }
     .error { color:#b91c1c; font-size:12px; margin-top:4px; }
     .hidden { display:none; }
     #loginCard { max-width:320px; margin:12px auto; position:relative; z-index:10; }
@@ -46,6 +47,8 @@
     .status-delivered { background:#dcfce7; color:#166534; }
     .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.2); padding:16px; max-width:400px; width:90%; z-index:50; }
     #dirPopupBackdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:40; }
+    /* Small sort dropdown in headers */
+    .header-sort { font-size:12px; font-weight:normal; padding:2px; width:auto; display:inline-block; margin-left:10px; border:1px solid #ccc; border-radius:4px; }
   </style>
 </head>
 <body>
@@ -224,13 +227,22 @@
       </div>
 
       <div class="card">
-        <h2>Recent Orders (POs)</h2>
+        <h2>
+          Recent Orders (POs)
+          <select id="ovReqSort" class="header-sort">
+            <option value="newest">Sort: Newest</option>
+            <option value="oldest">Sort: Oldest</option>
+            <option value="high_amt">Sort: Amount (High)</option>
+            <option value="low_amt">Sort: Amount (Low)</option>
+          </select>
+        </h2>
         <table id="overviewReqTable">
           <thead>
             <tr>
+              <th>PO #</th>
               <th>Number</th>
               <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-              <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
+              <th>Ordered</th><th>Urgency</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -238,7 +250,15 @@
       </div>
       
       <div class="card">
-        <h2>Recent Landed Items</h2>
+        <h2>
+          Recent Landed Items
+          <select id="ovLandSort" class="header-sort">
+            <option value="newest">Sort: Newest</option>
+            <option value="oldest">Sort: Oldest</option>
+            <option value="high_amt">Sort: Amount (High)</option>
+            <option value="low_amt">Sort: Amount (Low)</option>
+          </select>
+        </h2>
         <table id="overviewLandTable">
           <thead>
             <tr>
@@ -317,11 +337,19 @@
             </label>
           </div>
           <div class="flex-1">
+            <label>Urgency
+              <select id="reqUrgency">
+                <option value="normal">Normal</option>
+                <option value="low">Low</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+          </div>
+          <div class="flex-1">
             <label style="margin-top:20px;">
               <input type="checkbox" id="reqPaid" /> Paid
             </label>
           </div>
-           <div class="flex-1"></div> 
         </div>
 
         <div style="margin-top:16px;">
@@ -366,6 +394,16 @@
               <input type="text" id="filterReqSearch" placeholder="Search..." />
             </label>
           </div>
+          <div>
+            <label>Sort By
+              <select id="filterReqSort">
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="high_amt">Amount (High)</option>
+                <option value="low_amt">Amount (Low)</option>
+              </select>
+            </label>
+          </div>
           <div style="align-self:flex-end;">
             <button id="applyReqFilterBtn">Apply</button>
             <button id="clearReqFilterBtn" class="secondary" type="button">Clear</button>
@@ -378,9 +416,11 @@
         <table id="reqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
+              <th>ID</th>
+              <th>PO #</th>
+              <th>Number</th>
+              <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>Ordered</th><th>Expected</th><th>Urgency</th><th>Amount (USD)</th>
               <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
@@ -393,8 +433,10 @@
         <table id="reqCancelledTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>ID</th>
+              <th>PO #</th>
+              <th>Number</th>
+              <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
           </thead>
@@ -500,6 +542,16 @@
               <input type="text" id="filterLandingSearch" placeholder="Search..." />
             </label>
           </div>
+          <div>
+            <label>Sort By
+              <select id="filterLandingSort">
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="high_amt">Amount (High)</option>
+                <option value="low_amt">Amount (Low)</option>
+              </select>
+            </label>
+          </div>
           <div style="align-self:flex-end;">
             <button id="applyLandingFilterBtn">Apply</button>
             <button id="clearLandingFilterBtn" class="secondary" type="button">Clear</button>
@@ -577,7 +629,7 @@
         <table id="deliveredReqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
+              <th>ID</th><th>PO #</th><th>Number</th>
             <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
@@ -764,6 +816,29 @@ function parseDateSafe(d) {
   if (!d) return null;
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? null : dt;
+}
+
+function sortData(list, criteria, type="req") {
+  // slice to avoid mutation issues if necessary
+  let sorted = list.slice();
+  sorted.sort((a,b) => {
+    if(criteria === "newest" || criteria === "oldest") {
+      // For Orders use date_ordered, for Landed use landed_date
+      let da = type==="req" ? parseDateSafe(a.date_ordered) : parseDateSafe(a.landed_date);
+      let db = type==="req" ? parseDateSafe(b.date_ordered) : parseDateSafe(b.landed_date);
+      if(!da) da = new Date(0);
+      if(!db) db = new Date(0);
+      return criteria==="newest" ? db - da : da - db;
+    }
+    if(criteria === "high_amt" || criteria === "low_amt") {
+      let valA = a.amount_usd || 0;
+      let valB = b.amount_usd || 0;
+      return criteria==="high_amt" ? valB - valA : valA - valB;
+    }
+    // Fallback ID sort
+    return (b.id||0) - (a.id||0);
+  });
+  return sorted;
 }
 
 /* ========= Currencies ========= */
@@ -1295,14 +1370,21 @@ async function loadAllRequisitions(){
   const paidFilter=document.getElementById("filterReqPaid").value;
   const delFilter=document.getElementById("filterReqDelivered").value;
   const search=document.getElementById("filterReqSearch").value.toLowerCase();
+  const sort = document.getElementById("filterReqSort").value;
 
-  rows.forEach(r=>{
+  // Filter
+  let filtered = rows.filter(r=>{
     const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
-    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
+    return matchesStatus&&matchesPaid&&matchesDel&&matchesSearch;
+  });
 
+  // Sort
+  filtered = sortData(filtered, sort, "req");
+
+  filtered.forEach(r=>{
     const tr=document.createElement("tr");
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
@@ -1310,8 +1392,13 @@ async function loadAllRequisitions(){
     if((r.status||"open")==="cancelled") statusClass="status-cancelled";
     if(r.delivered) statusClass="status-delivered";
 
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
+    // Urgency display
+    const urgency = (r.urgency || "normal").toLowerCase();
+    const urgDisplay = urgency==="high" ? `<span class="text-red-bold">High</span>` : (urgency.charAt(0).toUpperCase() + urgency.slice(1));
+
+    tr.innerHTML=`<td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${urgDisplay}</td>
+      <td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-req" data-id="${r.id}">Edit</button>
@@ -1377,6 +1464,7 @@ function attachReqRowActions(){
       document.getElementById("reqTotal").value=orig;
       document.getElementById("reqCurrency").value=row.currency||"USD";
       document.getElementById("reqPaid").checked=!!row.paid;
+      document.getElementById("reqUrgency").value = row.urgency || "normal"; // Load Urgency
     };
   });
 }
@@ -1388,10 +1476,12 @@ document.getElementById("cancelReqEditBtn").onclick=()=>{
   ["reqNumber","reqPONumber","reqDescription","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("reqPaid").checked=false;
   document.getElementById("reqCurrency").value="USD";
+  document.getElementById("reqUrgency").value="normal";
 };
 document.getElementById("applyReqFilterBtn").onclick=loadAllRequisitions;
 document.getElementById("clearReqFilterBtn").onclick=async ()=>{
   ["filterReqStatus","filterReqPaid","filterReqDelivered","filterReqSearch"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("filterReqSort").value = "newest";
   await loadAllRequisitions();
 };
 
@@ -1407,6 +1497,7 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
   const total=document.getElementById("reqTotal").value;
   const currency=document.getElementById("reqCurrency").value||"USD";
   const paid=document.getElementById("reqPaid").checked;
+  const urgency = document.getElementById("reqUrgency").value; // NEW
   const err=document.getElementById("reqError"); err.textContent="";
 
   if(!number||!vessel||!category||!supplier||!date_ordered||!total){
@@ -1414,7 +1505,7 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
   }
   try{
     // Added po_number and description to payload
-    const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, paid};
+    const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, paid, urgency};
     
     if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
     else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
@@ -1432,18 +1523,27 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
 async function loadOverviewRequisitions(){
   let rows=allReqs;
   if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
+  
+  const sort = document.getElementById("ovReqSort").value;
+  rows = sortData(rows, sort, "req");
+
   const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
-  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
+  rows.slice(0,10).forEach(r=>{
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    
+    const urgency = (r.urgency || "normal").toLowerCase();
+    const urgDisplay = urgency==="high" ? `<span class="text-red-bold">High</span>` : (urgency.charAt(0).toUpperCase() + urgency.slice(1));
+
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
+    tr.innerHTML=`<td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+      <td>${r.date_ordered||""}</td><td>${urgDisplay}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
       <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
   });
 }
+document.getElementById("ovReqSort").onchange = loadOverviewRequisitions;
 
 /* ========= Landings ========= */
 async function loadAllLandings(){
@@ -1454,14 +1554,19 @@ async function loadAllLandings(){
   const paidFilter=document.getElementById("filterLandingPaid").value;
   const delFilter=document.getElementById("filterLandingDelivered").value;
   const search=document.getElementById("filterLandingSearch").value.toLowerCase();
+  const sort = document.getElementById("filterLandingSort").value;
 
-  rows.forEach(r=>{
+  let filtered = rows.filter(r=>{
     const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
     const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
-    if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
+    return matchesStatus&&matchesPaid&&matchesDel&&matchesSearch;
+  });
 
+  filtered = sortData(filtered, sort, "land");
+
+  filtered.forEach(r=>{
     const tr=document.createElement("tr");
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
@@ -1544,6 +1649,7 @@ document.getElementById("cancelLandEditBtn").onclick=()=>{
 document.getElementById("applyLandingFilterBtn").onclick=loadAllLandings;
 document.getElementById("clearLandingFilterBtn").onclick=async ()=>{
   ["filterLandingStatus","filterLandingPaid","filterLandingDelivered","filterLandingSearch"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("filterLandingSort").value = "newest";
   await loadAllLandings();
 };
 document.getElementById("saveLandingBtn").onclick=async ()=>{
@@ -1568,33 +1674,16 @@ document.getElementById("saveLandingBtn").onclick=async ()=>{
   }
 };
 
-/* ========= Cancelled tables ========= */
-async function fillCancelledTables(){
-  const reqBody=document.querySelector("#reqCancelledTable tbody");
-  const landBody=document.querySelector("#landingCancelledTable tbody");
-  reqBody.innerHTML=""; landBody.innerHTML="";
-  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    reqBody.appendChild(tr);
-  });
-  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    landBody.appendChild(tr);
-  });
-}
-
 /* ========= Overview Landings ========= */
 async function loadOverviewLandings(){
   let rows=allLandings;
   if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
+  
+  const sort = document.getElementById("ovLandSort").value;
+  rows = sortData(rows, sort, "land");
+
   const tbody=document.querySelector("#overviewLandTable tbody"); tbody.innerHTML="";
-  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
+  rows.slice(0,10).forEach(r=>{
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
@@ -1605,6 +1694,7 @@ async function loadOverviewLandings(){
     tbody.appendChild(tr);
   });
 }
+document.getElementById("ovLandSort").onchange = loadOverviewLandings;
 
 /* ========= Delivered ========= */
 async function loadDeliveredRequisitions(){
@@ -1617,7 +1707,7 @@ async function loadDeliveredRequisitions(){
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+    tr.innerHTML=`<td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
     tbody.appendChild(tr);
