@@ -104,17 +104,16 @@
 
   <div class="container tab-content">
 
-    <!-- OVERVIEW -->
     <div id="tab-overview">
       <div class="card">
         <h2>Dashboard</h2>
         <div class="summary-grid">
           <div class="summary-item">
-            <div class="summary-label">Open Requisitions (not delivered)</div>
+            <div class="summary-label">Open POs (not delivered)</div>
             <div class="summary-value" id="summaryOpenReqNotDel">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label">Open Requisitions (unpaid)</div>
+            <div class="summary-label">Open POs (unpaid)</div>
             <div class="summary-value" id="summaryOpenReqUnpaid">0</div>
           </div>
           <div class="summary-item">
@@ -135,8 +134,8 @@
             <label>Type
               <select id="ovTypeFilter">
                 <option value="">All</option>
-                <option value="req">Requisitions</option>
-                <option value="land">Workshops (Landed Items)</option>
+                <option value="req">Orders (POs)</option>
+                <option value="land">Workshops (Landed)</option>
               </select>
             </label>
           </div>
@@ -204,6 +203,15 @@
             <div class="summary-value" id="ovPaidYearTotal">0</div>
           </div>
           <div class="summary-item">
+            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Selected Period)</div>
+            <div class="summary-value" id="ovUnpaidMonthTotal">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Selected Year)</div>
+            <div class="summary-value" id="ovUnpaidYearTotal">0</div>
+          </div>
+          
+          <div class="summary-item">
             <div class="summary-label">Total Amount (Filter Result)</div>
             <div class="summary-value" id="ovAllTotal">0</div>
           </div>
@@ -215,63 +223,68 @@
         </ul>
       </div>
 
-      <div class="flex-row">
-        <div class="card flex-1">
-          <h2>Recent Requisitions</h2>
-          <table id="overviewReqTable">
-            <thead>
-              <tr>
-                <th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-                <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="card flex-1">
-          <h2>Recent Landed Items</h2>
-          <table id="overviewLandTable">
-            <thead>
-              <tr>
-                <th>Vessel</th><th>Description</th><th>Workshop</th>
-                <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
-                <th>Paid</th><th>Delivered</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+      <div class="card">
+        <h2>Recent Orders (POs)</h2>
+        <table id="overviewReqTable">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      
+      <div class="card">
+        <h2>Recent Landed Items</h2>
+        <table id="overviewLandTable">
+          <thead>
+            <tr>
+              <th>Vessel</th><th>Description</th><th>Workshop</th>
+              <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
+              <th>Paid</th><th>Delivered</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
 
-    <!-- REQUISITIONS -->
     <div id="tab-requisitions" class="hidden">
       <div class="card">
-        <h2 id="reqFormTitle">Add Requisition</h2>
+        <h2 id="reqFormTitle">Add Ordered Requisition</h2>
+        
         <div class="flex-row">
+          <div class="flex-1">
+             <label>PO Number
+               <input type="text" id="reqPONumber" placeholder="PO-XXXX" />
+             </label>
+          </div>
           <div class="flex-1">
             <label>Requisition Number
               <input type="text" id="reqNumber" />
             </label>
           </div>
-          <div class="form-group">
-            <label for="reqDescription">Description</label>
-            <input type="text" id="reqDescription" class="form-control" placeholder="Short description">
+          <div class="flex-1">
+            <label>Description
+              <input type="text" id="reqDescription" placeholder="Short description" />
+            </label>
           </div>
           <div class="flex-1">
             <label>Vessel
               <select id="reqVessel"></select>
             </label>
           </div>
-          <div class="flex-1">
-            <label>Category (Abbreviation)
+        </div>
+
+        <div class="flex-row" style="margin-top:10px;">
+           <div class="flex-1">
+            <label>Category
               <select id="reqCategory"></select>
             </label>
           </div>
-        </div>
-
-        <div class="flex-row">
           <div class="flex-1">
             <label>Supplier
               <div style="display:flex; gap:8px;">
@@ -292,7 +305,7 @@
           </div>
         </div>
 
-        <div class="flex-row">
+        <div class="flex-row" style="margin-top:10px;">
           <div class="flex-1">
             <label>Amount
               <input type="number" id="reqTotal" step="0.01" />
@@ -304,21 +317,22 @@
             </label>
           </div>
           <div class="flex-1">
-            <label>
+            <label style="margin-top:20px;">
               <input type="checkbox" id="reqPaid" /> Paid
             </label>
           </div>
+           <div class="flex-1"></div> 
         </div>
 
-        <div style="margin-top:8px;">
-          <button id="saveReqBtn">Save Requisition</button>
+        <div style="margin-top:16px;">
+          <button id="saveReqBtn">Save Order</button>
           <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
         </div>
         <div id="reqError" class="error"></div>
       </div>
 
       <div class="card">
-        <h2>Filter Requisitions</h2>
+        <h2>Filter Orders</h2>
         <div class="filter-row">
           <div>
             <label>Status
@@ -360,7 +374,7 @@
       </div>
 
       <div class="card">
-        <h2>All Requisitions</h2>
+        <h2>All Orders</h2>
         <table id="reqTable">
           <thead>
             <tr>
@@ -389,7 +403,6 @@
       </div>
     </div>
 
-    <!-- LANDINGS -->
     <div id="tab-landings" class="hidden">
       <div class="card">
         <h2 id="landFormTitle">Add Landed Item</h2>
@@ -522,7 +535,6 @@
       </div>
     </div>
 
-    <!-- DIRECTORY -->
     <div id="tab-directory" class="hidden">
       <div class="card">
         <h2>Suppliers & Workshops</h2>
@@ -532,14 +544,13 @@
         </div>
         <table id="directoryTable">
           <thead>
-            <tr><th>ID</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th></tr>
+            <tr><th>ID</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Actions</th></tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
     </div>
 
-    <!-- DELIVERED -->
     <div id="tab-delivered" class="hidden">
       <div class="card">
         <h2>Delivered Requisitions</h2>
@@ -609,7 +620,6 @@
       </div>
     </div>
 
-    <!-- ADMIN -->
     <div id="tab-admin" class="hidden">
       <div class="card">
         <h2>Categories</h2>
@@ -930,9 +940,10 @@ function updateOverviewPaidTotals(reqs, lands) {
   });
 
   const allTotal = filtered.reduce((s,x)=>s+x.amount,0);
+  
+  // Paid Math
   const paidOnly = filtered.filter(x=>x.paid===1);
   const paidMonthTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
-
   let paidYearTotal = 0;
   if (yearF) {
     paidYearTotal = paidOnly.filter(x=>{
@@ -943,9 +954,25 @@ function updateOverviewPaidTotals(reqs, lands) {
     paidYearTotal = paidMonthTotal;
   }
 
+  // Unpaid Math (New)
+  const unpaidOnly = filtered.filter(x=>x.paid===0);
+  const unpaidMonthTotal = unpaidOnly.reduce((s,x)=>s+x.amount,0);
+  let unpaidYearTotal = 0;
+  if (yearF) {
+    unpaidYearTotal = unpaidOnly.filter(x=>{
+      const dt=parseDateSafe(x.date);
+      return dt && String(dt.getFullYear())===yearF;
+    }).reduce((s,x)=>s+x.amount,0);
+  } else {
+    unpaidYearTotal = unpaidMonthTotal;
+  }
+
   document.getElementById("ovAllTotal").textContent = allTotal.toFixed(2);
   document.getElementById("ovPaidMonthTotal").textContent = paidMonthTotal.toFixed(2);
   document.getElementById("ovPaidYearTotal").textContent = paidYearTotal.toFixed(2);
+  // Set new unpaid fields
+  document.getElementById("ovUnpaidMonthTotal").textContent = unpaidMonthTotal.toFixed(2);
+  document.getElementById("ovUnpaidYearTotal").textContent = unpaidYearTotal.toFixed(2);
 
   // Top suppliers
   const supMap = {};
@@ -991,28 +1018,44 @@ function openDirPopup(type){
   document.getElementById("dirPopupError").textContent="";
   document.getElementById("dirPopupBackdrop").classList.remove("hidden");
   document.getElementById("dirPopup").classList.remove("hidden");
+  delete document.getElementById("dirPopup").dataset.editId; // Ensure not in edit mode
 }
 function closeDirPopup(){
   document.getElementById("dirPopupBackdrop").classList.add("hidden");
   document.getElementById("dirPopup").classList.add("hidden");
 }
 document.getElementById("dirPopupCancelBtn").onclick=closeDirPopup;
+
 document.getElementById("dirPopupSaveBtn").onclick=async ()=>{
   const name=document.getElementById("dirPopupName").value.trim();
   const email=document.getElementById("dirPopupEmail").value.trim();
   const phone=document.getElementById("dirPopupPhone").value.trim();
   const address=document.getElementById("dirPopupAddress").value.trim();
+  const editId = document.getElementById("dirPopup").dataset.editId; // Check if editing
+  
   const err=document.getElementById("dirPopupError");
   err.textContent="";
   if(!dirPopupType){ err.textContent="Unknown type."; return; }
   if(!name){ err.textContent="Name is required."; return; }
+  
   try{
-    await apiFetch("/api/directory/quick",{method:"POST",body:JSON.stringify({type:dirPopupType,name,email,phone,address})});
+    if(editId) {
+        // Edit mode
+        await apiFetch(`/api/directory/${editId}`, {
+            method: "PATCH",
+            body: JSON.stringify({type:dirPopupType, name, email, phone, address})
+        });
+        delete document.getElementById("dirPopup").dataset.editId; // clear edit mode
+    } else {
+        // Create mode
+        await apiFetch("/api/directory/quick",{method:"POST",body:JSON.stringify({type:dirPopupType,name,email,phone,address})});
+    }
     closeDirPopup();
     await loadDirectoryOptions();
     await loadDirectoryPage();
-  }catch(e){ err.textContent=e.error==="login_required"?"You must be logged in.":"Error saving."; }
+  }catch(e){ err.textContent=e.error==="login_required"?"You must be logged in.": "Error saving."; }
 };
+
 document.getElementById("newSupplierBtn").onclick=()=>openDirPopup("supplier");
 document.getElementById("newWorkshopBtn").onclick=()=>openDirPopup("workshop");
 document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
@@ -1022,10 +1065,46 @@ async function loadDirectoryPage(){
   let rows=[]; try{ rows=await apiFetch("/api/directory"); }catch{}
   const tbody=document.querySelector("#directoryTable tbody");
   tbody.innerHTML="";
+
   rows.forEach(r=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td>${r.address||""}</td>`;
+    tr.innerHTML=`<td>${r.id}</td><td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td>${r.address||""}</td>
+    <td>
+       <button class="secondary edit-dir" data-id="${r.id}" data-obj='${JSON.stringify(r).replace(/'/g, "&#39;")}'>Edit</button>
+       <button class="danger delete-dir" data-id="${r.id}">Delete</button>
+    </td>`;
     tbody.appendChild(tr);
+  });
+
+  // Attach handlers
+  document.querySelectorAll(".delete-dir").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const id=+btn.dataset.id;
+      if(!confirm("Delete this directory entry?")) return;
+      try {
+        await apiFetch(`/api/directory/${id}`, {method:"DELETE"});
+        await loadDirectoryPage(); 
+        await loadDirectoryOptions(); // Refresh dropdowns too
+      } catch(e) { 
+        alert(e.error === "admin_required" ? "Only Admin can delete directory items." : "Error deleting."); 
+      }
+    };
+  });
+  
+  document.querySelectorAll(".edit-dir").forEach(btn=>{
+    btn.onclick=()=>{
+      // Reuse the popup for editing
+      const r = JSON.parse(btn.dataset.obj);
+      openDirPopup(r.type); // Set type
+      document.getElementById("dirPopupTitle").textContent = "Edit " + r.type;
+      document.getElementById("dirPopupName").value = r.name;
+      document.getElementById("dirPopupEmail").value = r.email||"";
+      document.getElementById("dirPopupPhone").value = r.phone||"";
+      document.getElementById("dirPopupAddress").value = r.address||"";
+      
+      // Mark as edit mode
+      document.getElementById("dirPopup").dataset.editId = r.id;
+    };
   });
 }
 
@@ -1282,10 +1361,13 @@ function attachReqRowActions(){
       const id=+btn.dataset.id;
       const row=allReqs.find(r=>r.id===id); if(!row) return;
       editingReqId=id;
-      document.getElementById("reqFormTitle").textContent="Edit Requisition";
-      document.getElementById("saveReqBtn").textContent="Update Requisition";
+      document.getElementById("reqFormTitle").textContent="Edit Order";
+      document.getElementById("saveReqBtn").textContent="Update Order";
       document.getElementById("cancelReqEditBtn").classList.remove("hidden");
+      
       document.getElementById("reqNumber").value=row.number||"";
+      document.getElementById("reqPONumber").value=row.po_number||""; // Load PO
+      document.getElementById("reqDescription").value=row.description||""; // Load Desc
       document.getElementById("reqVessel").value=row.vessel||"";
       document.getElementById("reqCategory").value=row.category||"";
       document.getElementById("reqSupplierSelect").value=row.supplier||"";
@@ -1300,10 +1382,10 @@ function attachReqRowActions(){
 }
 document.getElementById("cancelReqEditBtn").onclick=()=>{
   editingReqId=null;
-  document.getElementById("reqFormTitle").textContent="Add Requisition";
-  document.getElementById("saveReqBtn").textContent="Save Requisition";
+  document.getElementById("reqFormTitle").textContent="Add Ordered Requisition";
+  document.getElementById("saveReqBtn").textContent="Save Order";
   document.getElementById("cancelReqEditBtn").classList.add("hidden");
-  ["reqNumber","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
+  ["reqNumber","reqPONumber","reqDescription","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("reqPaid").checked=false;
   document.getElementById("reqCurrency").value="USD";
 };
@@ -1315,7 +1397,8 @@ document.getElementById("clearReqFilterBtn").onclick=async ()=>{
 
 document.getElementById("saveReqBtn").onclick=async ()=>{
   const number=document.getElementById("reqNumber").value.trim();
-  const description = document.getElementById("reqDescription").value.trim();
+  const po_number=document.getElementById("reqPONumber").value.trim(); // NEW
+  const description = document.getElementById("reqDescription").value.trim(); // NEW FIX
   const vessel=document.getElementById("reqVessel").value.trim();
   const category=document.getElementById("reqCategory").value.trim();
   const supplier=document.getElementById("reqSupplierSelect").value.trim();
@@ -1330,7 +1413,9 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
     err.textContent="Please fill all required fields."; return;
   }
   try{
-    const payload={number,vessel,category,supplier,date_ordered,expected,amount:parseFloat(total),currency,paid};
+    // Added po_number and description to payload
+    const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, paid};
+    
     if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
     else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
     document.getElementById("cancelReqEditBtn").onclick();
@@ -1338,8 +1423,8 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
   }catch(e){
     if(e.error==="duplicate_number") err.textContent="This requisition number already exists.";
     else if(e.error==="unknown_category") err.textContent="Invalid category abbreviation.";
-    else if(e.error==="login_required") err.textContent="You must be logged in to add / edit requisitions.";
-    else err.textContent="Error saving requisition.";
+    else if(e.error==="login_required") err.textContent="You must be logged in to add / edit orders.";
+    else err.textContent="Error saving order.";
   }
 };
 
