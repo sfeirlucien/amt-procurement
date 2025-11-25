@@ -27,10 +27,6 @@
     .flex-1 { flex:1 1 0; min-width:200px; }
     
     /* Custom percentage widths for Landed Form (Desktop) */
-    /* Mobile First: All 100% by default */
-    .w-25, .w-50, .w-20 { flex: 1 1 100%; }
-
-    /* Desktop: Apply specific percentages only when screen is wide enough */
     @media (min-width: 768px) {
         .w-25 { flex: 0 0 calc(25% - 12px); max-width: calc(25% - 12px); }
         .w-50 { flex: 0 0 calc(50% - 12px); max-width: calc(50% - 12px); }
@@ -1448,9 +1444,6 @@ async function loadAllRequisitions(){
       return;
   }
 
-  const today = new Date();
-  today.setHours(0,0,0,0); // Normalize today to midnight
-
   filtered.forEach(r=>{
     const tr=document.createElement("tr");
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
@@ -1463,22 +1456,12 @@ async function loadAllRequisitions(){
     const urgency = (r.urgency || "normal").toLowerCase();
     const urgDisplay = urgency==="high" ? `<span class="text-red-bold">High</span>` : (urgency.charAt(0).toUpperCase() + urgency.slice(1));
 
-    // Overdue logic
-    const expDate = parseDateSafe(r.expected);
-    let overdueClass = "";
-    // If expected exists, date is before today, NOT delivered, and NOT cancelled
-    if(expDate && expDate < today && !r.delivered && (r.status||"open")!=="cancelled") {
-        overdueClass = "text-red-bold";
-    }
-    const expDisplay = r.expected ? `<span class="${overdueClass}">${r.expected}</span>` : "";
-
     tr.innerHTML=`<td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${expDisplay}</td><td>${urgDisplay}</td>
+      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${urgDisplay}</td>
       <td>${(r.total_amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-req" data-id="${r.id}">Edit</button>
-        <button class="secondary copy-req" data-id="${r.id}">Copy</button>
         <button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button>
         <button class="secondary mark-delivered-req" data-id="${r.id}">Delivered</button>
         <button class="danger cancel-req" data-id="${r.id}">Cancel</button>
@@ -1520,8 +1503,6 @@ function attachReqRowActions(){
       catch{ alert("Error deleting."); }
     };
   });
-  
-  // Edit
   document.querySelectorAll(".edit-req").forEach(btn=>{
     btn.onclick=()=>{
       const id=+btn.dataset.id;
@@ -1531,10 +1512,9 @@ function attachReqRowActions(){
       document.getElementById("saveReqBtn").textContent="Update Order";
       document.getElementById("cancelReqEditBtn").classList.remove("hidden");
       
-      // Populate form
       document.getElementById("reqNumber").value=row.number||"";
-      document.getElementById("reqPONumber").value=row.po_number||"";
-      document.getElementById("reqDescription").value=row.description||"";
+      document.getElementById("reqPONumber").value=row.po_number||""; // Load PO
+      document.getElementById("reqDescription").value=row.description||""; // Load Desc
       document.getElementById("reqVessel").value=row.vessel||"";
       document.getElementById("reqCategory").value=row.category||"";
       document.getElementById("reqSupplierSelect").value=row.supplier||"";
@@ -1544,44 +1524,7 @@ function attachReqRowActions(){
       document.getElementById("reqTotal").value=orig;
       document.getElementById("reqCurrency").value=row.currency||"USD";
       document.getElementById("reqPaid").checked=!!row.paid;
-      document.getElementById("reqUrgency").value = row.urgency || "normal";
-      
-      // Scroll to top
-      document.querySelector(".container").scrollIntoView({behavior: 'smooth'});
-    };
-  });
-
-  // Copy
-  document.querySelectorAll(".copy-req").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const row=allReqs.find(r=>r.id===id); if(!row) return;
-      
-      // We act like we are editing, but we clear the ID so it saves as NEW
-      editingReqId=null; // Important: Null means create new
-      document.getElementById("reqFormTitle").textContent="Add Ordered Requisition (Copy)";
-      document.getElementById("saveReqBtn").textContent="Save Order"; // Reset text
-      document.getElementById("cancelReqEditBtn").classList.remove("hidden");
-
-      // Populate form but clear unique fields
-      document.getElementById("reqNumber").value=""; // Clear Number to avoid duplicate error
-      document.getElementById("reqPONumber").value=""; // Clear PO
-      
-      // Keep the rest
-      document.getElementById("reqDescription").value=row.description||"";
-      document.getElementById("reqVessel").value=row.vessel||"";
-      document.getElementById("reqCategory").value=row.category||"";
-      document.getElementById("reqSupplierSelect").value=row.supplier||"";
-      document.getElementById("reqDateOrdered").value=row.date_ordered||"";
-      document.getElementById("reqExpected").value=row.expected||"";
-      const orig=(typeof row.original_amount==="number"?row.original_amount:row.total_amount)||0;
-      document.getElementById("reqTotal").value=orig;
-      document.getElementById("reqCurrency").value=row.currency||"USD";
-      document.getElementById("reqPaid").checked=false; // Usually copies are unpaid
-      document.getElementById("reqUrgency").value = row.urgency || "normal";
-
-      // Scroll to top
-      document.querySelector(".container").scrollIntoView({behavior: 'smooth'});
+      document.getElementById("reqUrgency").value = row.urgency || "normal"; // Load Urgency
     };
   });
 }
@@ -1642,10 +1585,7 @@ document.getElementById("saveReqBtn").onclick=async (e)=>{
     else err.textContent="Error saving order.";
   } finally {
      btn.disabled = false;
-     // Reset button text if we finished (and cancel btn was clicked in try block so id is null)
-     // But if error occurred, we stay on form.
      if(!editingReqId) btn.textContent = "Save Order";
-     else btn.textContent = "Update Order";
   }
 };
 
@@ -1665,9 +1605,6 @@ async function loadOverviewRequisitions(){
       tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:12px; color:#666;">No recent orders.</td></tr>`;
       return;
   }
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
 
   rows.slice(0,10).forEach(r=>{
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
@@ -1716,29 +1653,17 @@ async function loadAllLandings(){
       return;
   }
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
   filtered.forEach(r=>{
     const tr=document.createElement("tr");
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
 
-    // Overdue logic
-    const expDate = parseDateSafe(r.expected);
-    let overdueClass = "";
-    if(expDate && expDate < today && !r.delivered && (r.status||"open")!=="cancelled") {
-        overdueClass = "text-red-bold";
-    }
-    const expDisplay = r.expected ? `<span class="${overdueClass}">${r.expected}</span>` : "";
-
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${expDisplay}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
       <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-land" data-id="${r.id}">Edit</button>
-        <button class="secondary copy-land" data-id="${r.id}">Copy</button>
         <button class="secondary toggle-paid-land" data-id="${r.id}">Paid</button>
         <button class="secondary mark-delivered-land" data-id="${r.id}">Delivered</button>
         <button class="danger cancel-land" data-id="${r.id}">Cancel</button>
@@ -1779,8 +1704,6 @@ function attachLandingActions(){
       catch{ alert("Error deleting landing."); }
     };
   });
-  
-  // Edit
   document.querySelectorAll(".edit-land").forEach(btn=>{
     btn.onclick=()=>{
       const id=+btn.dataset.id;
@@ -1798,34 +1721,6 @@ function attachLandingActions(){
       document.getElementById("landAmount").value=orig;
       document.getElementById("landCurrency").value=row.currency||"USD";
       document.getElementById("landPaid").checked=!!row.paid;
-      
-      document.querySelector(".container").scrollIntoView({behavior: 'smooth'});
-    };
-  });
-
-  // Copy
-  document.querySelectorAll(".copy-land").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const row=allLandings.find(l=>l.id===id); if(!row) return;
-      
-      editingLandId=null; // Create new
-      document.getElementById("landFormTitle").textContent="Add Landed Item (Copy)";
-      document.getElementById("saveLandingBtn").textContent="Save Landed Item";
-      document.getElementById("cancelLandEditBtn").classList.remove("hidden");
-      
-      // Populate form
-      document.getElementById("landVessel").value=row.vessel||"";
-      document.getElementById("landDescription").value=row.item||"";
-      document.getElementById("landWorkshopSelect").value=row.workshop||"";
-      document.getElementById("landExpected").value=row.expected||"";
-      document.getElementById("landLanded").value=row.landed_date||"";
-      const orig=(typeof row.amount_original==="number"?row.amount_original:row.amount)||0;
-      document.getElementById("landAmount").value=orig;
-      document.getElementById("landCurrency").value=row.currency||"USD";
-      document.getElementById("landPaid").checked=false; // Usually copy is unpaid
-      
-      document.querySelector(".container").scrollIntoView({behavior: 'smooth'});
     };
   });
 }
@@ -1877,7 +1772,6 @@ document.getElementById("saveLandingBtn").onclick=async (e)=>{
   } finally {
      btn.disabled = false;
      if(!editingLandId) btn.textContent = "Save Landed Item";
-     else btn.textContent = "Update Landed Item";
   }
 };
 
@@ -1918,19 +1812,10 @@ async function loadDeliveredRequisitions(){
   const paidFilter=document.getElementById("filterDeliveredReqPaid").value;
   const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
   const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
-  
-  let filtered = rows.filter(r=>r.delivered).filter(r=>{
+  rows.filter(r=>r.delivered).forEach(r=>{
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
-    return matchesPaid&&matchesSearch;
-  });
-  
-  if(filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:12px; color:#666;">No records found.</td></tr>`;
-      return;
-  }
-
-  filtered.forEach(r=>{
+    if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
       <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
@@ -1949,19 +1834,10 @@ async function loadDeliveredLandings(){
   const paidFilter=document.getElementById("filterDeliveredLandPaid").value;
   const search=document.getElementById("filterDeliveredLandSearch").value.toLowerCase();
   const tbody=document.querySelector("#deliveredLandTable tbody"); tbody.innerHTML="";
-  
-  let filtered = rows.filter(r=>r.delivered).filter(r=>{
+  rows.filter(r=>r.delivered).forEach(r=>{
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
-    return matchesPaid&&matchesSearch;
-  });
-  
-  if(filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:12px; color:#666;">No records found.</td></tr>`;
-      return;
-  }
-
-  filtered.forEach(r=>{
+    if(!(matchesPaid&&matchesSearch)) return;
     const tr=document.createElement("tr");
     tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
       <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
