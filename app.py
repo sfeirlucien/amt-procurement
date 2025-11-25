@@ -1087,6 +1087,62 @@ def delete_landing(lid: int):
 
 
 # -------------------------------------------------
+# Directory Actions (Edit/Delete) - ADDED
+# -------------------------------------------------
+@app.patch("/api/directory/<int:did>")
+def edit_directory_entry(did: int):
+    guard = require_login()
+    if guard:
+        return guard
+    
+    # Check if row exists and user has permission
+    rows = read_rows("directory")
+    row = next((r for r in rows if int(r["id"]) == did), None)
+    if not row:
+        return jsonify({"error": "not_found"}), 404
+    
+    # In this app, usually only the creator or admin can edit. 
+    # For directory, let's allow admin or creator.
+    u = current_user()
+    if u["role"] != "admin" and row.get("created_by") != u["username"]:
+        return jsonify({"error": "not_allowed"}), 403
+
+    data = request.json or {}
+    updates = {}
+    
+    # Fields allowed to update
+    for k in ["name", "email", "phone", "address", "type"]:
+        if k in data:
+            val = data[k]
+            if isinstance(val, str):
+                val = val.strip()
+            updates[k] = val
+
+    if not update_row_by_id("directory", did, updates):
+        return jsonify({"error": "not_found"}), 404
+
+    log_action("directory_edit", str(did))
+    return jsonify({"ok": True})
+
+@app.delete("/api/directory/<int:did>")
+def delete_directory_entry(did: int):
+    guard = require_login()
+    if guard:
+        return guard
+
+    # Only admin can delete directory items (safer)
+    u = current_user()
+    if u["role"] != "admin":
+        return jsonify({"error": "admin_required"}), 403
+
+    if not delete_row_by_id("directory", did):
+        return jsonify({"error": "not_found"}), 404
+    
+    log_action("directory_delete", str(did))
+    return jsonify({"ok": True})
+
+
+# -------------------------------------------------
 # Run local
 # -------------------------------------------------
 if __name__ == "__main__":
