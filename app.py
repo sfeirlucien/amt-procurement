@@ -212,7 +212,9 @@ def update_row_by_id(sheet: str, row_id: int, updates: Dict[str, Any]) -> bool:
     id_col = headers.index("id") + 1
 
     for r_idx in range(2, ws.max_row + 1):
-        if ws.cell(r_idx, id_col).value == row_id:
+        # FIX: Compare as strings to handle Excel text/number mismatch
+        cell_val = ws.cell(r_idx, id_col).value
+        if str(cell_val) == str(row_id):
             for k, v in updates.items():
                 if k in headers:
                     c_idx = headers.index(k) + 1
@@ -231,7 +233,9 @@ def delete_row_by_id(sheet: str, row_id: int) -> bool:
     id_col = headers.index("id") + 1
 
     for r_idx in range(2, ws.max_row + 1):
-        if ws.cell(r_idx, id_col).value == row_id:
+        # FIX: Compare as strings
+        cell_val = ws.cell(r_idx, id_col).value
+        if str(cell_val) == str(row_id):
             ws.delete_rows(r_idx, 1)
             wb.save(DB_FILE)
             return True
