@@ -5,7 +5,7 @@
   <title>AMT Procurement</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/png" href="static/ICON.jpg">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
   <style>
     body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
     header { background:#1f2937; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
@@ -125,6 +125,7 @@
 
   <div class="container tab-content">
 
+    <!-- OVERVIEW -->
     <div id="tab-overview">
       <div class="card">
         <h2>Dashboard</h2>
@@ -223,6 +224,7 @@
             <div class="summary-label">Total Paid (Selected Year)</div>
             <div class="summary-value" id="ovPaidYearTotal">0</div>
           </div>
+          <!-- NEW UNPAID SECTION -->
           <div class="summary-item">
             <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Selected Period)</div>
             <div class="summary-value" id="ovUnpaidMonthTotal">0</div>
@@ -244,6 +246,7 @@
         </ul>
       </div>
 
+      <!-- RECENT ORDERS (SPLIT SORT) -->
       <div class="card">
         <div class="card-header">
           <h2>Recent Orders (POs)</h2>
@@ -275,6 +278,7 @@
         </table>
       </div>
       
+      <!-- RECENT LANDED (SPLIT SORT) -->
       <div class="card">
         <div class="card-header">
             <h2>Recent Landed Items</h2>
@@ -304,10 +308,12 @@
       </div>
     </div>
 
+    <!-- REQUISITIONS -->
     <div id="tab-requisitions" class="hidden">
       <div class="card">
         <h2 id="reqFormTitle">Add Ordered Requisition</h2>
         
+        <!-- LINE 1: PO Number, Req Number, Description, Vessel -->
         <div class="flex-row">
           <div class="flex-1">
              <label>PO Number
@@ -331,6 +337,7 @@
           </div>
         </div>
 
+        <!-- LINE 2: Category, Supplier, Date Ordered, Expected -->
         <div class="flex-row" style="margin-top:10px;">
            <div class="flex-1">
             <label>Category
@@ -357,6 +364,7 @@
           </div>
         </div>
 
+        <!-- LINE 3: Amount, Currency, Urgency, Paid -->
         <div class="flex-row" style="margin-top:10px;">
           <div class="flex-1">
             <label>Amount
@@ -427,6 +435,7 @@
             </label>
           </div>
           
+          <!-- SPLIT SORT FOR ALL ORDERS -->
           <div>
             <label>Sort By
               <select id="filterReqSortKey">
@@ -489,10 +498,12 @@
       </div>
     </div>
 
+    <!-- LANDINGS -->
     <div id="tab-landings" class="hidden">
       <div class="card">
         <h2 id="landFormTitle">Add Landed Item</h2>
         
+        <!-- LINE 1: Vessel 25%, Workshop 25%, Description 50% -->
         <div class="flex-row">
           <div class="w-25">
             <label>Vessel
@@ -514,6 +525,7 @@
           </div>
         </div>
 
+        <!-- LINE 2: Expected 20%, Landed 20%, Amount 20%, Currency 20%, Paid 20% -->
         <div class="flex-row" style="margin-top:10px;">
           <div class="w-20">
             <label>Expected Delivery
@@ -585,6 +597,7 @@
             </label>
           </div>
           
+          <!-- SPLIT SORT FOR ALL LANDED -->
           <div>
             <label>Sort By
               <select id="filterLandingSortKey">
@@ -639,6 +652,7 @@
       </div>
     </div>
 
+    <!-- DIRECTORY -->
     <div id="tab-directory" class="hidden">
       <div class="card">
         <h2>Suppliers & Workshops</h2>
@@ -655,6 +669,7 @@
       </div>
     </div>
 
+    <!-- DELIVERED -->
     <div id="tab-delivered" class="hidden">
       <div class="card">
         <h2>Delivered Requisitions</h2>
@@ -724,6 +739,7 @@
       </div>
     </div>
 
+    <!-- ADMIN -->
     <div id="tab-admin" class="hidden">
       <div class="card">
         <h2>Categories</h2>
@@ -1487,13 +1503,19 @@ async function loadAllRequisitions(){
     tbody.appendChild(tr);
   });
   attachReqRowActions();
+  
+  // Update dashboard immediately
+  await updateOverviewPaidTotals(allReqs, allLandings);
 }
 
 function attachReqRowActions(){
   document.querySelectorAll(".toggle-paid-req").forEach(btn=>{
     btn.onclick=async ()=>{
       const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/requisitions/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
+      try{ 
+          await apiFetch(`/api/requisitions/${id}/toggle_paid`,{method:"PATCH"}); 
+          await afterDataLoad(); // This reloads all data and updates UI
+      }
       catch{ alert("Error toggling paid."); }
     };
   });
@@ -1747,12 +1769,18 @@ async function loadAllLandings(){
     tbody.appendChild(tr);
   });
   attachLandingActions();
+  
+  // Update dashboard immediately
+  await updateOverviewPaidTotals(allReqs, allLandings);
 }
 function attachLandingActions(){
   document.querySelectorAll(".toggle-paid-land").forEach(btn=>{
     btn.onclick=async ()=>{
       const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/landings/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
+      try{ 
+          await apiFetch(`/api/landings/${id}/toggle_paid`,{method:"PATCH"}); 
+          await afterDataLoad(); 
+      }
       catch{ alert("Error toggling paid."); }
     };
   });
