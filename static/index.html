@@ -3,58 +3,118 @@
 <head>
   <meta charset="UTF-8" />
   <title>AMT Procurement</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <link rel="icon" type="image/png" href="static/ICON.jpg">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
-    header { background:#1f2937; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:20px; }
-    header .user-info { font-size:14px; display:flex; align-items:center; gap:8px;}
-    .tabs { display:flex; background:#111827; flex-wrap:wrap; }
-    .tab { padding:10px 16px; color:#9ca3af; cursor:pointer; font-size:14px; user-select:none; }
-    .tab.active { background:#1f2937; color:#fff; }
+    /* Base Styles */
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin:0; background:#f5f5f5; color: #333; }
+    
+    /* Header */
+    header { background:#1f2937; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:18px; font-weight: 600; }
+    header .user-info { font-size:14px; display:flex; align-items:center; gap:12px;}
+    
+    /* Navigation Tabs */
+    .tabs { display:flex; background:#111827; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+    .tabs::-webkit-scrollbar { height: 0px; background: transparent; } /* Hide scrollbar for cleaner look */
+    .tab { padding:12px 16px; color:#9ca3af; cursor:pointer; font-size:14px; user-select:none; flex: 0 0 auto; border-bottom: 3px solid transparent; }
+    .tab.active { background:#1f2937; color:#fff; border-bottom-color: #2563eb; }
+
+    /* Layout Containers */
     .container { padding:16px; max-width:1200px; margin:0 auto; }
-    .card { background:#fff; padding:16px; margin-bottom:16px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-    .card h2 { margin-top:0; font-size:18px; }
-    .flex-row { display:flex; gap:16px; flex-wrap:wrap; }
-    .flex-1 { flex:1 1 0; min-width:260px; }
-    label { display:block; font-size:13px; margin-bottom:6px; }
-    input, select { width:100%; padding:6px 8px; margin-top:2px; box-sizing:border-box; font-size:13px; }
-    button { padding:6px 10px; font-size:13px; border-radius:4px; border:none; cursor:pointer; background:#2563eb; color:#fff; }
+    .card { background:#fff; padding:16px; margin-bottom:16px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    .card h2 { margin-top:0; font-size:18px; margin-bottom: 12px; color: #111827; }
+    
+    /* Form Elements */
+    .flex-row { display:flex; gap:12px; flex-wrap:wrap; }
+    .flex-1 { flex:1 1 0; min-width:240px; } /* Ensures inputs don't get too small */
+    
+    label { display:block; font-size:13px; font-weight: 500; margin-bottom:4px; color: #4b5563; }
+    
+    /* Mobile-friendly Inputs: 16px prevents iOS zoom */
+    input, select { width:100%; padding:8px 10px; margin-top:2px; box-sizing:border-box; font-size:16px; border: 1px solid #d1d5db; border-radius: 4px; background-color: #fff; }
+    input:focus, select:focus { outline: none; border-color: #2563eb; ring: 2px solid #bfdbfe; }
+    
+    /* Buttons */
+    button { padding:8px 14px; font-size:14px; font-weight: 500; border-radius:6px; border:none; cursor:pointer; background:#2563eb; color:#fff; transition: background 0.2s; }
+    button:hover { background-color: #1d4ed8; }
+    button:active { transform: translateY(1px); }
     button.secondary { background:#6b7280; }
-    button.danger { background:#b91c1c; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th, td { border:1px solid #e5e7eb; padding:6px 8px; text-align:left; }
-    th { background:#f3f4f6; }
-    .tag { display:inline-block; padding:2px 6px; border-radius:999px; font-size:11px; }
+    button.secondary:hover { background:#4b5563; }
+    button.danger { background:#dc2626; }
+    button.danger:hover { background:#b91c1c; }
+
+    /* Tables - Desktop Default */
+    table { width:100%; border-collapse:collapse; font-size:13px; min-width: 800px; /* Forces scroll on small screens */ }
+    th, td { border:1px solid #e5e7eb; padding:8px 10px; text-align:left; vertical-align: middle; }
+    th { background:#f9fafb; font-weight: 600; color: #374151; }
+    
+    /* Scrollable Table Wrapper */
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 10px; }
+
+    /* Tags & Status */
+    .tag { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight: 500; }
     .tag.green { background:#dcfce7; color:#166534; }
-    .tag.red { background:#fee2e2; color:#b91c1c; }
-    .tag.gray { background:#e5e7eb; color:#374151; }
-    .error { color:#b91c1c; font-size:12px; margin-top:4px; }
-    .hidden { display:none; }
-    #loginCard { max-width:320px; margin:12px auto; position:relative; z-index:10; }
-    .summary-grid { display:flex; flex-wrap:wrap; gap:10px; }
-    .summary-item { flex:1 1 180px; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; font-size:13px; }
-    .summary-label { color:#6b7280; font-size:12px; }
-    .summary-value { font-size:18px; font-weight:bold; margin-top:4px; }
-    .filter-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; align-items:flex-end; }
-    .filter-row > div { min-width:140px; flex:1 1 120px; }
-    .status-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
-    .status-open { background:#eef2ff; color:#4f46e5; }
-    .status-cancelled { background:#fee2e2; color:#b91c1c; }
-    .status-delivered { background:#dcfce7; color:#166534; }
-    .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.2); padding:16px; max-width:400px; width:90%; z-index:50; }
-    #dirPopupBackdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:40; }
-    /* URGENCY ALERT STYLE */
-    .row-urgent { color: #b91c1c; font-weight: bold; }
+    .tag.red { background:#fee2e2; color:#991b1b; }
+    .tag.gray { background:#f3f4f6; color:#374151; }
+    
+    .status-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight: 600; text-transform: uppercase; }
+    .status-open { background:#e0e7ff; color:#4338ca; }
+    .status-cancelled { background:#fee2e2; color:#991b1b; }
+    .status-delivered { background:#dcfce7; color:#15803d; }
+    
+    .error { color:#dc2626; font-size:13px; margin-top:6px; }
+    .hidden { display:none !important; }
+
+    /* Login & Popups */
+    #loginCard { max-width:320px; margin:40px auto; position:relative; z-index:10; }
+    
+    .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:8px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); padding:20px; max-width:400px; width:90%; z-index:50; max-height: 90vh; overflow-y: auto; }
+    #dirPopupBackdrop { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:40; backdrop-filter: blur(2px); }
+
+    /* Summary Dashboard */
+    .summary-grid { display:flex; flex-wrap:wrap; gap:12px; }
+    .summary-item { flex:1 1 180px; background:#f9fafb; padding:12px; border-radius:8px; border:1px solid #e5e7eb; font-size:13px; }
+    .summary-label { color:#6b7280; font-size:12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .summary-value { font-size:20px; font-weight:700; margin-top:4px; color: #111827; }
+
+    /* Filters */
+    .filter-row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; align-items:flex-end; }
+    .filter-row > div { min-width:140px; flex:1 1 auto; }
+    
+    /* Urgency */
+    .row-urgent td { color: #b91c1c; font-weight: 600; background-color: #fef2f2; }
+
+    /* MOBILE SPECIFIC OVERRIDES */
+    @media (max-width: 768px) {
+      header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      header .user-info { width: 100%; justify-content: space-between; padding-top: 8px; border-top: 1px solid #374151; }
+      
+      .container { padding: 10px; }
+      .card { padding: 12px; }
+      
+      /* Make filters full width on mobile for easier tapping */
+      .filter-row { gap: 8px; }
+      .filter-row > div { min-width: 100%; flex: 1 1 100%; }
+      .filter-row button { width: 100%; margin-bottom: 4px; }
+      
+      /* Make summary items 50% width (2 per row) instead of shrinking too much */
+      .summary-item { flex: 1 1 40%; }
+      
+      /* Increase touch targets */
+      input[type="checkbox"] { transform: scale(1.2); margin-right: 6px; }
+      
+      /* Adjust buttons in tables to stack if needed or use icons (simplified here) */
+      td button { padding: 4px 8px; font-size: 12px; margin: 1px; }
+    }
   </style>
 </head>
 <body>
 
 <header>
   <div style="display:flex; align-items:center; gap:12px;">
-    <img src="static/logo.png" alt="AMT Logo" style="height:40px; width:auto; border-radius:4px;">
+    <img src="static/logo.png" alt="AMT Logo" style="height:36px; width:auto; border-radius:4px;">
     <h1>AMT Procurement</h1>
   </div>
   <div class="user-info" id="userInfo"></div>
@@ -68,7 +128,9 @@
   <label>Password
     <input type="password" id="loginPassword" />
   </label>
-  <button id="loginBtn">Login</button>
+  <div style="margin-top: 16px;">
+    <button id="loginBtn" style="width:100%">Login</button>
+  </div>
   <div id="loginError" class="error"></div>
 </div>
 
@@ -88,9 +150,9 @@
     <input type="text" id="dirPopupAddress" />
   </label>
   <div id="dirPopupError" class="error"></div>
-  <div style="margin-top:10px; text-align:right;">
-    <button id="dirPopupCancelBtn" class="secondary">Cancel</button>
-    <button id="dirPopupSaveBtn">Save</button>
+  <div style="margin-top:16px; display:flex; gap: 10px; justify-content: flex-end;">
+    <button id="dirPopupCancelBtn" class="secondary" style="flex:1;">Cancel</button>
+    <button id="dirPopupSaveBtn" style="flex:1;">Save</button>
   </div>
 </div>
 
@@ -111,19 +173,19 @@
         <h2>Dashboard</h2>
         <div class="summary-grid">
           <div class="summary-item">
-            <div class="summary-label">Open POs (not delivered)</div>
+            <div class="summary-label">Open POs (Not Delivered)</div>
             <div class="summary-value" id="summaryOpenReqNotDel">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label">Open POs (unpaid)</div>
+            <div class="summary-label">Open POs (Unpaid)</div>
             <div class="summary-value" id="summaryOpenReqUnpaid">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label">Open Landed Items (not delivered)</div>
+            <div class="summary-label">Landed Items (Not Delivered)</div>
             <div class="summary-value" id="summaryOpenLandNotDel">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label">Open Landed Items (unpaid)</div>
+            <div class="summary-label">Landed Items (Unpaid)</div>
             <div class="summary-value" id="summaryOpenLandUnpaid">0</div>
           </div>
         </div>
@@ -189,32 +251,34 @@
               </select>
             </label>
           </div>
-          <div style="align-self:flex-end;">
-            <button id="ovApplyTotalsBtn">Apply</button>
-            <button id="ovClearTotalsBtn" class="secondary">Clear</button>
+          <div style="flex-grow: 1;"> <label>&nbsp;</label>
+            <div style="display:flex; gap:8px;">
+               <button id="ovApplyTotalsBtn" style="flex:1;">Apply</button>
+               <button id="ovClearTotalsBtn" class="secondary" style="flex:1;">Clear</button>
+            </div>
           </div>
         </div>
 
         <div class="summary-grid" style="margin-top:10px;">
           <div class="summary-item">
-            <div class="summary-label">Total Paid (Selected Period)</div>
+            <div class="summary-label">Total Paid (Period)</div>
             <div class="summary-value" id="ovPaidMonthTotal">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label">Total Paid (Selected Year)</div>
+            <div class="summary-label">Total Paid (Year)</div>
             <div class="summary-value" id="ovPaidYearTotal">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Selected Period)</div>
+            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Period)</div>
             <div class="summary-value" id="ovUnpaidMonthTotal">0</div>
           </div>
           <div class="summary-item">
-            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Selected Year)</div>
+            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Year)</div>
             <div class="summary-value" id="ovUnpaidYearTotal">0</div>
           </div>
           
           <div class="summary-item">
-            <div class="summary-label">Total Amount (Filter Result)</div>
+            <div class="summary-label">Total Amount (Filtered)</div>
             <div class="summary-value" id="ovAllTotal">0</div>
           </div>
         </div>
@@ -227,31 +291,35 @@
 
       <div class="card">
         <h2>Recent Orders (POs)</h2>
-        <table id="overviewReqTable">
-          <thead>
-            <tr>
-              <th>PO #</th>
-              <th>Number</th>
-              <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
-              <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="overviewReqTable">
+            <thead>
+                <tr>
+                <th>PO #</th>
+                <th>Number</th>
+                <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
+                <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
       
       <div class="card">
         <h2>Recent Landed Items</h2>
-        <table id="overviewLandTable">
-          <thead>
-            <tr>
-              <th>Vessel</th><th>Description</th><th>Workshop</th>
-              <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
-              <th>Paid</th><th>Delivered</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="overviewLandTable">
+            <thead>
+                <tr>
+                <th>Vessel</th><th>Description</th><th>Workshop</th>
+                <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
+                <th>Paid</th><th>Delivered</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
     </div>
 
@@ -292,7 +360,7 @@
             <label>Supplier
               <div style="display:flex; gap:8px;">
                 <select id="reqSupplierSelect" style="flex:1;"></select>
-                <button id="newSupplierBtn" type="button">New</button>
+                <button id="newSupplierBtn" type="button" class="secondary" style="padding: 4px 10px;">+</button>
               </div>
             </label>
           </div>
@@ -308,7 +376,6 @@
           </div>
         </div>
 
-        <!-- LINE 3 with Urgency -->
         <div class="flex-row" style="margin-top:10px;">
           <div class="flex-1">
             <label>Amount
@@ -329,9 +396,9 @@
               </select>
             </label>
           </div>
-          <div class="flex-1">
-            <label style="margin-top:20px;">
-              <input type="checkbox" id="reqPaid" /> Paid
+          <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;">
+            <label style="cursor: pointer; display:flex; align-items: center;">
+              <input type="checkbox" id="reqPaid" style="width: auto; margin-right: 8px;" /> Paid
             </label>
           </div>
         </div>
@@ -374,44 +441,51 @@
             </label>
           </div>
           <div>
-            <label>Search (number / vessel / supplier)
+            <label>Search (PO/Vessel/Sup)
               <input type="text" id="filterReqSearch" placeholder="Search..." />
             </label>
           </div>
-          <div style="align-self:flex-end;">
-            <button id="applyReqFilterBtn">Apply</button>
-            <button id="clearReqFilterBtn" class="secondary" type="button">Clear</button>
+          <div style="flex-grow: 1;">
+             <label>&nbsp;</label>
+             <div style="display:flex; gap:8px;">
+                <button id="applyReqFilterBtn" style="flex:1;">Apply</button>
+                <button id="clearReqFilterBtn" class="secondary" type="button" style="flex:1;">Clear</button>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="card">
         <h2>All Orders</h2>
-        <table id="reqTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>PO #</th><th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
-              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
-              <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="reqTable">
+            <thead>
+                <tr>
+                <th>ID</th><th>PO #</th><th>Number</th>
+                <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
+                <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
+                <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
 
       <div class="card">
         <h2>Cancelled / Deleted Requisitions</h2>
-        <table id="reqCancelledTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
-              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="reqCancelledTable">
+            <thead>
+                <tr>
+                <th>ID</th><th>Number</th>
+                <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+                <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
     </div>
 
@@ -433,13 +507,13 @@
             <label>Workshop
               <div style="display:flex; gap:8px;">
                 <select id="landWorkshopSelect" style="flex:1;"></select>
-                <button id="newWorkshopBtn" type="button">New</button>
+                <button id="newWorkshopBtn" type="button" class="secondary" style="padding: 4px 10px;">+</button>
               </div>
             </label>
           </div>
         </div>
 
-        <div class="flex-row">
+        <div class="flex-row" style="margin-top: 10px;">
           <div class="flex-1">
             <label>Expected Delivery Date
               <input type="date" id="landExpected" />
@@ -452,7 +526,7 @@
           </div>
         </div>
 
-        <div class="flex-row">
+        <div class="flex-row" style="margin-top: 10px;">
           <div class="flex-1">
             <label>Amount
               <input type="number" id="landAmount" step="0.01" />
@@ -463,14 +537,14 @@
               <select id="landCurrency"></select>
             </label>
           </div>
-          <div class="flex-1">
-            <label>
-              <input type="checkbox" id="landPaid" /> Paid
+          <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;">
+            <label style="cursor: pointer; display:flex; align-items: center;">
+              <input type="checkbox" id="landPaid" style="width: auto; margin-right: 8px;" /> Paid
             </label>
           </div>
         </div>
 
-        <div style="margin-top:8px;">
+        <div style="margin-top:16px;">
           <button id="saveLandingBtn">Save Landed Item</button>
           <button id="cancelLandEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
         </div>
@@ -508,58 +582,67 @@
             </label>
           </div>
           <div>
-            <label>Search (vessel / description / workshop)
+            <label>Search
               <input type="text" id="filterLandingSearch" placeholder="Search..." />
             </label>
           </div>
-          <div style="align-self:flex-end;">
-            <button id="applyLandingFilterBtn">Apply</button>
-            <button id="clearLandingFilterBtn" class="secondary" type="button">Clear</button>
+          <div style="flex-grow: 1;">
+            <label>&nbsp;</label>
+            <div style="display:flex; gap:8px;">
+                <button id="applyLandingFilterBtn" style="flex:1;">Apply</button>
+                <button id="clearLandingFilterBtn" class="secondary" type="button" style="flex:1;">Clear</button>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="card">
         <h2>All Landed Items</h2>
-        <table id="landingTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
-              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th>
-              <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="landingTable">
+            <thead>
+                <tr>
+                <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
+                <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th>
+                <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
 
       <div class="card">
         <h2>Cancelled / Deleted Landed Items</h2>
-        <table id="landingCancelledTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
-              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="landingCancelledTable">
+            <thead>
+                <tr>
+                <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
+                <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
     </div>
 
     <div id="tab-directory" class="hidden">
       <div class="card">
         <h2>Suppliers & Workshops</h2>
-        <div style="margin-bottom:8px;">
+        <div style="margin-bottom:12px;">
           <button id="dirNewSupplierBtn">Add Supplier</button>
           <button id="dirNewWorkshopBtn" class="secondary" type="button">Add Workshop</button>
         </div>
-        <table id="directoryTable">
-          <thead>
-            <tr><th>ID</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Actions</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="directoryTable">
+            <thead>
+                <tr><th>ID</th><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Actions</th></tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
     </div>
 
@@ -577,25 +660,30 @@
             </label>
           </div>
           <div>
-            <label>Search (number / vessel / supplier)
+            <label>Search
               <input type="text" id="filterDeliveredReqSearch" placeholder="Search..." />
             </label>
           </div>
-          <div style="align-self:flex-end;">
-            <button id="applyDeliveredReqFilterBtn">Apply</button>
-            <button id="clearDeliveredReqFilterBtn" class="secondary" type="button">Clear</button>
+          <div style="flex-grow: 1;">
+            <label>&nbsp;</label>
+            <div style="display:flex; gap:8px;">
+                <button id="applyDeliveredReqFilterBtn" style="flex:1;">Apply</button>
+                <button id="clearDeliveredReqFilterBtn" class="secondary" type="button" style="flex:1;">Clear</button>
+            </div>
           </div>
         </div>
-        <table id="deliveredReqTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>PO #</th><th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
-              <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="deliveredReqTable">
+            <thead>
+                <tr>
+                <th>ID</th><th>PO #</th><th>Number</th>
+                <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
+                <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
 
       <div class="card">
@@ -611,24 +699,29 @@
             </label>
           </div>
           <div>
-            <label>Search (vessel / description / workshop)
+            <label>Search
               <input type="text" id="filterDeliveredLandSearch" placeholder="Search..." />
             </label>
           </div>
-          <div style="align-self:flex-end;">
-            <button id="applyDeliveredLandFilterBtn">Apply</button>
-            <button id="clearDeliveredLandFilterBtn" class="secondary" type="button">Clear</button>
+          <div style="flex-grow: 1;">
+            <label>&nbsp;</label>
+            <div style="display:flex; gap:8px;">
+                <button id="applyDeliveredLandFilterBtn" style="flex:1;">Apply</button>
+                <button id="clearDeliveredLandFilterBtn" class="secondary" type="button" style="flex:1;">Clear</button>
+            </div>
           </div>
         </div>
-        <table id="deliveredLandTable">
-          <thead>
-            <tr>
-              <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
-              <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="deliveredLandTable">
+            <thead>
+                <tr>
+                <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
+                <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
     </div>
 
@@ -652,10 +745,12 @@
           <button id="cancelCatEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
         </div>
         <div class="error" id="catError"></div>
-        <table id="catTable" style="margin-top:10px;">
-          <thead><tr><th>ID</th><th>Name</th><th>Abbreviation</th><th>Actions</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="catTable" style="margin-top:10px;">
+            <thead><tr><th>ID</th><th>Name</th><th>Abbreviation</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
 
       <div class="card">
@@ -672,10 +767,12 @@
           <button id="cancelVesselEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
         </div>
         <div class="error" id="vesselError"></div>
-        <table id="vesselTable" style="margin-top:10px;">
-          <thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="vesselTable" style="margin-top:10px;">
+            <thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
 
       <div class="card">
@@ -706,32 +803,36 @@
           <button id="saveUserBtn">Save User</button>
         </div>
         <div id="adminUserError" class="error"></div>
-        <table id="userTable" style="margin-top:10px;">
-          <thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="userTable" style="margin-top:10px;">
+            <thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
 
       <div class="card" id="backupCard">
         <h2>Backups</h2>
 
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-          <button id="downloadBackupBtn">Download Backup</button>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+          <button id="downloadBackupBtn" style="flex:1;">Download Backup</button>
 
-          <label style="display:flex; align-items:center; gap:8px;">
+          <label style="display:flex; align-items:center; gap:8px; flex:1; min-width: 250px;">
             <input type="file" id="uploadBackupInput" accept=".xlsx" style="width:auto;" />
-            <button id="uploadBackupBtn" class="secondary" type="button">Upload .xlsx (Overwrite)</button>
+            <button id="uploadBackupBtn" class="secondary" type="button">Upload (Overwrite)</button>
           </label>
         </div>
 
         <div id="backupError" class="error"></div>
 
-        <table id="backupTable" style="margin-top:10px;">
-          <thead>
-            <tr><th>Name</th><th>Created</th><th>Size (KB)</th><th>Actions</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="backupTable" style="margin-top:10px;">
+            <thead>
+                <tr><th>Name</th><th>Created</th><th>Size (KB)</th><th>Actions</th></tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
       </div>
 
     </div>
@@ -811,8 +912,8 @@ async function refreshSession() {
 
   if (currentUser && currentUser.username) {
     userInfo.innerHTML = `
-      Logged in as <strong>${currentUser.username}</strong> (${currentUser.role})
-      <button id="logoutBtn">Logout</button>
+      <span><strong>${currentUser.username}</strong> (${currentUser.role})</span>
+      <button id="logoutBtn" class="secondary" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Logout</button>
     `;
     document.getElementById("logoutBtn").onclick = async () => {
       await apiFetch("/api/logout", { method:"POST" });
@@ -825,7 +926,7 @@ async function refreshSession() {
   } else {
     userInfo.innerHTML = `
       Not logged in
-      <button id="showLoginBtn">Login</button>
+      <button id="showLoginBtn" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Login</button>
     `;
     document.getElementById("showLoginBtn").onclick = () => {
       loginCard.classList.toggle("hidden");
@@ -1406,6 +1507,9 @@ function attachReqRowActions(){
       document.getElementById("reqCurrency").value=row.currency||"USD";
       document.getElementById("reqUrgency").value=row.urgency||"normal"; // Load Urgency
       document.getElementById("reqPaid").checked=!!row.paid;
+      
+      // Scroll to form
+      document.getElementById("reqFormTitle").scrollIntoView({behavior: "smooth"});
     };
   });
 }
@@ -1574,6 +1678,9 @@ function attachLandingActions(){
       document.getElementById("landAmount").value=orig;
       document.getElementById("landCurrency").value=row.currency||"USD";
       document.getElementById("landPaid").checked=!!row.paid;
+      
+      // Scroll
+      document.getElementById("landFormTitle").scrollIntoView({behavior: "smooth"});
     };
   });
 }
