@@ -46,6 +46,8 @@
     .status-delivered { background:#dcfce7; color:#166534; }
     .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:6px; box-shadow:0 10px 25px rgba(0,0,0,0.2); padding:16px; max-width:400px; width:90%; z-index:50; }
     #dirPopupBackdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:40; }
+    /* URGENCY ALERT STYLE */
+    .row-urgent { color: #b91c1c; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -228,8 +230,9 @@
         <table id="overviewReqTable">
           <thead>
             <tr>
+              <th>PO #</th>
               <th>Number</th>
-              <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
               <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
             </tr>
           </thead>
@@ -305,6 +308,7 @@
           </div>
         </div>
 
+        <!-- LINE 3 with Urgency -->
         <div class="flex-row" style="margin-top:10px;">
           <div class="flex-1">
             <label>Amount
@@ -317,11 +321,19 @@
             </label>
           </div>
           <div class="flex-1">
+            <label>Urgency
+              <select id="reqUrgency">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
+            </label>
+          </div>
+          <div class="flex-1">
             <label style="margin-top:20px;">
               <input type="checkbox" id="reqPaid" /> Paid
             </label>
           </div>
-           <div class="flex-1"></div> 
         </div>
 
         <div style="margin-top:16px;">
@@ -378,8 +390,8 @@
         <table id="reqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>ID</th><th>PO #</th><th>Number</th>
+            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
               <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
             </tr>
@@ -577,8 +589,8 @@
         <table id="deliveredReqTable">
           <thead>
             <tr>
-              <th>ID</th><th>Number</th>
-            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+              <th>ID</th><th>PO #</th><th>Number</th>
+            <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
               <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
             </tr>
           </thead>
@@ -1303,16 +1315,32 @@ async function loadAllRequisitions(){
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
 
+    // Check urgency for styling
+    const isUrgent = (r.urgency || "normal").toLowerCase() === "high";
     const tr=document.createElement("tr");
+    if(isUrgent) tr.className = "row-urgent"; // applies the RED text style
+
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open";
     if((r.status||"open")==="cancelled") statusClass="status-cancelled";
     if(r.delivered) statusClass="status-delivered";
 
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
+    tr.innerHTML=`
+      <td>${r.id}</td>
+      <td>${r.po_number || ""}</td>
+      <td>${r.number}</td>
+      <td>${r.description || ""}</td>
+      <td>${r.vessel}</td>
+      <td>${r.category||""}</td>
+      <td>${r.supplier||""}</td>
+      <td>${(r.urgency||"normal")}</td>
+      <td>${r.date_ordered||""}</td>
+      <td>${r.expected||""}</td>
+      <td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${paidTag}</td>
+      <td>${delTag}</td>
+      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
       <td>
         <button class="edit-req" data-id="${r.id}">Edit</button>
         <button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button>
@@ -1366,8 +1394,8 @@ function attachReqRowActions(){
       document.getElementById("cancelReqEditBtn").classList.remove("hidden");
       
       document.getElementById("reqNumber").value=row.number||"";
-      document.getElementById("reqPONumber").value=row.po_number||""; // Load PO
-      document.getElementById("reqDescription").value=row.description||""; // Load Desc
+      document.getElementById("reqPONumber").value=row.po_number||""; 
+      document.getElementById("reqDescription").value=row.description||""; 
       document.getElementById("reqVessel").value=row.vessel||"";
       document.getElementById("reqCategory").value=row.category||"";
       document.getElementById("reqSupplierSelect").value=row.supplier||"";
@@ -1376,6 +1404,7 @@ function attachReqRowActions(){
       const orig=(typeof row.original_amount==="number"?row.original_amount:row.total_amount)||0;
       document.getElementById("reqTotal").value=orig;
       document.getElementById("reqCurrency").value=row.currency||"USD";
+      document.getElementById("reqUrgency").value=row.urgency||"normal"; // Load Urgency
       document.getElementById("reqPaid").checked=!!row.paid;
     };
   });
@@ -1386,6 +1415,7 @@ document.getElementById("cancelReqEditBtn").onclick=()=>{
   document.getElementById("saveReqBtn").textContent="Save Order";
   document.getElementById("cancelReqEditBtn").classList.add("hidden");
   ["reqNumber","reqPONumber","reqDescription","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("reqUrgency").value="normal";
   document.getElementById("reqPaid").checked=false;
   document.getElementById("reqCurrency").value="USD";
 };
@@ -1397,8 +1427,8 @@ document.getElementById("clearReqFilterBtn").onclick=async ()=>{
 
 document.getElementById("saveReqBtn").onclick=async ()=>{
   const number=document.getElementById("reqNumber").value.trim();
-  const po_number=document.getElementById("reqPONumber").value.trim(); // NEW
-  const description = document.getElementById("reqDescription").value.trim(); // NEW FIX
+  const po_number=document.getElementById("reqPONumber").value.trim();
+  const description = document.getElementById("reqDescription").value.trim();
   const vessel=document.getElementById("reqVessel").value.trim();
   const category=document.getElementById("reqCategory").value.trim();
   const supplier=document.getElementById("reqSupplierSelect").value.trim();
@@ -1406,6 +1436,7 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
   const expected=document.getElementById("reqExpected").value;
   const total=document.getElementById("reqTotal").value;
   const currency=document.getElementById("reqCurrency").value||"USD";
+  const urgency=document.getElementById("reqUrgency").value||"normal";
   const paid=document.getElementById("reqPaid").checked;
   const err=document.getElementById("reqError"); err.textContent="";
 
@@ -1413,8 +1444,7 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
     err.textContent="Please fill all required fields."; return;
   }
   try{
-    // Added po_number and description to payload
-    const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, paid};
+    const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, urgency, paid};
     
     if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
     else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
@@ -1437,9 +1467,24 @@ async function loadOverviewRequisitions(){
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    
+    // Check urgency
+    const isUrgent = (r.urgency || "normal").toLowerCase() === "high";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
+    if(isUrgent) tr.className = "row-urgent";
+
+    tr.innerHTML=`
+      <td>${r.po_number || ""}</td>
+      <td>${r.number}</td>
+      <td>${r.description || ""}</td>
+      <td>${r.vessel}</td>
+      <td>${r.category||""}</td>
+      <td>${r.supplier||""}</td>
+      <td>${r.urgency||"normal"}</td>
+      <td>${r.date_ordered||""}</td>
+      <td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${paidTag}</td>
+      <td>${delTag}</td>
       <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
     tbody.appendChild(tr);
   });
@@ -1616,10 +1661,26 @@ async function loadDeliveredRequisitions(){
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
+
+    // Check urgency
+    const isUrgent = (r.urgency || "normal").toLowerCase() === "high";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
+    if(isUrgent) tr.className = "row-urgent";
+
+    tr.innerHTML=`
+      <td>${r.id}</td>
+      <td>${r.po_number || ""}</td>
+      <td>${r.number}</td>
+      <td>${r.description || ""}</td>
+      <td>${r.vessel}</td>
+      <td>${r.category||""}</td>
+      <td>${r.supplier||""}</td>
+      <td>${r.urgency||"normal"}</td>
+      <td>${r.date_ordered||""}</td>
+      <td>${r.expected||""}</td>
+      <td>${(r.total_amount||0).toFixed(2)}</td>
+      <td>${r.paid?"Paid":"Unpaid"}</td>
+      <td>${r.status||"open"}</td>`;
     tbody.appendChild(tr);
   });
 }
