@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-UPDATED: Auto-backups + Manual Server Backup Trigger
+FIXED: Auto-backups, Unique Filenames, and Robust Routes
 """
 
 import os
@@ -8,6 +8,7 @@ import json
 import hashlib
 import shutil
 import atexit
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -43,7 +44,6 @@ FX_CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 ALLOWED_UPLOAD_EXT = {".xlsx"}
 
-
 SHEETS: Dict[str, List[str]] = {
     "users": ["username", "password_hash", "role", "created_at"],
     "requisitions": [
@@ -70,9 +70,8 @@ SHEETS: Dict[str, List[str]] = {
     "logs": ["timestamp", "action", "details"],
 }
 
-
 # -------------------------------------------------
-# Helpers (NO recursion)
+# Helpers
 # -------------------------------------------------
 def now_iso() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
@@ -92,7 +91,7 @@ def ensure_db() -> None:
 
     wb = openpyxl.load_workbook(DB_FILE)
 
-    # --- Header migration ---
+    # Header migration
     for sname, headers in SHEETS.items():
         if sname not in wb.sheetnames:
             ws_new = wb.create_sheet(sname)
@@ -200,7 +199,7 @@ def log_action(action: str, details: str = "") -> None:
     try:
         append_row("logs", {"timestamp": now_iso(), "action": action, "details": details})
     except:
-        pass # dont crash on logging
+        pass
 
 # -------------------------------------------------
 # Auth helpers
@@ -285,7 +284,8 @@ def to_usd(amount: float, currency: str) -> float:
 # Backup Logic (Manual + Auto)
 # -------------------------------------------------
 def make_backup_filename(suffix:str="") -> str:
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    # Added %f (microseconds) to ensure uniqueness
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
     return f"office_ops_backup_{ts}{suffix}.xlsx"
 
 def create_backup_file(suffix:str="") -> str:
@@ -295,7 +295,7 @@ def create_backup_file(suffix:str="") -> str:
     path = os.path.join(BACKUP_DIR, name)
     shutil.copy2(DB_FILE, path)
     
-    # Cleanup: Keep only last 20 backups to save space
+    # Cleanup: Keep only last 20 backups
     all_backups = sorted([os.path.join(BACKUP_DIR, f) for f in os.listdir(BACKUP_DIR) if f.endswith(".xlsx")])
     while len(all_backups) > 20:
         os.remove(all_backups.pop(0))
@@ -305,7 +305,7 @@ def create_backup_file(suffix:str="") -> str:
 
 def run_auto_backup():
     """Called by scheduler"""
-    print("Running auto-backup...")
+    print(f"[{datetime.utcnow()}] Running auto-backup...")
     create_backup_file(suffix="_AUTO")
 
 # -------------------------------------------------
@@ -319,11 +319,7 @@ def home():
 def health():
     return jsonify({"status": "ok", "time": now_iso()})
 
-# ... (Auth, User, Currency routes stay same - omitted for brevity, ensure you keep them!)
-# PASTE YOUR EXISTING Auth, FX, Categories, Vessels, Users, Directory, Requisitions, Landings routes here.
-# I am re-adding them shortly in the 'Full Block' below to ensure copy-paste works.
-
-# --- RE-INSERTING KEY ROUTES FOR CONTEXT ---
+# --- Auth ---
 @app.post("/api/login")
 def login():
     data = request.json or {}
@@ -351,13 +347,22 @@ def session_info():
     if not u: return jsonify({"logged_in": False}), 401
     return jsonify({"logged_in": True, **u})
 
+# --- FX ---
 @app.get("/api/currencies")
 def api_currencies():
     return jsonify({"currencies": sorted(set(fetch_fx_rates("USD").keys()) | {"USD"})})
 
+@app.get("/api/fx")
+def api_fx():
+    return jsonify({"base": "USD", "rates": fetch_fx_rates("USD")})
+
 # -------------------------------------------------
-# Backup routes (ADMIN ONLY) - MODIFIED
+# Backup routes (ADMIN ONLY) - FIXED
 # -------------------------------------------------
+@app.get("/api/backup")
+def download_backup_legacy():
+    """Support for old frontend link to prevent 404"""
+    return download_backup_direct()
 
 @app.get("/api/backup/download")
 def download_backup_direct():
@@ -440,12 +445,8 @@ def upload_overwrite_db():
     ensure_db()
     return jsonify({"ok": True})
 
-# --- ALL OTHER ROUTES (Category, Vessel, User, Req, Land) from your file go here ---
-# (I am assuming you keep the rest of your app.py the same. The critical change was the Scheduler below)
-# ... [Insert your Categories, Vessels, Users, Directory, Requisitions, Landings routes here] ...
-
 # -------------------------------------------------
-# Categories (admin) - Copied for completeness
+# Categories (admin)
 # -------------------------------------------------
 @app.get("/api/categories")
 def get_categories(): return jsonify(read_rows("categories"))
@@ -509,8 +510,6 @@ def delete_vessel(vid: int):
 # -------------------------------------------------
 # Users, Directory, Requisitions, Landings
 # -------------------------------------------------
-# (Keeping these condensed as they were correct in your original file. 
-# Just make sure they are present in your final file.)
 @app.get("/api/users")
 def list_users():
     if require_admin(): return require_admin()
@@ -525,7 +524,6 @@ def add_user():
 def delete_user_api(username):
     if require_admin(): return require_admin()
     if username=="admin": return jsonify({"error":"cannot_delete_admin"}),400
-    # simplified delete for brevity in this response (use your original logic here)
     wb=get_wb(); ws=wb["users"]; u_col=1
     for r in range(2,ws.max_row+1):
         if ws.cell(r,u_col).value==username: ws.delete_rows(r,1); wb.save(DB_FILE); return jsonify({"ok":True})
@@ -601,12 +599,21 @@ def delete_land(lid):
 
 @app.get("/api/directory")
 def get_dir(): return jsonify(read_rows("directory"))
-@app.post("/api/directory/quick")
-def add_dir():
+@app.post("/api/directory")
+def add_directory_std():
+    if require_login(): return require_login()
     d=request.json
-    row={**d, "id":next_id("directory"), "created_by":"sys", "created_at":now_iso()}
+    row={**d, "id":next_id("directory"), "created_by":current_user()["username"], "created_at":now_iso()}
     append_row("directory", row)
     return jsonify(row)
+@app.post("/api/directory/quick")
+def add_dir_quick():
+    return add_directory_std()
+@app.patch("/api/directory/<int:did>")
+def edit_directory_entry(did: int):
+    if require_login(): return require_login()
+    update_row_by_id("directory", did, request.json or {})
+    return jsonify({"ok": True})
 @app.delete("/api/directory/<int:did>")
 def del_dir(did):
     if require_admin(): return require_admin()
