@@ -17,7 +17,7 @@
     
     /* Navigation Tabs */
     .tabs { display:flex; background:#111827; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-    .tabs::-webkit-scrollbar { height: 0px; background: transparent; } /* Hide scrollbar for cleaner look */
+    .tabs::-webkit-scrollbar { height: 0px; background: transparent; }
     .tab { padding:12px 16px; color:#9ca3af; cursor:pointer; font-size:14px; user-select:none; flex: 0 0 auto; border-bottom: 3px solid transparent; }
     .tab.active { background:#1f2937; color:#fff; border-bottom-color: #2563eb; }
 
@@ -28,11 +28,10 @@
     
     /* Form Elements */
     .flex-row { display:flex; gap:12px; flex-wrap:wrap; }
-    .flex-1 { flex:1 1 0; min-width:240px; } /* Ensures inputs don't get too small */
+    .flex-1 { flex:1 1 0; min-width:240px; }
     
     label { display:block; font-size:13px; font-weight: 500; margin-bottom:4px; color: #4b5563; }
     
-    /* Mobile-friendly Inputs: 16px prevents iOS zoom */
     input, select { width:100%; padding:8px 10px; margin-top:2px; box-sizing:border-box; font-size:16px; border: 1px solid #d1d5db; border-radius: 4px; background-color: #fff; }
     input:focus, select:focus { outline: none; border-color: #2563eb; ring: 2px solid #bfdbfe; }
     
@@ -45,12 +44,11 @@
     button.danger { background:#dc2626; }
     button.danger:hover { background:#b91c1c; }
 
-    /* Tables - Desktop Default */
-    table { width:100%; border-collapse:collapse; font-size:13px; min-width: 800px; /* Forces scroll on small screens */ }
+    /* Tables */
+    table { width:100%; border-collapse:collapse; font-size:13px; min-width: 800px; }
     th, td { border:1px solid #e5e7eb; padding:8px 10px; text-align:left; vertical-align: middle; }
     th { background:#f9fafb; font-weight: 600; color: #374151; }
     
-    /* Scrollable Table Wrapper */
     .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 10px; }
 
     /* Tags & Status */
@@ -69,7 +67,6 @@
 
     /* Login & Popups */
     #loginCard { max-width:320px; margin:40px auto; position:relative; z-index:10; }
-    
     .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:8px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); padding:20px; max-width:400px; width:90%; z-index:50; max-height: 90vh; overflow-y: auto; }
     #dirPopupBackdrop { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:40; backdrop-filter: blur(2px); }
 
@@ -86,27 +83,16 @@
     /* Urgency */
     .row-urgent td { color: #b91c1c; font-weight: 600; background-color: #fef2f2; }
 
-    /* MOBILE SPECIFIC OVERRIDES */
     @media (max-width: 768px) {
       header { flex-direction: column; align-items: flex-start; gap: 8px; }
       header .user-info { width: 100%; justify-content: space-between; padding-top: 8px; border-top: 1px solid #374151; }
-      
       .container { padding: 10px; }
       .card { padding: 12px; }
-      
-      /* Make filters full width on mobile for easier tapping */
       .filter-row { gap: 8px; }
       .filter-row > div { min-width: 100%; flex: 1 1 100%; }
       .filter-row button { width: 100%; margin-bottom: 4px; }
-      
-      /* Make summary items 50% width (2 per row) instead of shrinking too much */
       .summary-item { flex: 1 1 40%; }
-      
-      /* Increase touch targets */
       input[type="checkbox"] { transform: scale(1.2); margin-right: 6px; }
-      
-      /* Adjust buttons in tables to stack if needed or use icons (simplified here) */
-      td button { padding: 4px 8px; font-size: 12px; margin: 1px; }
     }
   </style>
 </head>
@@ -326,36 +312,14 @@
     <div id="tab-requisitions" class="hidden">
       <div class="card">
         <h2 id="reqFormTitle">Add Ordered Requisition</h2>
-        
         <div class="flex-row">
-          <div class="flex-1">
-             <label>PO Number
-               <input type="text" id="reqPONumber" placeholder="PO-XXXX" />
-             </label>
-          </div>
-          <div class="flex-1">
-            <label>Requisition Number
-              <input type="text" id="reqNumber" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Description
-              <input type="text" id="reqDescription" placeholder="Short description" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Vessel
-              <select id="reqVessel"></select>
-            </label>
-          </div>
+          <div class="flex-1"><label>PO Number<input type="text" id="reqPONumber" placeholder="PO-XXXX" /></label></div>
+          <div class="flex-1"><label>Requisition Number<input type="text" id="reqNumber" /></label></div>
+          <div class="flex-1"><label>Description<input type="text" id="reqDescription" placeholder="Short description" /></label></div>
+          <div class="flex-1"><label>Vessel<select id="reqVessel"></select></label></div>
         </div>
-
         <div class="flex-row" style="margin-top:10px;">
-           <div class="flex-1">
-            <label>Category
-              <select id="reqCategory"></select>
-            </label>
-          </div>
+           <div class="flex-1"><label>Category<select id="reqCategory"></select></label></div>
           <div class="flex-1">
             <label>Supplier
               <div style="display:flex; gap:8px;">
@@ -364,45 +328,25 @@
               </div>
             </label>
           </div>
-          <div class="flex-1">
-            <label>Date Ordered
-              <input type="date" id="reqDateOrdered" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Expected Date
-              <input type="date" id="reqExpected" />
-            </label>
-          </div>
+          <div class="flex-1"><label>Date Ordered<input type="date" id="reqDateOrdered" /></label></div>
+          <div class="flex-1"><label>Expected Date<input type="date" id="reqExpected" /></label></div>
         </div>
-
         <div class="flex-row" style="margin-top:10px;">
-          <div class="flex-1">
-            <label>Amount
-              <input type="number" id="reqTotal" step="0.01" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Currency
-              <select id="reqCurrency"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Urgency
+          <div class="flex-1"><label>Amount<input type="number" id="reqTotal" step="0.01" /></label></div>
+          <div class="flex-1"><label>Currency<select id="reqCurrency"></select></label></div>
+          <div class="flex-1"><label>Urgency
               <select id="reqUrgency">
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
                 <option value="low">Low</option>
               </select>
-            </label>
-          </div>
+            </label></div>
           <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;">
             <label style="cursor: pointer; display:flex; align-items: center;">
               <input type="checkbox" id="reqPaid" style="width: auto; margin-right: 8px;" /> Paid
             </label>
           </div>
         </div>
-
         <div style="margin-top:16px;">
           <button id="saveReqBtn">Save Order</button>
           <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
@@ -413,38 +357,10 @@
       <div class="card">
         <h2>Filter Orders</h2>
         <div class="filter-row">
-          <div>
-            <label>Status
-              <select id="filterReqStatus">
-                <option value="">All</option>
-                <option value="open">Open</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Paid
-              <select id="filterReqPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Delivered
-              <select id="filterReqDelivered">
-                <option value="">All</option>
-                <option value="1">Delivered</option>
-                <option value="0">Not delivered</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search (PO/Vessel/Sup)
-              <input type="text" id="filterReqSearch" placeholder="Search..." />
-            </label>
-          </div>
+          <div><label>Status<select id="filterReqStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></label></div>
+          <div><label>Paid<select id="filterReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
+          <div><label>Delivered<select id="filterReqDelivered"><option value="">All</option><option value="1">Delivered</option><option value="0">Not delivered</option></select></label></div>
+          <div><label>Search (PO/Vessel/Sup)<input type="text" id="filterReqSearch" placeholder="Search..." /></label></div>
           <div style="flex-grow: 1;">
              <label>&nbsp;</label>
              <div style="display:flex; gap:8px;">
@@ -493,16 +409,8 @@
       <div class="card">
         <h2 id="landFormTitle">Add Landed Item</h2>
         <div class="flex-row">
-          <div class="flex-1">
-            <label>Vessel
-              <select id="landVessel"></select>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Description
-              <input type="text" id="landDescription" />
-            </label>
-          </div>
+          <div class="flex-1"><label>Vessel<select id="landVessel"></select></label></div>
+          <div class="flex-1"><label>Description<input type="text" id="landDescription" /></label></div>
           <div class="flex-1">
             <label>Workshop
               <div style="display:flex; gap:8px;">
@@ -512,38 +420,19 @@
             </label>
           </div>
         </div>
-
         <div class="flex-row" style="margin-top: 10px;">
-          <div class="flex-1">
-            <label>Expected Delivery Date
-              <input type="date" id="landExpected" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Landed Date
-              <input type="date" id="landLanded" />
-            </label>
-          </div>
+          <div class="flex-1"><label>Expected Delivery Date<input type="date" id="landExpected" /></label></div>
+          <div class="flex-1"><label>Landed Date<input type="date" id="landLanded" /></label></div>
         </div>
-
         <div class="flex-row" style="margin-top: 10px;">
-          <div class="flex-1">
-            <label>Amount
-              <input type="number" id="landAmount" step="0.01" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Currency
-              <select id="landCurrency"></select>
-            </label>
-          </div>
+          <div class="flex-1"><label>Amount<input type="number" id="landAmount" step="0.01" /></label></div>
+          <div class="flex-1"><label>Currency<select id="landCurrency"></select></label></div>
           <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;">
             <label style="cursor: pointer; display:flex; align-items: center;">
               <input type="checkbox" id="landPaid" style="width: auto; margin-right: 8px;" /> Paid
             </label>
           </div>
         </div>
-
         <div style="margin-top:16px;">
           <button id="saveLandingBtn">Save Landed Item</button>
           <button id="cancelLandEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
@@ -554,38 +443,10 @@
       <div class="card">
         <h2>Filter Landed Items</h2>
         <div class="filter-row">
-          <div>
-            <label>Status
-              <select id="filterLandingStatus">
-                <option value="">All</option>
-                <option value="open">Open</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Paid
-              <select id="filterLandingPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Delivered
-              <select id="filterLandingDelivered">
-                <option value="">All</option>
-                <option value="1">Delivered</option>
-                <option value="0">Not delivered</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search
-              <input type="text" id="filterLandingSearch" placeholder="Search..." />
-            </label>
-          </div>
+          <div><label>Status<select id="filterLandingStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></label></div>
+          <div><label>Paid<select id="filterLandingPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
+          <div><label>Delivered<select id="filterLandingDelivered"><option value="">All</option><option value="1">Delivered</option><option value="0">Not delivered</option></select></label></div>
+          <div><label>Search<input type="text" id="filterLandingSearch" placeholder="Search..." /></label></div>
           <div style="flex-grow: 1;">
             <label>&nbsp;</label>
             <div style="display:flex; gap:8px;">
@@ -650,20 +511,8 @@
       <div class="card">
         <h2>Delivered Requisitions</h2>
         <div class="filter-row">
-          <div>
-            <label>Paid
-              <select id="filterDeliveredReqPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search
-              <input type="text" id="filterDeliveredReqSearch" placeholder="Search..." />
-            </label>
-          </div>
+          <div><label>Paid<select id="filterDeliveredReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
+          <div><label>Search<input type="text" id="filterDeliveredReqSearch" placeholder="Search..." /></label></div>
           <div style="flex-grow: 1;">
             <label>&nbsp;</label>
             <div style="display:flex; gap:8px;">
@@ -689,20 +538,8 @@
       <div class="card">
         <h2>Delivered Landed Items</h2>
         <div class="filter-row">
-          <div>
-            <label>Paid
-              <select id="filterDeliveredLandPaid">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Search
-              <input type="text" id="filterDeliveredLandSearch" placeholder="Search..." />
-            </label>
-          </div>
+          <div><label>Paid<select id="filterDeliveredLandPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
+          <div><label>Search<input type="text" id="filterDeliveredLandSearch" placeholder="Search..." /></label></div>
           <div style="flex-grow: 1;">
             <label>&nbsp;</label>
             <div style="display:flex; gap:8px;">
@@ -729,16 +566,8 @@
       <div class="card">
         <h2>Categories</h2>
         <div class="flex-row">
-          <div class="flex-1">
-            <label>Category Name
-              <input type="text" id="catName" />
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Abbreviation
-              <input type="text" id="catAbbr" />
-            </label>
-          </div>
+          <div class="flex-1"><label>Category Name<input type="text" id="catName" /></label></div>
+          <div class="flex-1"><label>Abbreviation<input type="text" id="catAbbr" /></label></div>
         </div>
         <div style="margin-top:8px;">
           <button id="addCatBtn">Save Category</button>
@@ -756,11 +585,7 @@
       <div class="card">
         <h2>Vessels</h2>
         <div class="flex-row">
-          <div class="flex-1">
-            <label>Vessel Name
-              <input type="text" id="vesselName" />
-            </label>
-          </div>
+          <div class="flex-1"><label>Vessel Name<input type="text" id="vesselName" /></label></div>
         </div>
         <div style="margin-top:8px;">
           <button id="addVesselBtn">Save Vessel</button>
@@ -778,26 +603,9 @@
       <div class="card">
         <h2>Users</h2>
         <div class="flex-row">
-          <div class="flex-1">
-            <label>Username
-              <input type="text" id="adminUsername"/>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Password
-              <input type="password" id="adminPassword"/>
-            </label>
-          </div>
-          <div class="flex-1">
-            <label>Role
-              <select id="adminRole">
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="viewer">Viewer</option>
-                <option value="finance">Finance</option>
-              </select>
-            </label>
-          </div>
+          <div class="flex-1"><label>Username<input type="text" id="adminUsername"/></label></div>
+          <div class="flex-1"><label>Password<input type="password" id="adminPassword"/></label></div>
+          <div class="flex-1"><label>Role<select id="adminRole"><option value="user">User</option><option value="admin">Admin</option><option value="viewer">Viewer</option><option value="finance">Finance</option></select></label></div>
         </div>
         <div style="margin-top:8px;">
           <button id="saveUserBtn">Save User</button>
@@ -810,45 +618,37 @@
             </table>
         </div>
       </div>
-<div class="card" id="backupCard">
-  <h2>Backups</h2>
-  <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
-    <button id="downloadBackupBtn" style="flex:1;">Download Local Backup</button>
-    
-    <button id="createBackupBtn" style="flex:1; background-color: #059669;">Create Server Backup</button>
-  </div>
-  
-  <div style="margin-bottom:12px; border-top: 1px solid #eee; padding-top:12px;">
-     <label style="display:flex; align-items:center; gap:8px;">
-        <input type="file" id="uploadBackupInput" accept=".xlsx" style="width:auto;" />
-        <button id="uploadBackupBtn" class="secondary" type="button">Upload (Overwrite)</button>
-     </label>
-  </div>
 
-  <div style="display:flex; justify-content: space-between; align-items: center;">
-      <h3>Server Backups List</h3>
-      <button id="refreshBackupsBtn" class="secondary" style="padding:4px 8px; font-size:12px;">Refresh List</button>
-  </div>
-
-  <div id="backupError" class="error"></div>
-
-  <div class="table-responsive">
-      <table id="backupTable" style="margin-top:10px;">
-      <thead>
-          <tr><th>Name</th><th>Created</th><th>Size (KB)</th><th>Actions</th></tr>
-      </thead>
-      <tbody></tbody>
-      </table>
-  </div>
-</div>
+      <div class="card" id="backupCard">
+        <h2>Backups</h2>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+          <button id="downloadBackupBtn" style="flex:1;">Download Local Backup</button>
+          <button id="createBackupBtn" style="flex:1; background-color: #059669;">Create Server Backup</button>
+        </div>
+        <div style="margin-bottom:12px; border-top: 1px solid #eee; padding-top:12px;">
+           <label style="display:flex; align-items:center; gap:8px;">
+              <input type="file" id="uploadBackupInput" accept=".xlsx" style="width:auto;" />
+              <button id="uploadBackupBtn" class="secondary" type="button">Upload (Overwrite)</button>
+           </label>
+        </div>
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+            <h3>Server Backups List</h3>
+            <button id="refreshBackupsBtn" class="secondary" style="padding:4px 8px; font-size:12px;">Refresh List</button>
+        </div>
+        <div id="backupError" class="error"></div>
+        <div class="table-responsive">
+            <table id="backupTable" style="margin-top:10px;">
+            <thead><tr><th>Name</th><th>Created</th><th>Size (KB)</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+            </table>
+        </div>
+      </div>
 
     </div>
-
   </div>
 </div>
 
 <script>
-/* ========= Helpers ========= */
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -862,7 +662,6 @@ async function apiFetch(url, options = {}) {
   }
   return res.json();
 }
-
 let currentUser = null;
 let allReqs = [];
 let allLandings = [];
@@ -874,27 +673,11 @@ let editingVesselId = null;
 let dirPopupType = null;
 let currencyList = ["USD"];
 
-function quarterOfMonth(m){
-  if (m <= 3) return "Q1";
-  if (m <= 6) return "Q2";
-  if (m <= 9) return "Q3";
-  return "Q4";
-}
-function parseDateSafe(d) {
-  if (!d) return null;
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? null : dt;
-}
+function quarterOfMonth(m){ if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4"; }
+function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
 
-/* ========= Currencies ========= */
 async function loadCurrencies() {
-  try {
-    const res = await apiFetch("/api/currencies");
-    currencyList = res.currencies || ["USD"];
-  } catch (e) {
-    console.warn("FX error, fallback to defaults", e);
-    currencyList = ["USD","EUR","AED","GBP","LBP"];
-  }
+  try { const res = await apiFetch("/api/currencies"); currencyList = res.currencies || ["USD"]; } catch { currencyList = ["USD","EUR","AED","GBP","LBP"]; }
   const reqCurSel = document.getElementById("reqCurrency");
   const landCurSel = document.getElementById("landCurrency");
   reqCurSel.innerHTML = ""; landCurSel.innerHTML = "";
@@ -906,79 +689,31 @@ async function loadCurrencies() {
   if (!landCurSel.value) landCurSel.value = "USD";
 }
 
-/* ========= Session / Header / Login ========= */
 async function refreshSession() {
-  try {
-    currentUser = await apiFetch("/api/session");
-  } catch {
-    currentUser = null;
-  }
-
+  try { currentUser = await apiFetch("/api/session"); } catch { currentUser = null; }
   const userInfo = document.getElementById("userInfo");
   const loginCard = document.getElementById("loginCard");
-
   if (currentUser && currentUser.username) {
-    userInfo.innerHTML = `
-      <span><strong>${currentUser.username}</strong> (${currentUser.role})</span>
-      <button id="logoutBtn" class="secondary" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Logout</button>
-    `;
-    document.getElementById("logoutBtn").onclick = async () => {
-      await apiFetch("/api/logout", { method:"POST" });
-      currentUser = null;
-      loginCard.classList.add("hidden");
-      await refreshSession();
-      await afterDataLoad();
-    };
+    userInfo.innerHTML = `<span><strong>${currentUser.username}</strong> (${currentUser.role})</span><button id="logoutBtn" class="secondary" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Logout</button>`;
+    document.getElementById("logoutBtn").onclick = async () => { await apiFetch("/api/logout", { method:"POST" }); currentUser = null; loginCard.classList.add("hidden"); await refreshSession(); await afterDataLoad(); };
     loginCard.classList.add("hidden");
   } else {
-    userInfo.innerHTML = `
-      Not logged in
-      <button id="showLoginBtn" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Login</button>
-    `;
-    document.getElementById("showLoginBtn").onclick = () => {
-      loginCard.classList.toggle("hidden");
-    };
+    userInfo.innerHTML = `Not logged in<button id="showLoginBtn" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Login</button>`;
+    document.getElementById("showLoginBtn").onclick = () => { loginCard.classList.toggle("hidden"); };
   }
-
-  // Show/hide Admin tab
   const isAdmin = currentUser && currentUser.role === "admin";
   const adminTab = document.getElementById("adminTab");
-  if (adminTab) {
-    if (isAdmin) adminTab.classList.remove("hidden");
-    else adminTab.classList.add("hidden");
-  }
-
-  // Disable admin-only inputs for non-admin
-  ["catName","catAbbr","addCatBtn","cancelCatEditBtn",
-   "adminUsername","adminPassword","adminRole","saveUserBtn",
-   "vesselName","addVesselBtn","cancelVesselEditBtn"].forEach(id=>{
-    const el = document.getElementById(id);
-    if (el) el.disabled = !isAdmin && (id!=="adminRole");
+  if (adminTab) { if (isAdmin) adminTab.classList.remove("hidden"); else adminTab.classList.add("hidden"); }
+  ["catName","catAbbr","addCatBtn","cancelCatEditBtn","adminUsername","adminPassword","adminRole","saveUserBtn","vesselName","addVesselBtn","cancelVesselEditBtn"].forEach(id=>{
+    const el = document.getElementById(id); if (el) el.disabled = !isAdmin && (id!=="adminRole");
   });
 }
-
 document.getElementById("loginBtn").onclick = async () => {
   const u = document.getElementById("loginUsername").value.trim();
   const p = document.getElementById("loginPassword").value;
-  const errDiv = document.getElementById("loginError");
-  errDiv.textContent = "";
-  try {
-    await apiFetch("/api/login", {
-      method:"POST",
-      body: JSON.stringify({ username:u, password:p })
-    });
-    document.getElementById("loginCard").classList.add("hidden");
-    document.getElementById("loginUsername").value = "";
-    document.getElementById("loginPassword").value = "";
-    await refreshSession();
-    await afterDataLoad(true);
-  } catch(e) {
-    if (e.error === "invalid_credentials") errDiv.textContent = "Invalid username or password.";
-    else errDiv.textContent = "Login failed.";
-  }
+  const errDiv = document.getElementById("loginError"); errDiv.textContent = "";
+  try { await apiFetch("/api/login", { method:"POST", body: JSON.stringify({ username:u, password:p }) }); document.getElementById("loginCard").classList.add("hidden"); document.getElementById("loginUsername").value = ""; document.getElementById("loginPassword").value = ""; await refreshSession(); await afterDataLoad(true); } catch(e) { errDiv.textContent = e.error === "invalid_credentials" ? "Invalid username or password." : "Login failed."; }
 };
-
-/* ========= Tabs ========= */
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     if (tab.classList.contains("hidden")) return;
@@ -990,44 +725,23 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-/* ========= Overview Totals Filters ========= */
 async function loadOverviewTotalsFilters() {
   let reqs = allReqs, lands = allLandings;
   if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
   if (!lands.length) { try { lands = await apiFetch("/api/landings"); } catch { lands=[]; } }
-
-  // Month dropdown 1..12
   const monthSel = document.getElementById("ovMonthFilter");
-  monthSel.innerHTML = `<option value="">All months</option>` +
-    Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");
-
-  // Categories
-  const cats = new Set();
-  reqs.forEach(r => cats.add((r.category || "").trim()));
-  lands.forEach(r => cats.add((r.category || "").trim()));
+  monthSel.innerHTML = `<option value="">All months</option>` + Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");
+  const cats = new Set(); reqs.forEach(r => cats.add((r.category || "").trim())); lands.forEach(r => cats.add((r.category || "").trim()));
   const catSel = document.getElementById("ovCategoryFilter");
-  catSel.innerHTML = `<option value="">All categories</option>` +
-    [...cats].filter(Boolean).sort().map(c=>`<option value="${c}">${c}</option>`).join("");
-
-  // Vessels
-  const vset = new Set();
-  reqs.forEach(r => vset.add((r.vessel || "").trim()));
-  lands.forEach(r => vset.add((r.vessel || "").trim()));
+  catSel.innerHTML = `<option value="">All categories</option>` + [...cats].filter(Boolean).sort().map(c=>`<option value="${c}">${c}</option>`).join("");
+  const vset = new Set(); reqs.forEach(r => vset.add((r.vessel || "").trim())); lands.forEach(r => vset.add((r.vessel || "").trim()));
   const vesselSel = document.getElementById("ovVesselFilter");
-  vesselSel.innerHTML = `<option value="">All</option>` +
-    [...vset].filter(Boolean).sort().map(v=>`<option value="${v}">${v}</option>`).join("");
-
-  // Years
-  const years = new Set();
-  reqs.forEach(r => { const dt=parseDateSafe(r.date_ordered); if (dt) years.add(dt.getFullYear()); });
-  lands.forEach(r => { const dt=parseDateSafe(r.landed_date); if (dt) years.add(dt.getFullYear()); });
+  vesselSel.innerHTML = `<option value="">All</option>` + [...vset].filter(Boolean).sort().map(v=>`<option value="${v}">${v}</option>`).join("");
+  const years = new Set(); reqs.forEach(r => { const dt=parseDateSafe(r.date_ordered); if (dt) years.add(dt.getFullYear()); }); lands.forEach(r => { const dt=parseDateSafe(r.landed_date); if (dt) years.add(dt.getFullYear()); });
   const yearSel = document.getElementById("ovYearFilter");
-  yearSel.innerHTML = `<option value="">All years</option>` +
-    [...years].sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join("");
-
+  yearSel.innerHTML = `<option value="">All years</option>` + [...years].sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join("");
   updateOverviewPaidTotals(reqs, lands);
 }
-
 function updateOverviewPaidTotals(reqs, lands) {
   const typeF = document.getElementById("ovTypeFilter").value;
   const vesselF = document.getElementById("ovVesselFilter").value;
@@ -1036,17 +750,9 @@ function updateOverviewPaidTotals(reqs, lands) {
   const yearF = document.getElementById("ovYearFilter").value;
   const quarterF = document.getElementById("ovQuarterFilter").value;
   const categoryF = document.getElementById("ovCategoryFilter").value;
-
   let filtered = [];
-  if (!typeF || typeF==="req") filtered = filtered.concat(reqs.map(r=>({
-    _type:"req", vessel:r.vessel, category:r.category, supplier:r.supplier,
-    paid:Number(r.paid||0), amount:Number(r.total_amount||0), date:r.date_ordered
-  })));
-  if (!typeF || typeF==="land") filtered = filtered.concat(lands.map(r=>({
-    _type:"land", vessel:r.vessel, category:r.category, supplier:r.supplier||r.workshop,
-    paid:Number(r.paid||0), amount:Number(r.amount||0), date:r.landed_date
-  })));
-
+  if (!typeF || typeF==="req") filtered = filtered.concat(reqs.map(r=>({_type:"req", vessel:r.vessel, category:r.category, supplier:r.supplier, paid:Number(r.paid||0), amount:Number(r.total_amount||0), date:r.date_ordered})));
+  if (!typeF || typeF==="land") filtered = filtered.concat(lands.map(r=>({_type:"land", vessel:r.vessel, category:r.category, supplier:r.supplier||r.workshop, paid:Number(r.paid||0), amount:Number(r.amount||0), date:r.landed_date})));
   filtered = filtered.filter(x=>{
     if (vesselF && (x.vessel||"")!==vesselF) return false;
     if (paidF!=="" && String(x.paid)!==paidF) return false;
@@ -1058,53 +764,25 @@ function updateOverviewPaidTotals(reqs, lands) {
     if (categoryF && (x.category||"")!==categoryF) return false;
     return true;
   });
-
   const allTotal = filtered.reduce((s,x)=>s+x.amount,0);
-  
-  // Paid Math
   const paidOnly = filtered.filter(x=>x.paid===1);
   const paidMonthTotal = paidOnly.reduce((s,x)=>s+x.amount,0);
   let paidYearTotal = 0;
-  if (yearF) {
-    paidYearTotal = paidOnly.filter(x=>{
-      const dt=parseDateSafe(x.date);
-      return dt && String(dt.getFullYear())===yearF;
-    }).reduce((s,x)=>s+x.amount,0);
-  } else {
-    paidYearTotal = paidMonthTotal;
-  }
-
-  // Unpaid Math (New)
+  if (yearF) { paidYearTotal = paidOnly.filter(x=>{ const dt=parseDateSafe(x.date); return dt && String(dt.getFullYear())===yearF; }).reduce((s,x)=>s+x.amount,0); } else { paidYearTotal = paidMonthTotal; }
   const unpaidOnly = filtered.filter(x=>x.paid===0);
   const unpaidMonthTotal = unpaidOnly.reduce((s,x)=>s+x.amount,0);
   let unpaidYearTotal = 0;
-  if (yearF) {
-    unpaidYearTotal = unpaidOnly.filter(x=>{
-      const dt=parseDateSafe(x.date);
-      return dt && String(dt.getFullYear())===yearF;
-    }).reduce((s,x)=>s+x.amount,0);
-  } else {
-    unpaidYearTotal = unpaidMonthTotal;
-  }
-
+  if (yearF) { unpaidYearTotal = unpaidOnly.filter(x=>{ const dt=parseDateSafe(x.date); return dt && String(dt.getFullYear())===yearF; }).reduce((s,x)=>s+x.amount,0); } else { unpaidYearTotal = unpaidMonthTotal; }
   document.getElementById("ovAllTotal").textContent = allTotal.toFixed(2);
   document.getElementById("ovPaidMonthTotal").textContent = paidMonthTotal.toFixed(2);
   document.getElementById("ovPaidYearTotal").textContent = paidYearTotal.toFixed(2);
-  // Set new unpaid fields
   document.getElementById("ovUnpaidMonthTotal").textContent = unpaidMonthTotal.toFixed(2);
   document.getElementById("ovUnpaidYearTotal").textContent = unpaidYearTotal.toFixed(2);
-
-  // Top suppliers
-  const supMap = {};
-  filtered.forEach(x=>{
-    const sname=x.supplier||"Unknown";
-    supMap[sname]=(supMap[sname]||0)+x.amount;
-  });
+  const supMap = {}; filtered.forEach(x=>{ const sname=x.supplier||"Unknown"; supMap[sname]=(supMap[sname]||0)+x.amount; });
   const topSup = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const ul=document.getElementById("ovTopSuppliers");
   ul.innerHTML = topSup.length ? topSup.map(([k,v])=>`<li>${k}: $${v.toFixed(2)}</li>`).join("") : "<li>—</li>";
 }
-
 document.getElementById("ovApplyTotalsBtn").onclick = async () => {
   let reqs = allReqs, lands = allLandings;
   if (!reqs.length) { try { reqs = await apiFetch("/api/requisitions"); } catch { reqs=[]; } }
@@ -1112,13 +790,10 @@ document.getElementById("ovApplyTotalsBtn").onclick = async () => {
   updateOverviewPaidTotals(reqs, lands);
 };
 document.getElementById("ovClearTotalsBtn").onclick = async () => {
-  ["ovTypeFilter","ovVesselFilter","ovPaidFilter","ovMonthFilter","ovYearFilter","ovQuarterFilter","ovCategoryFilter"].forEach(id=>{
-    document.getElementById(id).value="";
-  });
+  ["ovTypeFilter","ovVesselFilter","ovPaidFilter","ovMonthFilter","ovYearFilter","ovQuarterFilter","ovCategoryFilter"].forEach(id=>{ document.getElementById(id).value=""; });
   await loadOverviewTotalsFilters();
 };
 
-/* ========= Directory Options / Popup / Page ========= */
 async function loadDirectoryOptions() {
   let suppliers=[], workshops=[];
   try { suppliers=await apiFetch("/api/directory?type=supplier"); } catch {}
@@ -1130,7 +805,6 @@ async function loadDirectoryOptions() {
   suppliers.forEach(s=>{ const o=document.createElement("option"); o.value=s.name; o.textContent=s.name; supSel.appendChild(o); });
   workshops.forEach(w=>{ const o=document.createElement("option"); o.value=w.name; o.textContent=w.name; workSel.appendChild(o); });
 }
-
 function openDirPopup(type){
   dirPopupType=type;
   document.getElementById("dirPopupTitle").textContent=type==="supplier"?"New Supplier":"New Workshop";
@@ -1138,275 +812,83 @@ function openDirPopup(type){
   document.getElementById("dirPopupError").textContent="";
   document.getElementById("dirPopupBackdrop").classList.remove("hidden");
   document.getElementById("dirPopup").classList.remove("hidden");
-  delete document.getElementById("dirPopup").dataset.editId; // Ensure not in edit mode
+  delete document.getElementById("dirPopup").dataset.editId;
 }
-function closeDirPopup(){
-  document.getElementById("dirPopupBackdrop").classList.add("hidden");
-  document.getElementById("dirPopup").classList.add("hidden");
-}
+function closeDirPopup(){ document.getElementById("dirPopupBackdrop").classList.add("hidden"); document.getElementById("dirPopup").classList.add("hidden"); }
 document.getElementById("dirPopupCancelBtn").onclick=closeDirPopup;
-
 document.getElementById("dirPopupSaveBtn").onclick=async ()=>{
   const name=document.getElementById("dirPopupName").value.trim();
   const email=document.getElementById("dirPopupEmail").value.trim();
   const phone=document.getElementById("dirPopupPhone").value.trim();
   const address=document.getElementById("dirPopupAddress").value.trim();
-  const editId = document.getElementById("dirPopup").dataset.editId; // Check if editing
-  
-  const err=document.getElementById("dirPopupError");
-  err.textContent="";
+  const editId = document.getElementById("dirPopup").dataset.editId;
+  const err=document.getElementById("dirPopupError"); err.textContent="";
   if(!dirPopupType){ err.textContent="Unknown type."; return; }
   if(!name){ err.textContent="Name is required."; return; }
-  
   try{
-    if(editId) {
-        // Edit mode
-        await apiFetch(`/api/directory/${editId}`, {
-            method: "PATCH",
-            body: JSON.stringify({type:dirPopupType, name, email, phone, address})
-        });
-        delete document.getElementById("dirPopup").dataset.editId; // clear edit mode
-    } else {
-        // Create mode
-        await apiFetch("/api/directory/quick",{method:"POST",body:JSON.stringify({type:dirPopupType,name,email,phone,address})});
-    }
-    closeDirPopup();
-    await loadDirectoryOptions();
-    await loadDirectoryPage();
+    if(editId) { await apiFetch(`/api/directory/${editId}`, { method: "PATCH", body: JSON.stringify({type:dirPopupType, name, email, phone, address}) }); delete document.getElementById("dirPopup").dataset.editId; } 
+    else { await apiFetch("/api/directory/quick",{method:"POST",body:JSON.stringify({type:dirPopupType,name,email,phone,address})}); }
+    closeDirPopup(); await loadDirectoryOptions(); await loadDirectoryPage();
   }catch(e){ err.textContent=e.error==="login_required"?"You must be logged in.": "Error saving."; }
 };
-
 document.getElementById("newSupplierBtn").onclick=()=>openDirPopup("supplier");
 document.getElementById("newWorkshopBtn").onclick=()=>openDirPopup("workshop");
 document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
 document.getElementById("dirNewWorkshopBtn").onclick=()=>openDirPopup("workshop");
-
 async function loadDirectoryPage(){
   let rows=[]; try{ rows=await apiFetch("/api/directory"); }catch{}
-  const tbody=document.querySelector("#directoryTable tbody");
-  tbody.innerHTML="";
-
+  const tbody=document.querySelector("#directoryTable tbody"); tbody.innerHTML="";
   rows.forEach(r=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td>${r.address||""}</td>
-    <td>
-       <button class="secondary edit-dir" data-id="${r.id}" data-obj='${JSON.stringify(r).replace(/'/g, "&#39;")}'>Edit</button>
-       <button class="danger delete-dir" data-id="${r.id}">Delete</button>
-    </td>`;
+    tr.innerHTML=`<td>${r.id}</td><td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td>${r.address||""}</td><td><button class="secondary edit-dir" data-id="${r.id}" data-obj='${JSON.stringify(r).replace(/'/g, "&#39;")}'>Edit</button><button class="danger delete-dir" data-id="${r.id}">Delete</button></td>`;
     tbody.appendChild(tr);
   });
-
-  // Attach handlers
-  document.querySelectorAll(".delete-dir").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Delete this directory entry?")) return;
-      try {
-        await apiFetch(`/api/directory/${id}`, {method:"DELETE"});
-        await loadDirectoryPage(); 
-        await loadDirectoryOptions(); // Refresh dropdowns too
-      } catch(e) { 
-        alert(e.error === "admin_required" ? "Only Admin can delete directory items." : "Error deleting."); 
-      }
-    };
-  });
-  
-  document.querySelectorAll(".edit-dir").forEach(btn=>{
-    btn.onclick=()=>{
-      // Reuse the popup for editing
-      const r = JSON.parse(btn.dataset.obj);
-      openDirPopup(r.type); // Set type
-      document.getElementById("dirPopupTitle").textContent = "Edit " + r.type;
-      document.getElementById("dirPopupName").value = r.name;
-      document.getElementById("dirPopupEmail").value = r.email||"";
-      document.getElementById("dirPopupPhone").value = r.phone||"";
-      document.getElementById("dirPopupAddress").value = r.address||"";
-      
-      // Mark as edit mode
-      document.getElementById("dirPopup").dataset.editId = r.id;
-    };
-  });
+  document.querySelectorAll(".delete-dir").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete this directory entry?")) return; try { await apiFetch(`/api/directory/${+btn.dataset.id}`, {method:"DELETE"}); await loadDirectoryPage(); await loadDirectoryOptions(); } catch(e) { alert(e.error === "admin_required" ? "Only Admin can delete." : "Error deleting."); } }; });
+  document.querySelectorAll(".edit-dir").forEach(btn=>{ btn.onclick=()=>{ const r = JSON.parse(btn.dataset.obj); openDirPopup(r.type); document.getElementById("dirPopupTitle").textContent = "Edit " + r.type; document.getElementById("dirPopupName").value = r.name; document.getElementById("dirPopupEmail").value = r.email||""; document.getElementById("dirPopupPhone").value = r.phone||""; document.getElementById("dirPopupAddress").value = r.address||""; document.getElementById("dirPopup").dataset.editId = r.id; }; });
 }
 
-/* ========= Vessels ========= */
 async function loadVessels(){
   try { vessels=await apiFetch("/api/vessels"); } catch { vessels=[]; }
-  const reqSel=document.getElementById("reqVessel");
-  const landSel=document.getElementById("landVessel");
-  if(reqSel){
-    const cur=reqSel.value;
-    reqSel.innerHTML='<option value="">Select vessel</option>';
-    vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; reqSel.appendChild(o); });
-    if(cur) reqSel.value=cur;
-  }
-  if(landSel){
-    const cur=landSel.value;
-    landSel.innerHTML='<option value="">Select vessel</option>';
-    vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; landSel.appendChild(o); });
-    if(cur) landSel.value=cur;
-  }
-  // admin table
-  const tbody=document.querySelector("#vesselTable tbody");
-  if(!tbody) return;
-  tbody.innerHTML="";
-  vessels.forEach(v=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${v.id}</td><td>${v.name}</td>
-      <td>
-        <button class="edit-vessel" data-id="${v.id}">Edit</button>
-        <button class="danger delete-vessel" data-id="${v.id}">Delete</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-
-  document.querySelectorAll(".edit-vessel").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const v=vessels.find(x=>x.id===id);
-      if(!v) return;
-      editingVesselId=id;
-      document.getElementById("vesselName").value=v.name;
-      document.getElementById("cancelVesselEditBtn").classList.remove("hidden");
-    };
-  });
-  document.querySelectorAll(".delete-vessel").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Delete this vessel?")) return;
-      try{ await apiFetch(`/api/vessels/${id}`,{method:"DELETE"}); await loadVessels(); }catch{ alert("Error deleting vessel."); }
-    };
-  });
+  const reqSel=document.getElementById("reqVessel"); const landSel=document.getElementById("landVessel");
+  if(reqSel){ const cur=reqSel.value; reqSel.innerHTML='<option value="">Select vessel</option>'; vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; reqSel.appendChild(o); }); if(cur) reqSel.value=cur; }
+  if(landSel){ const cur=landSel.value; landSel.innerHTML='<option value="">Select vessel</option>'; vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; landSel.appendChild(o); }); if(cur) landSel.value=cur; }
+  const tbody=document.querySelector("#vesselTable tbody"); if(!tbody) return; tbody.innerHTML="";
+  vessels.forEach(v=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${v.id}</td><td>${v.name}</td><td><button class="edit-vessel" data-id="${v.id}">Edit</button><button class="danger delete-vessel" data-id="${v.id}">Delete</button></td>`; tbody.appendChild(tr); });
+  document.querySelectorAll(".edit-vessel").forEach(btn=>{ btn.onclick=()=>{ const id=+btn.dataset.id; const v=vessels.find(x=>x.id===id); if(!v) return; editingVesselId=id; document.getElementById("vesselName").value=v.name; document.getElementById("cancelVesselEditBtn").classList.remove("hidden"); }; });
+  document.querySelectorAll(".delete-vessel").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete this vessel?")) return; try{ await apiFetch(`/api/vessels/${+btn.dataset.id}`,{method:"DELETE"}); await loadVessels(); }catch{ alert("Error deleting vessel."); } }; });
 }
-
 document.getElementById("addVesselBtn").onclick=async ()=>{
-  const name=document.getElementById("vesselName").value.trim();
-  const err=document.getElementById("vesselError");
-  err.textContent="";
-  if(!name){ err.textContent="Vessel name required."; return; }
-  try{
-    if(editingVesselId){
-      await apiFetch(`/api/vessels/${editingVesselId}`,{method:"PATCH",body:JSON.stringify({name})});
-    }else{
-      await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name})});
-    }
-    editingVesselId=null;
-    document.getElementById("vesselName").value="";
-    document.getElementById("cancelVesselEditBtn").classList.add("hidden");
-    await loadVessels();
-  }catch(e){
-    if(e.error==="duplicate_name") err.textContent="This vessel already exists.";
-    else if(e.error==="admin_required") err.textContent="Only admin can manage vessels.";
-    else err.textContent="Error saving vessel.";
-  }
+  const name=document.getElementById("vesselName").value.trim(); const err=document.getElementById("vesselError"); err.textContent=""; if(!name){ err.textContent="Vessel name required."; return; }
+  try{ if(editingVesselId){ await apiFetch(`/api/vessels/${editingVesselId}`,{method:"PATCH",body:JSON.stringify({name})}); }else{ await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name})}); } editingVesselId=null; document.getElementById("vesselName").value=""; document.getElementById("cancelVesselEditBtn").classList.add("hidden"); await loadVessels(); }catch(e){ err.textContent="Error saving vessel."; }
 };
-document.getElementById("cancelVesselEditBtn").onclick=()=>{
-  editingVesselId=null;
-  document.getElementById("vesselName").value="";
-  document.getElementById("cancelVesselEditBtn").classList.add("hidden");
-};
+document.getElementById("cancelVesselEditBtn").onclick=()=>{ editingVesselId=null; document.getElementById("vesselName").value=""; document.getElementById("cancelVesselEditBtn").classList.add("hidden"); };
 
-/* ========= Categories ========= */
 async function loadCategories(){
   let cats=[]; try{ cats=await apiFetch("/api/categories"); }catch{}
   const catSelect=document.getElementById("reqCategory");
-  if(catSelect){
-    catSelect.innerHTML='<option value="">Select category</option>';
-    cats.forEach(c=>{ const o=document.createElement("option"); o.value=c.abbr; o.textContent=`${c.abbr} - ${c.name}`; catSelect.appendChild(o); });
-  }
-  const tbody=document.querySelector("#catTable tbody");
-  tbody.innerHTML="";
-  cats.forEach(c=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${c.id}</td><td>${c.name}</td><td>${c.abbr}</td>
-      <td><button class="edit-cat" data-id="${c.id}">Edit</button>
-          <button class="danger delete-cat" data-id="${c.id}">Delete</button></td>`;
-    tbody.appendChild(tr);
-  });
-  document.querySelectorAll(".edit-cat").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const cat=cats.find(x=>x.id===id);
-      if(!cat) return;
-      editingCatId=id;
-      document.getElementById("catName").value=cat.name;
-      document.getElementById("catAbbr").value=cat.abbr;
-      document.getElementById("cancelCatEditBtn").classList.remove("hidden");
-    };
-  });
-  document.querySelectorAll(".delete-cat").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Delete this category?")) return;
-      try{ await apiFetch(`/api/categories/${id}`,{method:"DELETE"}); await loadCategories(); }catch{ alert("Error deleting category."); }
-    };
-  });
+  if(catSelect){ catSelect.innerHTML='<option value="">Select category</option>'; cats.forEach(c=>{ const o=document.createElement("option"); o.value=c.abbr; o.textContent=`${c.abbr} - ${c.name}`; catSelect.appendChild(o); }); }
+  const tbody=document.querySelector("#catTable tbody"); tbody.innerHTML="";
+  cats.forEach(c=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${c.id}</td><td>${c.name}</td><td>${c.abbr}</td><td><button class="edit-cat" data-id="${c.id}">Edit</button><button class="danger delete-cat" data-id="${c.id}">Delete</button></td>`; tbody.appendChild(tr); });
+  document.querySelectorAll(".edit-cat").forEach(btn=>{ btn.onclick=()=>{ const id=+btn.dataset.id; const cat=cats.find(x=>x.id===id); if(!cat) return; editingCatId=id; document.getElementById("catName").value=cat.name; document.getElementById("catAbbr").value=cat.abbr; document.getElementById("cancelCatEditBtn").classList.remove("hidden"); }; });
+  document.querySelectorAll(".delete-cat").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete this category?")) return; try{ await apiFetch(`/api/categories/${+btn.dataset.id}`,{method:"DELETE"}); await loadCategories(); }catch{ alert("Error deleting category."); } }; });
 }
 document.getElementById("addCatBtn").onclick=async ()=>{
-  const name=document.getElementById("catName").value.trim();
-  const abbr=document.getElementById("catAbbr").value.trim();
-  const err=document.getElementById("catError"); err.textContent="";
-  if(!name||!abbr){ err.textContent="Name and abbreviation are required."; return; }
-  try{
-    if(editingCatId){
-      await apiFetch(`/api/categories/${editingCatId}`,{method:"PATCH",body:JSON.stringify({name,abbr})});
-    }else{
-      await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name,abbr})});
-    }
-    editingCatId=null;
-    document.getElementById("catName").value="";
-    document.getElementById("catAbbr").value="";
-    document.getElementById("cancelCatEditBtn").classList.add("hidden");
-    await loadCategories(); await loadOverviewTotalsFilters();
-  }catch(e){
-    if(e.error==="duplicate_abbr") err.textContent="Abbreviation already exists.";
-    else if(e.error==="admin_required") err.textContent="Only admin can manage categories.";
-    else err.textContent="Error saving category.";
-  }
+  const name=document.getElementById("catName").value.trim(); const abbr=document.getElementById("catAbbr").value.trim(); const err=document.getElementById("catError"); err.textContent=""; if(!name||!abbr){ err.textContent="Name and abbreviation are required."; return; }
+  try{ if(editingCatId){ await apiFetch(`/api/categories/${editingCatId}`,{method:"PATCH",body:JSON.stringify({name,abbr})}); }else{ await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name,abbr})}); } editingCatId=null; document.getElementById("catName").value=""; document.getElementById("catAbbr").value=""; document.getElementById("cancelCatEditBtn").classList.add("hidden"); await loadCategories(); await loadOverviewTotalsFilters(); }catch(e){ err.textContent="Error saving category."; }
 };
-document.getElementById("cancelCatEditBtn").onclick=()=>{
-  editingCatId=null;
-  document.getElementById("catName").value="";
-  document.getElementById("catAbbr").value="";
-  document.getElementById("cancelCatEditBtn").classList.add("hidden");
-};
+document.getElementById("cancelCatEditBtn").onclick=()=>{ editingCatId=null; document.getElementById("catName").value=""; document.getElementById("catAbbr").value=""; document.getElementById("cancelCatEditBtn").classList.add("hidden"); };
 
-/* ========= Users ========= */
 async function loadUsersAdmin(){
   let users=[]; try{ users=await apiFetch("/api/users"); }catch{}
   const tbody=document.querySelector("#userTable tbody"); tbody.innerHTML="";
-  users.forEach(u=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${u.username}</td><td>${u.role}</td>
-      <td><button class="danger delete-user" data-username="${u.username}">Delete</button></td>`;
-    tbody.appendChild(tr);
-  });
-  document.querySelectorAll(".delete-user").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const username=btn.dataset.username;
-      if(!confirm(`Delete user "${username}"?`)) return;
-      try{ await apiFetch(`/api/users/${username}`,{method:"DELETE"}); await loadUsersAdmin(); }catch{ alert("Error deleting user.");}
-    };
-  });
+  users.forEach(u=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${u.username}</td><td>${u.role}</td><td><button class="danger delete-user" data-username="${u.username}">Delete</button></td>`; tbody.appendChild(tr); });
+  document.querySelectorAll(".delete-user").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm(`Delete user "${btn.dataset.username}"?`)) return; try{ await apiFetch(`/api/users/${btn.dataset.username}`,{method:"DELETE"}); await loadUsersAdmin(); }catch{ alert("Error deleting user.");} }; });
 }
 document.getElementById("saveUserBtn").onclick=async ()=>{
-  const username=document.getElementById("adminUsername").value.trim();
-  const password=document.getElementById("adminPassword").value;
-  const role=document.getElementById("adminRole").value;
-  const err=document.getElementById("adminUserError"); err.textContent="";
-  if(!username||!password){ err.textContent="Username and password are required."; return; }
-  try{
-    await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username,password,role})});
-    document.getElementById("adminUsername").value="";
-    document.getElementById("adminPassword").value="";
-    document.getElementById("adminRole").value="user";
-    await loadUsersAdmin();
-  }catch(e){
-    if(e.error==="admin_required") err.textContent="Only admin can manage users.";
-    else err.textContent="Error saving user.";
-  }
+  const username=document.getElementById("adminUsername").value.trim(); const password=document.getElementById("adminPassword").value; const role=document.getElementById("adminRole").value; const err=document.getElementById("adminUserError"); err.textContent=""; if(!username||!password){ err.textContent="Username and password required."; return; }
+  try{ await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username,password,role})}); document.getElementById("adminUsername").value=""; document.getElementById("adminPassword").value=""; document.getElementById("adminRole").value="user"; await loadUsersAdmin(); }catch(e){ err.textContent="Error saving user."; }
 };
 
-/* ========= Requisitions ========= */
 async function loadAllRequisitions(){
   let rows=[]; try{ rows=await apiFetch("/api/requisitions"); }catch{}
   allReqs=rows;
@@ -1415,549 +897,161 @@ async function loadAllRequisitions(){
   const paidFilter=document.getElementById("filterReqPaid").value;
   const delFilter=document.getElementById("filterReqDelivered").value;
   const search=document.getElementById("filterReqSearch").value.toLowerCase();
-
   rows.forEach(r=>{
     const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
-
-    // Check urgency for styling
     const isUrgent = (r.urgency || "normal").toLowerCase() === "high";
     const tr=document.createElement("tr");
-    if(isUrgent) tr.className = "row-urgent"; // applies the RED text style
-
+    if(isUrgent) tr.className = "row-urgent";
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open";
-    if((r.status||"open")==="cancelled") statusClass="status-cancelled";
-    if(r.delivered) statusClass="status-delivered";
-
-    tr.innerHTML=`
-      <td>${r.id}</td>
-      <td>${r.po_number || ""}</td>
-      <td>${r.number}</td>
-      <td>${r.description || ""}</td>
-      <td>${r.vessel}</td>
-      <td>${r.category||""}</td>
-      <td>${r.supplier||""}</td>
-      <td>${(r.urgency||"normal")}</td>
-      <td>${r.date_ordered||""}</td>
-      <td>${r.expected||""}</td>
-      <td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td>
-      <td>${delTag}</td>
-      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
-      <td>
-        <button class="edit-req" data-id="${r.id}">Edit</button>
-        <button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button>
-        <button class="secondary mark-delivered-req" data-id="${r.id}">Delivered</button>
-        <button class="danger cancel-req" data-id="${r.id}">Cancel</button>
-        <button class="danger delete-req" data-id="${r.id}">Delete</button>
-      </td>`;
+    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    tr.innerHTML=`<td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${(r.urgency||"normal")}</td><td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td><td><button class="edit-req" data-id="${r.id}">Edit</button><button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button><button class="secondary mark-delivered-req" data-id="${r.id}">Delivered</button><button class="danger cancel-req" data-id="${r.id}">Cancel</button><button class="danger delete-req" data-id="${r.id}">Delete</button></td>`;
     tbody.appendChild(tr);
   });
   attachReqRowActions();
 }
-
 function attachReqRowActions(){
-  document.querySelectorAll(".toggle-paid-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/requisitions/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
-      catch{ alert("Error toggling paid."); }
-    };
-  });
-  document.querySelectorAll(".mark-delivered-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/requisitions/${id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); }
-      catch{ alert("Error marking delivered."); }
-    };
-  });
-  document.querySelectorAll(".cancel-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Cancel this requisition?")) return;
-      try{ await apiFetch(`/api/requisitions/${id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }
-      catch{ alert("Error cancelling."); }
-    };
-  });
-  document.querySelectorAll(".delete-req").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Permanently delete this requisition?")) return;
-      try{ await apiFetch(`/api/requisitions/${id}`,{method:"DELETE"}); await afterDataLoad(); }
-      catch{ alert("Error deleting."); }
-    };
-  });
-  document.querySelectorAll(".edit-req").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const row=allReqs.find(r=>r.id===id); if(!row) return;
-      editingReqId=id;
-      document.getElementById("reqFormTitle").textContent="Edit Order";
-      document.getElementById("saveReqBtn").textContent="Update Order";
-      document.getElementById("cancelReqEditBtn").classList.remove("hidden");
-      
-      document.getElementById("reqNumber").value=row.number||"";
-      document.getElementById("reqPONumber").value=row.po_number||""; 
-      document.getElementById("reqDescription").value=row.description||""; 
-      document.getElementById("reqVessel").value=row.vessel||"";
-      document.getElementById("reqCategory").value=row.category||"";
-      document.getElementById("reqSupplierSelect").value=row.supplier||"";
-      document.getElementById("reqDateOrdered").value=row.date_ordered||"";
-      document.getElementById("reqExpected").value=row.expected||"";
-      const orig=(typeof row.original_amount==="number"?row.original_amount:row.total_amount)||0;
-      document.getElementById("reqTotal").value=orig;
-      document.getElementById("reqCurrency").value=row.currency||"USD";
-      document.getElementById("reqUrgency").value=row.urgency||"normal"; // Load Urgency
-      document.getElementById("reqPaid").checked=!!row.paid;
-      
-      // Scroll to form
-      document.getElementById("reqFormTitle").scrollIntoView({behavior: "smooth"});
-    };
-  });
+  document.querySelectorAll(".toggle-paid-req").forEach(btn=>{ btn.onclick=async ()=>{ try{ await apiFetch(`/api/requisitions/${+btn.dataset.id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".mark-delivered-req").forEach(btn=>{ btn.onclick=async ()=>{ try{ await apiFetch(`/api/requisitions/${+btn.dataset.id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".cancel-req").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Cancel?")) return; try{ await apiFetch(`/api/requisitions/${+btn.dataset.id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".delete-req").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete?")) return; try{ await apiFetch(`/api/requisitions/${+btn.dataset.id}`,{method:"DELETE"}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".edit-req").forEach(btn=>{ btn.onclick=()=>{ const id=+btn.dataset.id; const row=allReqs.find(r=>r.id===id); if(!row) return; editingReqId=id; document.getElementById("reqFormTitle").textContent="Edit Order"; document.getElementById("saveReqBtn").textContent="Update Order"; document.getElementById("cancelReqEditBtn").classList.remove("hidden"); document.getElementById("reqNumber").value=row.number||""; document.getElementById("reqPONumber").value=row.po_number||""; document.getElementById("reqDescription").value=row.description||""; document.getElementById("reqVessel").value=row.vessel||""; document.getElementById("reqCategory").value=row.category||""; document.getElementById("reqSupplierSelect").value=row.supplier||""; document.getElementById("reqDateOrdered").value=row.date_ordered||""; document.getElementById("reqExpected").value=row.expected||""; const orig=(typeof row.original_amount==="number"?row.original_amount:row.total_amount)||0; document.getElementById("reqTotal").value=orig; document.getElementById("reqCurrency").value=row.currency||"USD"; document.getElementById("reqUrgency").value=row.urgency||"normal"; document.getElementById("reqPaid").checked=!!row.paid; document.getElementById("reqFormTitle").scrollIntoView({behavior: "smooth"}); }; });
 }
-document.getElementById("cancelReqEditBtn").onclick=()=>{
-  editingReqId=null;
-  document.getElementById("reqFormTitle").textContent="Add Ordered Requisition";
-  document.getElementById("saveReqBtn").textContent="Save Order";
-  document.getElementById("cancelReqEditBtn").classList.add("hidden");
-  ["reqNumber","reqPONumber","reqDescription","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("reqUrgency").value="normal";
-  document.getElementById("reqPaid").checked=false;
-  document.getElementById("reqCurrency").value="USD";
-};
+document.getElementById("cancelReqEditBtn").onclick=()=>{ editingReqId=null; document.getElementById("reqFormTitle").textContent="Add Ordered Requisition"; document.getElementById("saveReqBtn").textContent="Save Order"; document.getElementById("cancelReqEditBtn").classList.add("hidden"); ["reqNumber","reqPONumber","reqDescription","reqVessel","reqCategory","reqSupplierSelect","reqDateOrdered","reqExpected","reqTotal"].forEach(id=>document.getElementById(id).value=""); document.getElementById("reqUrgency").value="normal"; document.getElementById("reqPaid").checked=false; document.getElementById("reqCurrency").value="USD"; };
 document.getElementById("applyReqFilterBtn").onclick=loadAllRequisitions;
-document.getElementById("clearReqFilterBtn").onclick=async ()=>{
-  ["filterReqStatus","filterReqPaid","filterReqDelivered","filterReqSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadAllRequisitions();
-};
-
+document.getElementById("clearReqFilterBtn").onclick=async ()=>{ ["filterReqStatus","filterReqPaid","filterReqDelivered","filterReqSearch"].forEach(id=>document.getElementById(id).value=""); await loadAllRequisitions(); };
 document.getElementById("saveReqBtn").onclick=async ()=>{
-  const number=document.getElementById("reqNumber").value.trim();
-  const po_number=document.getElementById("reqPONumber").value.trim();
-  const description = document.getElementById("reqDescription").value.trim();
-  const vessel=document.getElementById("reqVessel").value.trim();
-  const category=document.getElementById("reqCategory").value.trim();
-  const supplier=document.getElementById("reqSupplierSelect").value.trim();
-  const date_ordered=document.getElementById("reqDateOrdered").value;
-  const expected=document.getElementById("reqExpected").value;
-  const total=document.getElementById("reqTotal").value;
-  const currency=document.getElementById("reqCurrency").value||"USD";
-  const urgency=document.getElementById("reqUrgency").value||"normal";
-  const paid=document.getElementById("reqPaid").checked;
-  const err=document.getElementById("reqError"); err.textContent="";
-
-  if(!number||!vessel||!category||!supplier||!date_ordered||!total){
-    err.textContent="Please fill all required fields."; return;
-  }
-  try{
-    const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, urgency, paid};
-    
-    if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)});
-    else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)});
-    document.getElementById("cancelReqEditBtn").onclick();
-    await afterDataLoad();
-  }catch(e){
-    if(e.error==="duplicate_number") err.textContent="This requisition number already exists.";
-    else if(e.error==="unknown_category") err.textContent="Invalid category abbreviation.";
-    else if(e.error==="login_required") err.textContent="You must be logged in to add / edit orders.";
-    else err.textContent="Error saving order.";
-  }
+  const number=document.getElementById("reqNumber").value.trim(); const po_number=document.getElementById("reqPONumber").value.trim(); const description = document.getElementById("reqDescription").value.trim(); const vessel=document.getElementById("reqVessel").value.trim(); const category=document.getElementById("reqCategory").value.trim(); const supplier=document.getElementById("reqSupplierSelect").value.trim(); const date_ordered=document.getElementById("reqDateOrdered").value; const expected=document.getElementById("reqExpected").value; const total=document.getElementById("reqTotal").value; const currency=document.getElementById("reqCurrency").value||"USD"; const urgency=document.getElementById("reqUrgency").value||"normal"; const paid=document.getElementById("reqPaid").checked; const err=document.getElementById("reqError"); err.textContent="";
+  if(!number||!vessel||!category||!supplier||!date_ordered||!total){ err.textContent="Please fill required fields."; return; }
+  try{ const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, urgency, paid}; if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)}); else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)}); document.getElementById("cancelReqEditBtn").onclick(); await afterDataLoad(); }catch(e){ err.textContent="Error saving order."; }
 };
 
-/* ========= Overview Reqs ========= */
 async function loadOverviewRequisitions(){
-  let rows=allReqs;
-  if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
+  let rows=allReqs; if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
   rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
-    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-    
-    // Check urgency
-    const isUrgent = (r.urgency || "normal").toLowerCase() === "high";
-    const tr=document.createElement("tr");
-    if(isUrgent) tr.className = "row-urgent";
-
-    tr.innerHTML=`
-      <td>${r.po_number || ""}</td>
-      <td>${r.number}</td>
-      <td>${r.description || ""}</td>
-      <td>${r.vessel}</td>
-      <td>${r.category||""}</td>
-      <td>${r.supplier||""}</td>
-      <td>${r.urgency||"normal"}</td>
-      <td>${r.date_ordered||""}</td>
-      <td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td>
-      <td>${delTag}</td>
-      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
-    tbody.appendChild(tr);
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'; const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'; let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    const isUrgent = (r.urgency || "normal").toLowerCase() === "high"; const tr=document.createElement("tr"); if(isUrgent) tr.className = "row-urgent";
+    tr.innerHTML=`<td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${r.urgency||"normal"}</td><td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`; tbody.appendChild(tr);
   });
 }
 
-/* ========= Landings ========= */
 async function loadAllLandings(){
-  let rows=[]; try{ rows=await apiFetch("/api/landings"); }catch{}
-  allLandings=rows;
+  let rows=[]; try{ rows=await apiFetch("/api/landings"); }catch{} allLandings=rows;
   const tbody=document.querySelector("#landingTable tbody"); tbody.innerHTML="";
-  const statusFilter=document.getElementById("filterLandingStatus").value;
-  const paidFilter=document.getElementById("filterLandingPaid").value;
-  const delFilter=document.getElementById("filterLandingDelivered").value;
-  const search=document.getElementById("filterLandingSearch").value.toLowerCase();
-
+  const statusFilter=document.getElementById("filterLandingStatus").value; const paidFilter=document.getElementById("filterLandingPaid").value; const delFilter=document.getElementById("filterLandingDelivered").value; const search=document.getElementById("filterLandingSearch").value.toLowerCase();
   rows.forEach(r=>{
-    const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
-    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
-    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
+    const matchesStatus=!statusFilter||(r.status||"open")===statusFilter; const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter; const matchesDel=delFilter===""||String(r.delivered||0)===delFilter; const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
     if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
-
-    const tr=document.createElement("tr");
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
-    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
-      <td>
-        <button class="edit-land" data-id="${r.id}">Edit</button>
-        <button class="secondary toggle-paid-land" data-id="${r.id}">Paid</button>
-        <button class="secondary mark-delivered-land" data-id="${r.id}">Delivered</button>
-        <button class="danger cancel-land" data-id="${r.id}">Cancel</button>
-        <button class="danger delete-land" data-id="${r.id}">Delete</button>
-      </td>`;
-    tbody.appendChild(tr);
+    const tr=document.createElement("tr"); const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'; const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'; let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td><td><button class="edit-land" data-id="${r.id}">Edit</button><button class="secondary toggle-paid-land" data-id="${r.id}">Paid</button><button class="secondary mark-delivered-land" data-id="${r.id}">Delivered</button><button class="danger cancel-land" data-id="${r.id}">Cancel</button><button class="danger delete-land" data-id="${r.id}">Delete</button></td>`; tbody.appendChild(tr);
   });
   attachLandingActions();
 }
 function attachLandingActions(){
-  document.querySelectorAll(".toggle-paid-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/landings/${id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); }
-      catch{ alert("Error toggling paid."); }
-    };
-  });
-  document.querySelectorAll(".mark-delivered-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      try{ await apiFetch(`/api/landings/${id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); }
-      catch{ alert("Error marking delivered."); }
-    };
-  });
-  document.querySelectorAll(".cancel-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Cancel this landed item?")) return;
-      try{ await apiFetch(`/api/landings/${id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }
-      catch{ alert("Error cancelling landing."); }
-    };
-  });
-  document.querySelectorAll(".delete-land").forEach(btn=>{
-    btn.onclick=async ()=>{
-      const id=+btn.dataset.id;
-      if(!confirm("Permanently delete this landed item?")) return;
-      try{ await apiFetch(`/api/landings/${id}`,{method:"DELETE"}); await afterDataLoad(); }
-      catch{ alert("Error deleting landing."); }
-    };
-  });
-  document.querySelectorAll(".edit-land").forEach(btn=>{
-    btn.onclick=()=>{
-      const id=+btn.dataset.id;
-      const row=allLandings.find(l=>l.id===id); if(!row) return;
-      editingLandId=id;
-      document.getElementById("landFormTitle").textContent="Edit Landed Item";
-      document.getElementById("saveLandingBtn").textContent="Update Landed Item";
-      document.getElementById("cancelLandEditBtn").classList.remove("hidden");
-      document.getElementById("landVessel").value=row.vessel||"";
-      document.getElementById("landDescription").value=row.item||"";
-      document.getElementById("landWorkshopSelect").value=row.workshop||"";
-      document.getElementById("landExpected").value=row.expected||"";
-      document.getElementById("landLanded").value=row.landed_date||"";
-      const orig=(typeof row.amount_original==="number"?row.amount_original:row.amount)||0;
-      document.getElementById("landAmount").value=orig;
-      document.getElementById("landCurrency").value=row.currency||"USD";
-      document.getElementById("landPaid").checked=!!row.paid;
-      
-      // Scroll
-      document.getElementById("landFormTitle").scrollIntoView({behavior: "smooth"});
-    };
-  });
+  document.querySelectorAll(".toggle-paid-land").forEach(btn=>{ btn.onclick=async ()=>{ try{ await apiFetch(`/api/landings/${+btn.dataset.id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".mark-delivered-land").forEach(btn=>{ btn.onclick=async ()=>{ try{ await apiFetch(`/api/landings/${+btn.dataset.id}`,{method:"PATCH",body:JSON.stringify({delivered:true})}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".cancel-land").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Cancel?")) return; try{ await apiFetch(`/api/landings/${+btn.dataset.id}`,{method:"PATCH",body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".delete-land").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete?")) return; try{ await apiFetch(`/api/landings/${+btn.dataset.id}`,{method:"DELETE"}); await afterDataLoad(); } catch{ alert("Error."); } }; });
+  document.querySelectorAll(".edit-land").forEach(btn=>{ btn.onclick=()=>{ const id=+btn.dataset.id; const row=allLandings.find(l=>l.id===id); if(!row) return; editingLandId=id; document.getElementById("landFormTitle").textContent="Edit Landed Item"; document.getElementById("saveLandingBtn").textContent="Update Landed Item"; document.getElementById("cancelLandEditBtn").classList.remove("hidden"); document.getElementById("landVessel").value=row.vessel||""; document.getElementById("landDescription").value=row.item||""; document.getElementById("landWorkshopSelect").value=row.workshop||""; document.getElementById("landExpected").value=row.expected||""; document.getElementById("landLanded").value=row.landed_date||""; const orig=(typeof row.amount_original==="number"?row.amount_original:row.amount)||0; document.getElementById("landAmount").value=orig; document.getElementById("landCurrency").value=row.currency||"USD"; document.getElementById("landPaid").checked=!!row.paid; document.getElementById("landFormTitle").scrollIntoView({behavior: "smooth"}); }; });
 }
-document.getElementById("cancelLandEditBtn").onclick=()=>{
-  editingLandId=null;
-  document.getElementById("landFormTitle").textContent="Add Landed Item";
-  document.getElementById("saveLandingBtn").textContent="Save Landed Item";
-  document.getElementById("cancelLandEditBtn").classList.add("hidden");
-  ["landVessel","landDescription","landWorkshopSelect","landExpected","landLanded","landAmount"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("landPaid").checked=false;
-  document.getElementById("landCurrency").value="USD";
-};
+document.getElementById("cancelLandEditBtn").onclick=()=>{ editingLandId=null; document.getElementById("landFormTitle").textContent="Add Landed Item"; document.getElementById("saveLandingBtn").textContent="Save Landed Item"; document.getElementById("cancelLandEditBtn").classList.add("hidden"); ["landVessel","landDescription","landWorkshopSelect","landExpected","landLanded","landAmount"].forEach(id=>document.getElementById(id).value=""); document.getElementById("landPaid").checked=false; document.getElementById("landCurrency").value="USD"; };
 document.getElementById("applyLandingFilterBtn").onclick=loadAllLandings;
-document.getElementById("clearLandingFilterBtn").onclick=async ()=>{
-  ["filterLandingStatus","filterLandingPaid","filterLandingDelivered","filterLandingSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadAllLandings();
-};
+document.getElementById("clearLandingFilterBtn").onclick=async ()=>{ ["filterLandingStatus","filterLandingPaid","filterLandingDelivered","filterLandingSearch"].forEach(id=>document.getElementById(id).value=""); await loadAllLandings(); };
 document.getElementById("saveLandingBtn").onclick=async ()=>{
-  const vessel=document.getElementById("landVessel").value.trim();
-  const desc=document.getElementById("landDescription").value.trim();
-  const workshop=document.getElementById("landWorkshopSelect").value.trim();
-  const expected=document.getElementById("landExpected").value;
-  const landed=document.getElementById("landLanded").value;
-  const amount=document.getElementById("landAmount").value;
-  const currency=document.getElementById("landCurrency").value||"USD";
-  const paid=document.getElementById("landPaid").checked;
-  const err=document.getElementById("landError"); err.textContent="";
-  if(!vessel||!desc||!workshop||!amount){ err.textContent="Vessel, description, workshop and amount are required."; return; }
-  try{
-    const payload={vessel,item:desc,workshop,amount:parseFloat(amount),currency,expected,landed_date:landed,paid};
-    if(editingLandId) await apiFetch(`/api/landings/${editingLandId}`,{method:"PATCH",body:JSON.stringify(payload)});
-    else await apiFetch("/api/landings",{method:"POST",body:JSON.stringify(payload)});
-    document.getElementById("cancelLandEditBtn").onclick();
-    await afterDataLoad();
-  }catch(e){
-    err.textContent=e.error==="login_required"?"You must be logged in.":"Error saving landed item.";
-  }
+  const vessel=document.getElementById("landVessel").value.trim(); const desc=document.getElementById("landDescription").value.trim(); const workshop=document.getElementById("landWorkshopSelect").value.trim(); const expected=document.getElementById("landExpected").value; const landed=document.getElementById("landLanded").value; const amount=document.getElementById("landAmount").value; const currency=document.getElementById("landCurrency").value||"USD"; const paid=document.getElementById("landPaid").checked; const err=document.getElementById("landError"); err.textContent="";
+  if(!vessel||!desc||!workshop||!amount){ err.textContent="Required fields missing."; return; }
+  try{ const payload={vessel,item:desc,workshop,amount:parseFloat(amount),currency,expected,landed_date:landed,paid}; if(editingLandId) await apiFetch(`/api/landings/${editingLandId}`,{method:"PATCH",body:JSON.stringify(payload)}); else await apiFetch("/api/landings",{method:"POST",body:JSON.stringify(payload)}); document.getElementById("cancelLandEditBtn").onclick(); await afterDataLoad(); }catch(e){ err.textContent="Error saving."; }
 };
 
-/* ========= Cancelled tables ========= */
 async function fillCancelledTables(){
-  const reqBody=document.querySelector("#reqCancelledTable tbody");
-  const landBody=document.querySelector("#landingCancelledTable tbody");
-  reqBody.innerHTML=""; landBody.innerHTML="";
-  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description || ""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
-      <td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    reqBody.appendChild(tr);
-  });
-  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    landBody.appendChild(tr);
-  });
+  const reqBody=document.querySelector("#reqCancelledTable tbody"); const landBody=document.querySelector("#landingCancelledTable tbody"); reqBody.innerHTML=""; landBody.innerHTML="";
+  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; reqBody.appendChild(tr); });
+  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; landBody.appendChild(tr); });
 }
 
-/* ========= Overview Landings ========= */
 async function loadOverviewLandings(){
-  let rows=allLandings;
-  if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
+  let rows=allLandings; if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewLandTable tbody"); tbody.innerHTML="";
   rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
-    const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
-    let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`;
-    tbody.appendChild(tr);
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'; const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'; let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`; tbody.appendChild(tr);
   });
 }
 
-/* ========= Delivered ========= */
 async function loadDeliveredRequisitions(){
   let rows=allReqs; if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
-  const paidFilter=document.getElementById("filterDeliveredReqPaid").value;
-  const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
+  const paidFilter=document.getElementById("filterDeliveredReqPaid").value; const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
   const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
   rows.filter(r=>r.delivered).forEach(r=>{
-    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
+    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter; const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
-
-    // Check urgency
-    const isUrgent = (r.urgency || "normal").toLowerCase() === "high";
-    const tr=document.createElement("tr");
-    if(isUrgent) tr.className = "row-urgent";
-
-    tr.innerHTML=`
-      <td>${r.id}</td>
-      <td>${r.po_number || ""}</td>
-      <td>${r.number}</td>
-      <td>${r.description || ""}</td>
-      <td>${r.vessel}</td>
-      <td>${r.category||""}</td>
-      <td>${r.supplier||""}</td>
-      <td>${r.urgency||"normal"}</td>
-      <td>${r.date_ordered||""}</td>
-      <td>${r.expected||""}</td>
-      <td>${(r.total_amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td>
-      <td>${r.status||"open"}</td>`;
-    tbody.appendChild(tr);
+    const isUrgent = (r.urgency || "normal").toLowerCase() === "high"; const tr=document.createElement("tr"); if(isUrgent) tr.className = "row-urgent";
+    tr.innerHTML=`<td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${r.urgency||"normal"}</td><td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; tbody.appendChild(tr);
   });
 }
 document.getElementById("applyDeliveredReqFilterBtn").onclick=loadDeliveredRequisitions;
-document.getElementById("clearDeliveredReqFilterBtn").onclick=async ()=>{
-  ["filterDeliveredReqPaid","filterDeliveredReqSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadDeliveredRequisitions();
-};
+document.getElementById("clearDeliveredReqFilterBtn").onclick=async ()=>{ ["filterDeliveredReqPaid","filterDeliveredReqSearch"].forEach(id=>document.getElementById(id).value=""); await loadDeliveredRequisitions(); };
 
 async function loadDeliveredLandings(){
   let rows=allLandings; if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
-  const paidFilter=document.getElementById("filterDeliveredLandPaid").value;
-  const search=document.getElementById("filterDeliveredLandSearch").value.toLowerCase();
+  const paidFilter=document.getElementById("filterDeliveredLandPaid").value; const search=document.getElementById("filterDeliveredLandSearch").value.toLowerCase();
   const tbody=document.querySelector("#deliveredLandTable tbody"); tbody.innerHTML="";
   rows.filter(r=>r.delivered).forEach(r=>{
-    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
-    const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
+    const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter; const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
     if(!(matchesPaid&&matchesSearch)) return;
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
-      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
-      <td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`;
-    tbody.appendChild(tr);
+    const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; tbody.appendChild(tr);
   });
 }
 document.getElementById("applyDeliveredLandFilterBtn").onclick=loadDeliveredLandings;
-document.getElementById("clearDeliveredLandFilterBtn").onclick=async ()=>{
-  ["filterDeliveredLandPaid","filterDeliveredLandSearch"].forEach(id=>document.getElementById(id).value="");
-  await loadDeliveredLandings();
-};
+document.getElementById("clearDeliveredLandFilterBtn").onclick=async ()=>{ ["filterDeliveredLandPaid","filterDeliveredLandSearch"].forEach(id=>document.getElementById(id).value=""); await loadDeliveredLandings(); };
 
-/* ========= Summary counts ========= */
 async function updateSummaryCounts(){
-  let reqs=allReqs, lands=allLandings;
-  if(!reqs.length){ try{ reqs=await apiFetch("/api/requisitions"); }catch{ reqs=[]; } }
-  if(!lands.length){ try{ lands=await apiFetch("/api/landings"); }catch{ lands=[]; } }
-
+  let reqs=allReqs, lands=allLandings; if(!reqs.length){ try{ reqs=await apiFetch("/api/requisitions"); }catch{ reqs=[]; } } if(!lands.length){ try{ lands=await apiFetch("/api/landings"); }catch{ lands=[]; } }
   document.getElementById("summaryOpenReqNotDel").textContent=reqs.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
   document.getElementById("summaryOpenReqUnpaid").textContent=reqs.filter(r=>!r.delivered&&!r.paid&&(r.status||"open")==="open").length;
   document.getElementById("summaryOpenLandNotDel").textContent=lands.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
   document.getElementById("summaryOpenLandUnpaid").textContent=lands.filter(r=>!r.delivered&&!r.paid&&(r.status||"open")==="open").length;
 }
 
-/* ========= One place to reload everything ========= */
 async function afterDataLoad() {
-  await loadDirectoryOptions();
-  await loadCategories();
-  await loadVessels();
-  await loadDirectoryPage();
-  await loadUsersAdmin();
-  await loadAllRequisitions();
-  await loadAllLandings();
-  await loadOverviewRequisitions();
-  await loadOverviewLandings();
-  await loadDeliveredRequisitions();
-  await loadDeliveredLandings();
-  await fillCancelledTables();
-  await updateSummaryCounts();
-  await loadOverviewTotalsFilters();
+  await loadDirectoryOptions(); await loadCategories(); await loadVessels(); await loadDirectoryPage(); await loadUsersAdmin(); await loadAllRequisitions(); await loadAllLandings(); await loadOverviewRequisitions(); await loadOverviewLandings(); await loadDeliveredRequisitions(); await loadDeliveredLandings(); await fillCancelledTables(); await updateSummaryCounts(); await loadOverviewTotalsFilters();
 }
 
-
-/* ========= Backups (Admin) ========= */
 async function loadBackupsAdmin(){
-  const err=document.getElementById("backupError");
-  const tbody=document.querySelector("#backupTable tbody");
-  if(!tbody) return;
-  tbody.innerHTML="";
-  err.textContent="";
+  const err=document.getElementById("backupError"); const tbody=document.querySelector("#backupTable tbody"); if(!tbody) return; tbody.innerHTML=""; err.textContent="";
   try{
     const backups=await apiFetch("/api/backups");
     backups.forEach(b=>{
-      const tr=document.createElement("tr");
-      const sizeKB=((b.size||0)/1024).toFixed(1);
-      tr.innerHTML=`<td>${b.name}</td><td>${b.created_at||""}</td><td>${sizeKB}</td>
-        <td>
-          <button class="secondary dl-backup" data-name="${b.name}">Download</button>
-          <button class="secondary restore-backup" data-name="${b.name}">Restore</button>
-          <button class="danger delete-backup" data-name="${b.name}">Delete</button>
-        </td>`;
+      const tr=document.createElement("tr"); const sizeKB=((b.size||0)/1024).toFixed(1);
+      tr.innerHTML=`<td>${b.name}</td><td>${b.created_at||""}</td><td>${sizeKB}</td><td><button class="secondary dl-backup" data-name="${b.name}">Download</button><button class="secondary restore-backup" data-name="${b.name}">Restore</button><button class="danger delete-backup" data-name="${b.name}">Delete</button></td>`;
       tbody.appendChild(tr);
     });
-
-    document.querySelectorAll(".dl-backup").forEach(btn=>{
-      btn.onclick=()=>{ window.open(`/api/backups/${encodeURIComponent(btn.dataset.name)}/download`, "_blank"); };
-    });
-    document.querySelectorAll(".restore-backup").forEach(btn=>{
-      btn.onclick=async ()=>{
-        const name=btn.dataset.name;
-        if(!confirm(`Restore backup "${name}"? This will overwrite current data.`)) return;
-        try{
-          await apiFetch(`/api/backups/${encodeURIComponent(name)}/restore`, {method:"POST"});
-          await afterDataLoad();
-          alert("Backup restored.");
-        }catch{ alert("Error restoring backup."); }
-      };
-    });
-// Listener for Download Local (Old style)
-document.getElementById("downloadBackupBtn")?.addEventListener("click", ()=>{
-  window.open("/api/backup/download", "_blank");
-});
-
-// Listener for Create Server Backup (New style)
-document.getElementById("createBackupBtn")?.addEventListener("click", async ()=>{
-  if(!confirm("Create a new backup on the server?")) return;
-  try {
-      await apiFetch("/api/backup/create", {method: "POST"});
-      await loadBackupsAdmin(); // Refresh the list immediately!
-      alert("Backup created on server.");
-  } catch(e) {
-      alert("Error creating backup.");
-  }
-});
-
-// Refresh button
-document.getElementById("refreshBackupsBtn")?.addEventListener("click", loadBackupsAdmin);
-
-// The rest of the upload logic stays the same...
-  }catch(e){
-    if(e.error==="admin_required") err.textContent="Only admin can access backups.";
-    else err.textContent="Error loading backups.";
-  }
+    document.querySelectorAll(".dl-backup").forEach(btn=>{ btn.onclick=()=>{ window.open(`/api/backups/${encodeURIComponent(btn.dataset.name)}/download`, "_blank"); }; });
+    document.querySelectorAll(".restore-backup").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Restore?")) return; try{ await apiFetch(`/api/backups/${encodeURIComponent(btn.dataset.name)}/restore`, {method:"POST"}); await afterDataLoad(); alert("Restored."); }catch{ alert("Error restoring."); } }; });
+    document.querySelectorAll(".delete-backup").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete?")) return; try{ await apiFetch(`/api/backups/${encodeURIComponent(btn.dataset.name)}`, {method:"DELETE"}); await loadBackupsAdmin(); }catch{ alert("Error deleting."); } }; });
+  }catch(e){ err.textContent=e.error==="admin_required"?"Only admin can access backups.":"Error loading backups."; }
 }
 
-document.getElementById("downloadBackupBtn")?.addEventListener("click", ()=>{
-  window.open("/api/backup", "_blank");
-});
+document.getElementById("downloadBackupBtn")?.addEventListener("click", ()=>{ window.open("/api/backup/download", "_blank"); });
+document.getElementById("createBackupBtn")?.addEventListener("click", async ()=>{ if(!confirm("Create server backup?")) return; try { await apiFetch("/api/backup/create", {method: "POST"}); await loadBackupsAdmin(); alert("Created."); } catch(e) { alert("Error creating."); } });
+document.getElementById("refreshBackupsBtn")?.addEventListener("click", loadBackupsAdmin);
 
 document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>{
-  const input=document.getElementById("uploadBackupInput");
-  const err=document.getElementById("backupError");
-  err.textContent="";
-  if(!input || !input.files || !input.files.length){ err.textContent="Please choose a .xlsx file."; return; }
-  const file=input.files[0];
-  if(!file.name.toLowerCase().endsWith(".xlsx")){ err.textContent="Only .xlsx allowed."; return; }
-
-  const fd=new FormData();
-  fd.append("file", file);
-  try{
-    const res=await fetch("/api/upload", {method:"POST", body: fd, credentials:"same-origin"});
-    if(!res.ok){
-      let j={}; try{ j=await res.json(); }catch{}
-      throw j;
-    }
-    input.value="";
-    await afterDataLoad();
-    await loadBackupsAdmin();
-    alert("Uploaded and overwritten successfully.");
-  }catch(e){
-    if(e.error==="invalid_file_type") err.textContent="Only .xlsx allowed.";
-    else if(e.error==="corrupt_excel") err.textContent="Excel file is not valid.";
-    else if(e.error==="admin_required") err.textContent="Only admin can upload.";
-    else err.textContent="Upload failed.";
-  }
+  const input=document.getElementById("uploadBackupInput"); const err=document.getElementById("backupError"); err.textContent="";
+  if(!input || !input.files || !input.files.length){ err.textContent="Please choose .xlsx file."; return; }
+  const file=input.files[0]; if(!file.name.toLowerCase().endsWith(".xlsx")){ err.textContent="Only .xlsx allowed."; return; }
+  const fd=new FormData(); fd.append("file", file);
+  try{ const res=await fetch("/api/upload", {method:"POST", body: fd, credentials:"same-origin"}); if(!res.ok){ let j={}; try{ j=await res.json(); }catch{} throw j; } input.value=""; await afterDataLoad(); await loadBackupsAdmin(); alert("Uploaded."); }catch(e){ err.textContent="Upload failed."; }
 });
 
-
-/* ========= Init ========= */
-(async function init(){
-  await loadCurrencies();
-  await refreshSession();   // important due to admin tab visibility
-  await afterDataLoad();
-})();
+(async function init(){ await loadCurrencies(); await refreshSession(); await afterDataLoad(); if(document.getElementById("adminTab") && !document.getElementById("adminTab").classList.contains("hidden")) { await loadBackupsAdmin(); } })();
+// Add tab listener to load backups when admin tab clicked
+document.querySelector('[data-tab="admin"]').addEventListener("click", loadBackupsAdmin);
 </script>
 
 </body>
