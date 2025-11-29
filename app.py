@@ -1,13 +1,12 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Auto-backups, Unique Filenames, and Robust Routes
+FIXED: Smart Auto-Backup (Works on Sleeping/Free Servers)
 """
 
 import os
 import json
 import hashlib
 import shutil
-import atexit
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -18,7 +17,6 @@ from openpyxl import Workbook
 from flask import Flask, jsonify, request, session, send_from_directory, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # -------------------------------------------------
 # App init
@@ -36,13 +34,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
-ROLES = {"admin", "user", "viewer", "finance"}
-
 FX_CACHE_FILE = os.path.join(BASE_DIR, "fx_cache.json")
 FX_CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
 
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 ALLOWED_UPLOAD_EXT = {".xlsx"}
+AUTO_BACKUP_INTERVAL_SECONDS = 12 * 60 * 60 # 12 Hours
 
 SHEETS: Dict[str, List[str]] = {
     "users": ["username", "password_hash", "role", "created_at"],
@@ -281,10 +278,10 @@ def to_usd(amount: float, currency: str) -> float:
     return float(amount) / float(r)
 
 # -------------------------------------------------
-# Backup Logic (Manual + Auto)
+# Backup Logic (Smart Check)
 # -------------------------------------------------
 def make_backup_filename(suffix:str="") -> str:
-    # Added %f (microseconds) to ensure uniqueness
+    # microseconds included for uniqueness
     ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
     return f"office_ops_backup_{ts}{suffix}.xlsx"
 
@@ -296,17 +293,78 @@ def create_backup_file(suffix:str="") -> str:
     shutil.copy2(DB_FILE, path)
     
     # Cleanup: Keep only last 20 backups
-    all_backups = sorted([os.path.join(BACKUP_DIR, f) for f in os.listdir(BACKUP_DIR) if f.endswith(".xlsx")])
-    while len(all_backups) > 20:
-        os.remove(all_backups.pop(0))
+    try:
+        all_backups = sorted([os.path.join(BACKUP_DIR, f) for f in os.listdir(BACKUP_DIR) if f.endswith(".xlsx")])
+        while len(all_backups) > 20:
+            os.remove(all_backups.pop(0))
+    except:
+        pass
         
     log_action("backup_create", name)
     return path
 
-def run_auto_backup():
-    """Called by scheduler"""
-    print(f"[{datetime.utcnow()}] Running auto-backup...")
-    create_backup_file(suffix="_AUTO")
+# Global variable to limit how often we check disk (don't check every millisecond)
+LAST_AUTO_CHECK_TIME = 0
+
+def check_and_run_smart_backup():
+    """
+    Checks if an auto-backup is needed. 
+    1. If no AUTO backup exists -> create one.
+    2. If last AUTO backup is older than 12 hours -> create one.
+    """
+    global LAST_AUTO_CHECK_TIME
+    # Only check once every 5 minutes to avoid slowing down the server
+    if time.time() - LAST_AUTO_CHECK_TIME < 300:
+        return
+
+    LAST_AUTO_CHECK_TIME = time.time()
+    
+    ensure_db()
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+
+    # Filter for auto backups only
+    auto_backups = [f for f in os.listdir(BACKUP_DIR) if "_AUTO" in f and f.endswith(".xlsx")]
+    
+    should_backup = False
+    
+    if not auto_backups:
+        # Case 1: No auto backups exist yet.
+        should_backup = True
+    else:
+        # Case 2: Check if the newest one is too old
+        try:
+            auto_backups.sort(reverse=True) # newest first based on name timestamp
+            newest_file = os.path.join(BACKUP_DIR, auto_backups[0])
+            # Check file creation/mod time
+            mtime = os.path.getmtime(newest_file)
+            age_seconds = time.time() - mtime
+            
+            if age_seconds > AUTO_BACKUP_INTERVAL_SECONDS:
+                should_backup = True
+        except:
+            # If error checking time, just be safe and backup
+            should_backup = True
+            
+    if should_backup:
+        print(f"[{datetime.utcnow()}] Triggering Smart Auto-Backup...")
+        create_backup_file(suffix="_AUTO")
+
+# -------------------------------------------------
+# Middleware (The Smart Trigger)
+# -------------------------------------------------
+@app.before_request
+def trigger_backup_check():
+    """
+    Before handling any request (like loading the page or logging in),
+    check if we need to backup. This ensures backups happen even if
+    the server slept for a week.
+    """
+    # Only trigger on API calls or HTML loads (ignore static assets like css/js to save speed)
+    if request.path == "/" or request.path.startswith("/api/"):
+        try:
+            check_and_run_smart_backup()
+        except:
+            pass
 
 # -------------------------------------------------
 # Routes
@@ -357,16 +415,14 @@ def api_fx():
     return jsonify({"base": "USD", "rates": fetch_fx_rates("USD")})
 
 # -------------------------------------------------
-# Backup routes (ADMIN ONLY) - FIXED
+# Backup routes (ADMIN ONLY)
 # -------------------------------------------------
 @app.get("/api/backup")
 def download_backup_legacy():
-    """Support for old frontend link to prevent 404"""
     return download_backup_direct()
 
 @app.get("/api/backup/download")
 def download_backup_direct():
-    """Creates a fresh backup and downloads it immediately."""
     guard = require_admin()
     if guard: return guard
     path = create_backup_file(suffix="_MANUAL")
@@ -374,7 +430,6 @@ def download_backup_direct():
 
 @app.post("/api/backup/create")
 def create_backup_api():
-    """Creates a backup on server but does NOT download it. Refreshes list."""
     guard = require_admin()
     if guard: return guard
     create_backup_file(suffix="_MANUAL")
@@ -625,15 +680,4 @@ def del_dir(did):
 # -------------------------------------------------
 if __name__ == "__main__":
     ensure_db()
-    
-    # --- SCHEDULER START ---
-    scheduler = BackgroundScheduler()
-    # Run auto_backup every 12 hours
-    scheduler.add_job(func=run_auto_backup, trigger="interval", hours=12)
-    scheduler.start()
-    
-    # Shut down scheduler when exiting the app
-    atexit.register(lambda: scheduler.shutdown())
-    # -----------------------
-
     app.run(host="0.0.0.0", port=5000, debug=True)
