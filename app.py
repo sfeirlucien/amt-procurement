@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Audit Log, Tracking URL, Bulk Actions, Smart Backup
+FIXED: Dubai Time (GMT+4), Audit Filters, Tracking URL, Smart Backup
 """
 
 import os
@@ -8,7 +8,7 @@ import json
 import hashlib
 import shutil
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -48,7 +48,7 @@ SHEETS: Dict[str, List[str]] = {
         "date_ordered", "expected",
         "amount_original", "currency", "amount_usd",
         "paid", "delivered", "status",
-        "po_number", "remarks", "urgency", "tracking_url",  # Added tracking_url
+        "po_number", "remarks", "urgency", "tracking_url",
         "created_by", "created_at", "updated_at"
     ],
     "landings": [
@@ -64,14 +64,18 @@ SHEETS: Dict[str, List[str]] = {
     ],
     "categories": ["id", "name", "abbr", "created_at"],
     "vessels": ["id", "name", "created_at"],
-    "logs": ["timestamp", "user", "action", "target", "details"], # Enhanced logging
+    "logs": ["timestamp", "user", "action", "target", "details"],
 }
 
 # -------------------------------------------------
-# Helpers
+# Helpers (Dubai Time GMT+4)
 # -------------------------------------------------
+def get_dubai_time():
+    # UTC + 4 hours
+    return datetime.utcnow() + timedelta(hours=4)
+
 def now_iso() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
+    return get_dubai_time().isoformat(timespec="seconds")
 
 def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
@@ -289,7 +293,8 @@ def to_usd(amount: float, currency: str) -> float:
 # Backup Logic (Smart Check)
 # -------------------------------------------------
 def make_backup_filename(suffix:str="") -> str:
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+    # Use Dubai time for filename
+    ts = get_dubai_time().strftime("%Y%m%d_%H%M%S_%f")
     return f"office_ops_backup_{ts}{suffix}.xlsx"
 
 def create_backup_file(suffix:str="") -> str:
@@ -337,7 +342,7 @@ def check_and_run_smart_backup():
             should_backup = True
             
     if should_backup:
-        print(f"[{datetime.utcnow()}] Triggering Smart Auto-Backup...")
+        print(f"[{now_iso()}] Triggering Smart Auto-Backup...")
         create_backup_file(suffix="_AUTO")
 
 @app.before_request
@@ -446,10 +451,12 @@ def api_list_backups():
         if not fn.lower().endswith(".xlsx"): continue
         fp = os.path.join(BACKUP_DIR, fn)
         st = os.stat(fp)
+        # Convert file mtime (UTC/Server) to Dubai Time
+        dt_dubai = datetime.utcfromtimestamp(st.st_mtime) + timedelta(hours=4)
         out.append({
             "name": fn,
             "size": st.st_size,
-            "created_at": datetime.utcfromtimestamp(st.st_mtime).isoformat(timespec="seconds") + "Z"
+            "created_at": dt_dubai.isoformat(timespec="seconds")
         })
     return jsonify(out)
 
