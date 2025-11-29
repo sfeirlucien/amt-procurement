@@ -27,7 +27,8 @@
     /* Header */
     header { background: var(--header-bg); color: var(--header-text); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
     header h1 { margin:0; font-size:18px; font-weight: 600; }
-    header .user-info { font-size:14px; display:flex; align-items:center; gap:12px;}
+    header .header-right { display:flex; align-items:center; gap:12px; }
+    header .user-info { font-size:14px; display:flex; align-items:center; gap:8px;}
     
     /* Tabs */
     .tabs { display:flex; background:#000; overflow-x: auto; white-space: nowrap; }
@@ -55,6 +56,7 @@
     button.secondary { background:#6b7280; }
     button.danger { background:#dc2626; }
     button.success { background:#059669; }
+    button.warning { background:#d97706; }
     button.dark-toggle { background: transparent; border: 1px solid #666; padding: 4px 8px; font-size: 16px; }
 
     /* Tables */
@@ -100,6 +102,8 @@
     /* Quick Action Buttons */
     button.small-action { padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #059669; }
     button.small-action:hover { opacity: 0.9; }
+    button.small-action.danger { background: #dc2626; }
+    button.small-action.warning { background: #d97706; }
     
     /* New Tracking Button Style */
     a.track-btn { display:inline-block; padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #8b5cf6; color:white; border-radius:6px; text-decoration:none; font-weight:500; text-align: center; vertical-align: middle; }
@@ -108,6 +112,7 @@
     /* Mobile */
     @media (max-width: 768px) {
       header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .header-right { width: 100%; justify-content: space-between; }
       .filter-row > div { min-width: 100%; flex: 1 1 100%; }
       .bulk-bar { width: 90%; flex-wrap: wrap; justify-content: center; bottom: 10px; }
       input[type="checkbox"] { transform: scale(1.2); }
@@ -121,8 +126,10 @@
     <img src="static/logo.png" alt="AMT" style="height:36px; width:auto; border-radius:4px;">
     <h1>AMT Procurement</h1>
   </div>
-  <div class="user-info" id="userInfo"></div>
-  <button class="dark-toggle" id="darkModeBtn" title="Toggle Dark Mode">🌙</button>
+  <div class="header-right">
+    <div class="user-info" id="userInfo"></div>
+    <button class="dark-toggle" id="darkModeBtn" title="Toggle Dark Mode">🌙</button>
+  </div>
 </header>
 
 <div id="loginCard" class="card hidden">
@@ -193,6 +200,20 @@
         <option value="doughnut">Doughnut</option>
         <option value="line">Line Chart</option>
       </select>
+    </div>
+    <div style="flex:1;">
+        <label>Filter Month</label>
+        <select id="chartFilterMonth">
+            <option value="">All Months</option>
+            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+            <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+            <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+        </select>
+    </div>
+    <div style="flex:1;">
+        <label>Filter Year</label>
+        <select id="chartFilterYear"><option value="">All Years</option></select>
     </div>
     <div style="display:flex; align-items:flex-end;">
       <button id="refreshChartBtn">Refresh Chart</button>
@@ -334,7 +355,7 @@
       <div class="card">
         <h2>Cancelled</h2>
         <div class="table-responsive">
-            <table id="reqCancelledTable"><thead><tr><th>PO</th><th>Desc</th><th>Vessel</th><th>Supplier</th><th>Amount</th><th>Status</th></tr></thead><tbody></tbody></table>
+            <table id="reqCancelledTable"><thead><tr><th>PO</th><th>Desc</th><th>Vessel</th><th>Supplier</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table>
         </div>
       </div>
     </div>
@@ -534,9 +555,13 @@ async function loadOptions(){
         ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m,i)=> mSel.add(new Option(m, i+1)));
     }
     const ySel = document.getElementById("ovYearFilter");
+    const chartYSel = document.getElementById("chartFilterYear");
     if(ySel && ySel.options.length <= 1) {
         const y = new Date().getFullYear();
-        for(let i=y; i>=y-3; i--) ySel.add(new Option(i, i));
+        for(let i=y; i>=y-3; i--) {
+             ySel.add(new Option(i, i));
+             if(chartYSel) chartYSel.add(new Option(i, i));
+        }
     }
 
     try { const cats=await apiFetch("/api/categories"); 
@@ -581,12 +606,14 @@ function renderReqTable() {
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
         
         let actionBtns = '';
-        // FEATURE: Tracking Link Button (Only shows if url exists)
         if(r.tracking_url && r.tracking_url.length > 5) {
              actionBtns += `<a href="${r.tracking_url}" target="_blank" class="track-btn" title="Track Shipment">✈️</a>`;
         }
         if(!r.paid) actionBtns += `<button class="small-action toggle-paid" data-id="${r.id}" title="Mark Paid">$</button>`;
         if(!r.delivered) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
+        
+        // ADDED: Cancel Button (Circle Slash Icon)
+        actionBtns += `<button class="small-action danger toggle-cancel" data-id="${r.id}" title="Cancel Order">⊘</button>`;
         
         tr.innerHTML = `
             <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
@@ -610,14 +637,10 @@ function renderReqTable() {
     
     document.querySelectorAll(".edit-req").forEach(b=>b.onclick=()=>editReq(b.dataset.id));
     document.querySelectorAll(".delete-req").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'req'));
-    document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{
-        await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) });
-        await afterDataLoad();
-    });
-    document.querySelectorAll(".toggle-del").forEach(b=>b.onclick=async()=>{
-        await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) });
-        await afterDataLoad();
-    });
+    document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
+    document.querySelectorAll(".toggle-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
+    // Cancel Action
+    document.querySelectorAll(".toggle-cancel").forEach(b=>b.onclick=async()=>{ if(confirm("Move to Cancelled?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }});
     attachBulkListeners('req');
 }
 
@@ -660,22 +683,33 @@ function renderLandTable() {
     document.querySelectorAll(".edit-land").forEach(b=>b.onclick=()=>editLand(b.dataset.id));
     document.querySelectorAll(".delete-land").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'land'));
     
-    document.querySelectorAll(".toggle-land-paid").forEach(b=>b.onclick=async()=>{
-        await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) });
-        await afterDataLoad();
-    });
-    document.querySelectorAll(".toggle-land-del").forEach(b=>b.onclick=async()=>{
-        await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) });
-        await afterDataLoad();
-    });
+    document.querySelectorAll(".toggle-land-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
+    document.querySelectorAll(".toggle-land-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
     attachBulkListeners('land');
 }
 
 function renderCancelled() {
   const reqBody=document.querySelector("#reqCancelledTable tbody"); reqBody.innerHTML="";
   allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ 
-      const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.po_number||r.number}</td><td>${r.description}</td><td>${r.vessel}</td><td>${r.supplier}</td><td>${r.amount_usd}</td><td>${r.status}</td>`; reqBody.appendChild(tr); 
+      const tr=document.createElement("tr"); 
+      // Added Actions Column: Recover and Delete Forever
+      tr.innerHTML=`
+        <td>${r.po_number||r.number}</td>
+        <td>${r.description}</td>
+        <td>${r.vessel}</td>
+        <td>${r.supplier}</td>
+        <td>${r.amount_usd}</td>
+        <td><span class="tag red">Cancelled</span></td>
+        <td>
+            <button class="small-action warning recover-req" data-id="${r.id}" title="Recover">↺</button>
+            <button class="small-action danger perm-delete-req" data-id="${r.id}" title="Delete Forever">X</button>
+        </td>`; 
+      reqBody.appendChild(tr); 
   });
+  
+  // Attach Cancelled Table Listeners
+  document.querySelectorAll(".recover-req").forEach(b=>b.onclick=async()=>{ if(confirm("Recover this order?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"open"})}); await afterDataLoad(); }});
+  document.querySelectorAll(".perm-delete-req").forEach(b=>b.onclick=async()=>{ deleteItem(b.dataset.id, 'req'); });
 }
 
 function renderDelivered() {
@@ -718,7 +752,7 @@ async function editReq(id) {
     document.getElementById("reqCategory").value=r.category; document.getElementById("reqSupplierSelect").value=r.supplier;
     document.getElementById("reqDateOrdered").value=r.date_ordered; document.getElementById("reqExpected").value=r.expected||"";
     document.getElementById("reqTotal").value=r.amount_original; document.getElementById("reqCurrency").value=r.currency;
-    document.getElementById("reqTracking").value=r.tracking_url||""; // Added tracking population
+    document.getElementById("reqTracking").value=r.tracking_url||"";
     document.getElementById("reqUrgency").value=r.urgency; document.getElementById("reqPaid").checked=!!r.paid;
     document.getElementById("reqFormTitle").scrollIntoView({behavior:"smooth"});
     document.querySelector("[data-tab='requisitions']").click();
@@ -770,7 +804,7 @@ document.getElementById("saveReqBtn").onclick = async () => {
         category: document.getElementById("reqCategory").value, supplier: document.getElementById("reqSupplierSelect").value,
         date_ordered: document.getElementById("reqDateOrdered").value, expected: document.getElementById("reqExpected").value,
         amount: document.getElementById("reqTotal").value, currency: document.getElementById("reqCurrency").value,
-        tracking_url: document.getElementById("reqTracking").value, // Added tracking save
+        tracking_url: document.getElementById("reqTracking").value,
         urgency: document.getElementById("reqUrgency").value, paid: document.getElementById("reqPaid").checked
     };
     if(!payload.number || !payload.vessel || !payload.amount) { alert("Missing fields"); return; }
@@ -939,16 +973,24 @@ function updateChart() {
     const xAxisKey = document.getElementById("chartXAxis").value;
     const yAxisKey = document.getElementById("chartYAxis").value;
     const chartType = document.getElementById("chartType").value;
+    // New Filters
+    const fMonth = document.getElementById("chartFilterMonth").value;
+    const fYear = document.getElementById("chartFilterYear").value;
 
     let dataMap = {};
     const process = (item) => {
+        // FILTERING LOGIC
+        const d = parseDateSafe(item.date_ordered || item.landed_date);
+        if(!d) return; 
+        if(fYear && d.getFullYear() != fYear) return;
+        if(fMonth && (d.getMonth() + 1) != fMonth) return;
+
         let key = "Unknown";
         if(xAxisKey === 'vessel') key = item.vessel;
         else if(xAxisKey === 'category') key = item.category || "Other";
         else if(xAxisKey === 'supplier') key = item.supplier || item.workshop || "Unknown";
         else if(xAxisKey === 'month' || xAxisKey === 'year') {
-            const d = parseDateSafe(item.date_ordered || item.landed_date);
-            if(d) key = xAxisKey==='month' ? (d.getMonth()+1) : d.getFullYear();
+            key = xAxisKey==='month' ? (d.getMonth()+1) : d.getFullYear();
         }
         if(!dataMap[key]) dataMap[key] = { sum: 0, count: 0 };
         dataMap[key].sum += item.amount_usd || 0;
@@ -1048,12 +1090,11 @@ async function loadAdminData() {
             </tr>`;
         });
         
-        // Audit Log Fetch with Safety Check
+        // Audit Log Fetch
         const auditTable = document.querySelector("#auditTable tbody");
         auditTable.innerHTML = "";
         try {
             const logs = await apiFetch("/api/audit");
-            // Expecting array: [{user: 'admin', action: 'Created Order', target: 'PO-123', date: '2025...'}]
             if(Array.isArray(logs)) {
                 logs.slice(0, 50).forEach(log => {
                     auditTable.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${log.date}</td></tr>`;
@@ -1062,7 +1103,6 @@ async function loadAdminData() {
                 auditTable.innerHTML = "<tr><td colspan='4' style='color:#666; font-style:italic;'>Log empty or unavailable</td></tr>";
             }
         } catch(e) {
-            // This prevents crash if backend doesn't have the audit endpoint yet
             auditTable.innerHTML = "<tr><td colspan='4' style='color:#666; font-style:italic;'>No audit log available (Requires backend update)</td></tr>";
         }
     }
