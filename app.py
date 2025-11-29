@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Bulk Actions, Export support, Smart Backup
+FIXED: Audit Log, Tracking URL, Bulk Actions, Smart Backup
 """
 
 import os
@@ -48,7 +48,7 @@ SHEETS: Dict[str, List[str]] = {
         "date_ordered", "expected",
         "amount_original", "currency", "amount_usd",
         "paid", "delivered", "status",
-        "po_number", "remarks", "urgency",
+        "po_number", "remarks", "urgency", "tracking_url",  # Added tracking_url
         "created_by", "created_at", "updated_at"
     ],
     "landings": [
@@ -64,7 +64,7 @@ SHEETS: Dict[str, List[str]] = {
     ],
     "categories": ["id", "name", "abbr", "created_at"],
     "vessels": ["id", "name", "created_at"],
-    "logs": ["timestamp", "action", "details"],
+    "logs": ["timestamp", "user", "action", "target", "details"], # Enhanced logging
 }
 
 # -------------------------------------------------
@@ -192,19 +192,27 @@ def delete_row_by_id(sheet: str, row_id: int) -> bool:
             return True
     return False
 
-def log_action(action: str, details: str = "") -> None:
-    try:
-        append_row("logs", {"timestamp": now_iso(), "action": action, "details": details})
-    except:
-        pass
-
 # -------------------------------------------------
-# Auth helpers
+# Auth helpers & Logging
 # -------------------------------------------------
 def current_user() -> Optional[Dict[str, str]]:
     if "username" not in session:
         return None
     return {"username": session["username"], "role": session.get("role", "user")}
+
+def log_action(action: str, target: str = "", details: str = "") -> None:
+    try:
+        u = current_user()
+        username = u["username"] if u else "system"
+        append_row("logs", {
+            "timestamp": now_iso(),
+            "user": username,
+            "action": action,
+            "target": target,
+            "details": details
+        })
+    except:
+        pass
 
 def require_login():
     if not current_user():
@@ -298,7 +306,7 @@ def create_backup_file(suffix:str="") -> str:
     except:
         pass
         
-    log_action("backup_create", name)
+    log_action("Backup Created", target=name, details="Auto or Manual backup")
     return path
 
 LAST_AUTO_CHECK_TIME = 0
@@ -365,7 +373,7 @@ def login():
         return jsonify({"error": "invalid_credentials"}), 401
     session["username"] = username
     session["role"] = (u.get("role") or "user").lower()
-    log_action("login", username)
+    log_action("Login", target=username)
     return jsonify({"ok": True, "username": username, "role": session["role"]})
 
 @app.post("/api/logout")
@@ -378,6 +386,24 @@ def session_info():
     u = current_user()
     if not u: return jsonify({"logged_in": False}), 401
     return jsonify({"logged_in": True, **u})
+
+# --- Audit Log (New) ---
+@app.get("/api/audit")
+def get_audit_log():
+    if require_admin(): return require_admin()
+    rows = read_rows("logs")
+    # Sort by timestamp desc
+    rows.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
+    
+    out = []
+    for r in rows:
+        out.append({
+            "user": r.get("user") or "system",
+            "action": r.get("action"),
+            "target": r.get("target") or "",
+            "date": r.get("timestamp")
+        })
+    return jsonify(out)
 
 # --- FX ---
 @app.get("/api/currencies")
@@ -442,7 +468,7 @@ def api_restore_backup(name: str):
     fp = os.path.join(BACKUP_DIR, name)
     if not os.path.exists(fp): return jsonify({"error": "not_found"}), 404
     shutil.copy2(fp, DB_FILE)
-    log_action("backup_restore", name)
+    log_action("Restore Backup", target=name)
     return jsonify({"ok": True})
 
 @app.delete("/api/backups/<name>")
@@ -472,6 +498,7 @@ def upload_overwrite_db():
     shutil.copy2(tmp_path, DB_FILE)
     os.remove(tmp_path)
     ensure_db()
+    log_action("Upload DB", details="Overwrote DB via upload")
     return jsonify({"ok": True})
 
 # -------------------------------------------------
@@ -491,6 +518,7 @@ def add_category():
     if any((c.get("abbr") or "").upper() == abbr for c in cats): return jsonify({"error": "duplicate_abbr"}), 409
     row = {"id": next_id("categories"),"name": name,"abbr": abbr,"created_at": now_iso()}
     append_row("categories", row)
+    log_action("Add Category", target=name)
     return jsonify(row)
 @app.patch("/api/categories/<int:cid>")
 def edit_category(cid: int):
@@ -521,6 +549,7 @@ def add_vessel():
     if any((v.get("name") or "").strip().lower() == name.lower() for v in vs): return jsonify({"error": "duplicate_name"}), 409
     row = {"id": next_id("vessels"), "name": name, "created_at": now_iso()}
     append_row("vessels", row)
+    log_action("Add Vessel", target=name)
     return jsonify(row)
 @app.patch("/api/vessels/<int:vid>")
 def edit_vessel(vid: int):
@@ -548,6 +577,7 @@ def add_user():
     if require_admin(): return require_admin()
     data=request.json
     append_row("users", {"username":data["username"],"password_hash":hash_pw(data["password"]),"role":data["role"],"created_at":now_iso()})
+    log_action("Add User", target=data["username"])
     return jsonify({"ok":True})
 @app.delete("/api/users/<username>")
 def delete_user_api(username):
@@ -555,7 +585,10 @@ def delete_user_api(username):
     if username=="admin": return jsonify({"error":"cannot_delete_admin"}),400
     wb=get_wb(); ws=wb["users"]; u_col=1
     for r in range(2,ws.max_row+1):
-        if ws.cell(r,u_col).value==username: ws.delete_rows(r,1); wb.save(DB_FILE); return jsonify({"ok":True})
+        if ws.cell(r,u_col).value==username: 
+            ws.delete_rows(r,1); wb.save(DB_FILE)
+            log_action("Delete User", target=username)
+            return jsonify({"ok":True})
     return jsonify({"error":"not_found"}),404
 
 # --- REQUISITIONS & BULK ---
@@ -571,14 +604,23 @@ def add_requisition():
     row={**d, "id":next_id("requisitions"), "created_by":current_user()["username"], "created_at":now_iso()}
     row["amount_usd"] = round(to_usd(float(d.get("amount") or 0), d.get("currency")),2)
     append_row("requisitions", row)
+    log_action("Add Req", target=str(row.get("po_number") or row.get("number")), details=row.get("description"))
     return jsonify(row)
 @app.patch("/api/requisitions/<int:rid>")
 def edit_requisition(rid):
     if require_login(): return require_login()
     d=request.json
     if "amount" in d: d["amount_usd"] = round(to_usd(float(d["amount"]), d.get("currency","USD")),2)
-    if update_row_by_id("requisitions", rid, d): return jsonify({"ok":True})
+    
+    if update_row_by_id("requisitions", rid, d): 
+        # Check if status was updated
+        if "status" in d:
+            log_action("Status Change", target=f"Req {rid}", details=d["status"])
+        else:
+            log_action("Edit Req", target=f"Req {rid}")
+        return jsonify({"ok":True})
     return jsonify({"error":"not_found"}),404
+
 @app.patch("/api/requisitions/<int:rid>/toggle_paid")
 def toggle_paid_req(rid):
     if require_login(): return require_login()
@@ -587,10 +629,12 @@ def toggle_paid_req(rid):
     new_p = 0 if int(row.get("paid")or 0) else 1
     update_row_by_id("requisitions", rid, {"paid":new_p})
     return jsonify({"ok":True})
+
 @app.delete("/api/requisitions/<int:rid>")
 def delete_req(rid):
     if require_admin(): return require_admin()
     delete_row_by_id("requisitions", rid)
+    log_action("Delete Req", target=f"Req {rid}")
     return jsonify({"ok":True})
 
 @app.post("/api/requisitions/bulk")
@@ -615,7 +659,7 @@ def bulk_req_action():
         if update_row_by_id("requisitions", int(rid), updates):
             count += 1
     
-    log_action("bulk_req", f"{action} on {count} items")
+    log_action("Bulk Action", target=action, details=f"Affected {count} orders")
     return jsonify({"ok": True, "updated": count})
 
 # --- LANDINGS & BULK ---
@@ -631,6 +675,7 @@ def add_landing():
     row={**d, "id":next_id("landings"), "created_by":current_user()["username"], "created_at":now_iso()}
     row["amount_usd"] = round(to_usd(float(d.get("amount") or 0), d.get("currency")),2)
     append_row("landings", row)
+    log_action("Add Landing", target=row.get("vessel"), details=row.get("item"))
     return jsonify(row)
 @app.patch("/api/landings/<int:lid>")
 def edit_landing(lid):
@@ -638,6 +683,7 @@ def edit_landing(lid):
     d=request.json
     if "amount" in d: d["amount_usd"] = round(to_usd(float(d["amount"]), d.get("currency","USD")),2)
     update_row_by_id("landings", lid, d)
+    log_action("Edit Landing", target=f"Land {lid}")
     return jsonify({"ok":True})
 @app.patch("/api/landings/<int:lid>/toggle_paid")
 def toggle_paid_land(lid):
@@ -651,6 +697,7 @@ def toggle_paid_land(lid):
 def delete_land(lid):
     if require_admin(): return require_admin()
     delete_row_by_id("landings", lid)
+    log_action("Delete Landing", target=f"Land {lid}")
     return jsonify({"ok":True})
 
 @app.post("/api/landings/bulk")
@@ -674,7 +721,7 @@ def bulk_land_action():
         if update_row_by_id("landings", int(lid), updates):
             count += 1
             
-    log_action("bulk_land", f"{action} on {count} items")
+    log_action("Bulk Land Action", target=action, details=f"Affected {count} items")
     return jsonify({"ok": True, "updated": count})
 
 # --- DIRECTORY ---
@@ -686,6 +733,7 @@ def add_directory_std():
     d=request.json
     row={**d, "id":next_id("directory"), "created_by":current_user()["username"], "created_at":now_iso()}
     append_row("directory", row)
+    log_action("Add Contact", target=row.get("name"))
     return jsonify(row)
 @app.post("/api/directory/quick")
 def add_dir_quick():
@@ -699,6 +747,7 @@ def edit_directory_entry(did: int):
 def del_dir(did):
     if require_admin(): return require_admin()
     delete_row_by_id("directory", did)
+    log_action("Delete Contact", target=f"Dir {did}")
     return jsonify({"ok":True})
 
 # -------------------------------------------------
