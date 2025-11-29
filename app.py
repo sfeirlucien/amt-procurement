@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Smart Auto-Backup (Works on Sleeping/Free Servers)
+FIXED: Bulk Actions, Export support, Smart Backup
 """
 
 import os
@@ -281,7 +281,6 @@ def to_usd(amount: float, currency: str) -> float:
 # Backup Logic (Smart Check)
 # -------------------------------------------------
 def make_backup_filename(suffix:str="") -> str:
-    # microseconds included for uniqueness
     ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
     return f"office_ops_backup_{ts}{suffix}.xlsx"
 
@@ -292,7 +291,6 @@ def create_backup_file(suffix:str="") -> str:
     path = os.path.join(BACKUP_DIR, name)
     shutil.copy2(DB_FILE, path)
     
-    # Cleanup: Keep only last 20 backups
     try:
         all_backups = sorted([os.path.join(BACKUP_DIR, f) for f in os.listdir(BACKUP_DIR) if f.endswith(".xlsx")])
         while len(all_backups) > 20:
@@ -303,63 +301,39 @@ def create_backup_file(suffix:str="") -> str:
     log_action("backup_create", name)
     return path
 
-# Global variable to limit how often we check disk (don't check every millisecond)
 LAST_AUTO_CHECK_TIME = 0
 
 def check_and_run_smart_backup():
-    """
-    Checks if an auto-backup is needed. 
-    1. If no AUTO backup exists -> create one.
-    2. If last AUTO backup is older than 12 hours -> create one.
-    """
     global LAST_AUTO_CHECK_TIME
-    # Only check once every 5 minutes to avoid slowing down the server
     if time.time() - LAST_AUTO_CHECK_TIME < 300:
         return
 
     LAST_AUTO_CHECK_TIME = time.time()
-    
     ensure_db()
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
-    # Filter for auto backups only
     auto_backups = [f for f in os.listdir(BACKUP_DIR) if "_AUTO" in f and f.endswith(".xlsx")]
-    
     should_backup = False
     
     if not auto_backups:
-        # Case 1: No auto backups exist yet.
         should_backup = True
     else:
-        # Case 2: Check if the newest one is too old
         try:
-            auto_backups.sort(reverse=True) # newest first based on name timestamp
+            auto_backups.sort(reverse=True)
             newest_file = os.path.join(BACKUP_DIR, auto_backups[0])
-            # Check file creation/mod time
             mtime = os.path.getmtime(newest_file)
             age_seconds = time.time() - mtime
-            
             if age_seconds > AUTO_BACKUP_INTERVAL_SECONDS:
                 should_backup = True
         except:
-            # If error checking time, just be safe and backup
             should_backup = True
             
     if should_backup:
         print(f"[{datetime.utcnow()}] Triggering Smart Auto-Backup...")
         create_backup_file(suffix="_AUTO")
 
-# -------------------------------------------------
-# Middleware (The Smart Trigger)
-# -------------------------------------------------
 @app.before_request
 def trigger_backup_check():
-    """
-    Before handling any request (like loading the page or logging in),
-    check if we need to backup. This ensures backups happen even if
-    the server slept for a week.
-    """
-    # Only trigger on API calls or HTML loads (ignore static assets like css/js to save speed)
     if request.path == "/" or request.path.startswith("/api/"):
         try:
             check_and_run_smart_backup()
@@ -415,7 +389,7 @@ def api_fx():
     return jsonify({"base": "USD", "rates": fetch_fx_rates("USD")})
 
 # -------------------------------------------------
-# Backup routes (ADMIN ONLY)
+# Backup routes
 # -------------------------------------------------
 @app.get("/api/backup")
 def download_backup_legacy():
@@ -501,7 +475,7 @@ def upload_overwrite_db():
     return jsonify({"ok": True})
 
 # -------------------------------------------------
-# Categories (admin)
+# Categories
 # -------------------------------------------------
 @app.get("/api/categories")
 def get_categories(): return jsonify(read_rows("categories"))
@@ -584,6 +558,7 @@ def delete_user_api(username):
         if ws.cell(r,u_col).value==username: ws.delete_rows(r,1); wb.save(DB_FILE); return jsonify({"ok":True})
     return jsonify({"error":"not_found"}),404
 
+# --- REQUISITIONS & BULK ---
 @app.get("/api/requisitions")
 def list_requisitions():
     rows=read_rows("requisitions")
@@ -618,6 +593,32 @@ def delete_req(rid):
     delete_row_by_id("requisitions", rid)
     return jsonify({"ok":True})
 
+@app.post("/api/requisitions/bulk")
+def bulk_req_action():
+    if require_login(): return require_login()
+    data = request.json or {}
+    ids = data.get("ids", [])
+    action = data.get("action", "")
+    if not ids or not action: return jsonify({"error":"missing_args"}), 400
+    
+    updates = {}
+    if action == "mark_paid": updates = {"paid": 1}
+    elif action == "mark_unpaid": updates = {"paid": 0}
+    elif action == "mark_delivered": updates = {"delivered": 1}
+    elif action == "mark_undelivered": updates = {"delivered": 0}
+    else: return jsonify({"error":"invalid_action"}), 400
+    
+    updates["updated_at"] = now_iso()
+    count = 0
+    # Process Loop
+    for rid in ids:
+        if update_row_by_id("requisitions", int(rid), updates):
+            count += 1
+    
+    log_action("bulk_req", f"{action} on {count} items")
+    return jsonify({"ok": True, "updated": count})
+
+# --- LANDINGS & BULK ---
 @app.get("/api/landings")
 def list_landings():
     rows=read_rows("landings")
@@ -652,6 +653,31 @@ def delete_land(lid):
     delete_row_by_id("landings", lid)
     return jsonify({"ok":True})
 
+@app.post("/api/landings/bulk")
+def bulk_land_action():
+    if require_login(): return require_login()
+    data = request.json or {}
+    ids = data.get("ids", [])
+    action = data.get("action", "")
+    if not ids or not action: return jsonify({"error":"missing_args"}), 400
+    
+    updates = {}
+    if action == "mark_paid": updates = {"paid": 1}
+    elif action == "mark_unpaid": updates = {"paid": 0}
+    elif action == "mark_delivered": updates = {"delivered": 1}
+    elif action == "mark_undelivered": updates = {"delivered": 0}
+    else: return jsonify({"error":"invalid_action"}), 400
+    
+    updates["updated_at"] = now_iso()
+    count = 0
+    for lid in ids:
+        if update_row_by_id("landings", int(lid), updates):
+            count += 1
+            
+    log_action("bulk_land", f"{action} on {count} items")
+    return jsonify({"ok": True, "updated": count})
+
+# --- DIRECTORY ---
 @app.get("/api/directory")
 def get_dir(): return jsonify(read_rows("directory"))
 @app.post("/api/directory")
