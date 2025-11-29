@@ -469,8 +469,15 @@
         </div>
         
         <div class="card">
-           <h3>Activity Log (Who did what?)</h3>
-           <div class="table-responsive">
+           <h3>Activity Log</h3>
+           <div class="flex-row" style="margin-bottom:8px;">
+               <div style="flex:1;"><select id="auditFYear"><option value="">Year</option></select></div>
+               <div style="flex:1;"><select id="auditFMonth"><option value="">Month</option></select></div>
+               <div style="flex:1;"><input type="number" id="auditFDay" placeholder="Day (1-31)" min="1" max="31"></div>
+               <div style="flex:0;"><button id="auditApplyBtn">Filter</button></div>
+           </div>
+           <!-- Added max-height container -->
+           <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
               <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
            </div>
         </div>
@@ -510,6 +517,8 @@ let currentUser=null, allReqs=[], allLandings=[], vessels=[];
 let editingReqId=null, editingLandId=null, dirPopupType=null, currencyList=["USD"];
 let selectedIds = new Set(); let currentBulkType = null;
 let myChart = null; 
+// Audit Log Cache
+let allAuditLogs = [];
 
 /* ================== DARK MODE ================== */
 const darkModeBtn = document.getElementById("darkModeBtn");
@@ -551,16 +560,23 @@ async function loadOptions(){
     fillVes("reqVessel"); fillVes("landVessel"); fillVes("ovVesselFilter");
 
     const mSel = document.getElementById("ovMonthFilter");
+    const aMSel = document.getElementById("auditFMonth");
     if(mSel && mSel.options.length <= 1) {
-        ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m,i)=> mSel.add(new Option(m, i+1)));
+        ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m,i)=> {
+            const val = i+1;
+            mSel.add(new Option(m, val));
+            if(aMSel) aMSel.add(new Option(m, val));
+        });
     }
     const ySel = document.getElementById("ovYearFilter");
     const chartYSel = document.getElementById("chartFilterYear");
+    const auditYSel = document.getElementById("auditFYear");
     if(ySel && ySel.options.length <= 1) {
         const y = new Date().getFullYear();
         for(let i=y; i>=y-3; i--) {
              ySel.add(new Option(i, i));
              if(chartYSel) chartYSel.add(new Option(i, i));
+             if(auditYSel) auditYSel.add(new Option(i, i));
         }
     }
 
@@ -602,7 +618,6 @@ function renderReqTable() {
         const moneyDisplay = `<span class="money-tip" title="Original: ${r.currency} ${r.amount_original}">${r.amount_usd.toFixed(2)}</span>`;
         const supDisplay = `<span class="clickable-supplier" onclick="showSupplierHistory('${r.supplier}')">${r.supplier}</span>`;
         
-        // MODIFIED: COPY TEXT LOGIC
         const paidStatus = r.paid ? "Paid" : "Unpaid";
         const copyText = `PO: ${r.po_number||r.number}\nDesc: ${r.description}\nSupplier: ${r.supplier}\nExpected: ${r.expected||"N/A"}\nAmount: ${formatMoney(r.amount_usd)}\nPayment: ${paidStatus}`;
         
@@ -615,8 +630,6 @@ function renderReqTable() {
         }
         if(!r.paid) actionBtns += `<button class="small-action toggle-paid" data-id="${r.id}" title="Mark Paid">$</button>`;
         if(!r.delivered) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
-        
-        // ADDED: Cancel Button (Circle Slash Icon)
         actionBtns += `<button class="small-action danger toggle-cancel" data-id="${r.id}" title="Cancel Order">⊘</button>`;
         
         tr.innerHTML = `
@@ -643,7 +656,6 @@ function renderReqTable() {
     document.querySelectorAll(".delete-req").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'req'));
     document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
     document.querySelectorAll(".toggle-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
-    // Cancel Action
     document.querySelectorAll(".toggle-cancel").forEach(b=>b.onclick=async()=>{ if(confirm("Move to Cancelled?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }});
     attachBulkListeners('req');
 }
@@ -696,7 +708,6 @@ function renderCancelled() {
   const reqBody=document.querySelector("#reqCancelledTable tbody"); reqBody.innerHTML="";
   allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ 
       const tr=document.createElement("tr"); 
-      // Added Actions Column: Recover and Delete Forever
       tr.innerHTML=`
         <td>${r.po_number||r.number}</td>
         <td>${r.description}</td>
@@ -710,8 +721,6 @@ function renderCancelled() {
         </td>`; 
       reqBody.appendChild(tr); 
   });
-  
-  // Attach Cancelled Table Listeners
   document.querySelectorAll(".recover-req").forEach(b=>b.onclick=async()=>{ if(confirm("Recover this order?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"open"})}); await afterDataLoad(); }});
   document.querySelectorAll(".perm-delete-req").forEach(b=>b.onclick=async()=>{ deleteItem(b.dataset.id, 'req'); });
 }
@@ -1095,22 +1104,44 @@ async function loadAdminData() {
         });
         
         // Audit Log Fetch
-        const auditTable = document.querySelector("#auditTable tbody");
-        auditTable.innerHTML = "";
         try {
             const logs = await apiFetch("/api/audit");
             if(Array.isArray(logs)) {
-                logs.slice(0, 50).forEach(log => {
-                    auditTable.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${log.date}</td></tr>`;
-                });
-            } else {
-                auditTable.innerHTML = "<tr><td colspan='4' style='color:#666; font-style:italic;'>Log empty or unavailable</td></tr>";
+                allAuditLogs = logs;
+                renderAuditLog();
             }
-        } catch(e) {
-            auditTable.innerHTML = "<tr><td colspan='4' style='color:#666; font-style:italic;'>No audit log available (Requires backend update)</td></tr>";
-        }
+        } catch(e) { console.error(e); }
     }
 }
+
+// AUDIT LOG FILTER RENDER
+function renderAuditLog() {
+    const tbody = document.querySelector("#auditTable tbody");
+    tbody.innerHTML = "";
+    
+    const fY = document.getElementById("auditFYear").value;
+    const fM = document.getElementById("auditFMonth").value;
+    const fD = document.getElementById("auditFDay").value;
+
+    const filtered = allAuditLogs.filter(log => {
+        if(!log.date) return false;
+        const d = new Date(log.date);
+        if(fY && d.getFullYear() != fY) return false;
+        if(fM && (d.getMonth()+1) != fM) return false;
+        if(fD && d.getDate() != fD) return false;
+        return true;
+    });
+
+    if(filtered.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; color:#777;'>No logs found</td></tr>";
+        return;
+    }
+
+    filtered.forEach(log => {
+        tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${log.date.replace("T"," ")}</td></tr>`;
+    });
+}
+document.getElementById("auditApplyBtn").onclick = renderAuditLog;
 
 document.getElementById("addCatBtn").onclick=async()=>{ await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name:document.getElementById("catName").value, abbr:document.getElementById("catAbbr").value})}); await loadAdminData(); };
 document.getElementById("addVesselBtn").onclick=async()=>{ await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name:document.getElementById("vesselName").value})}); await loadAdminData(); };
