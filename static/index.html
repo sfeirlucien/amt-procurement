@@ -450,6 +450,15 @@
                 <button id="createBackupBtn" class="success">Create Server Backup</button>
                 <button id="refreshBackupsBtn" class="secondary">Refresh List</button>
             </div>
+            
+            <div style="margin-bottom:12px; border-top: 1px solid var(--border-color); padding-top:12px;">
+               <label style="display:flex; align-items:center; gap:8px;">
+                  <input type="file" id="uploadBackupInput" accept=".xlsx" style="width:auto;" />
+                  <button id="uploadBackupBtn" class="secondary" type="button">Upload (Overwrite)</button>
+               </label>
+            </div>
+            
+            <div id="backupError" class="error"></div>
             <table id="backupTable"><thead><tr><th>Name</th><th>Date</th><th>Size</th><th>Act</th></tr></thead><tbody></tbody></table>
         </div>
       </div>
@@ -468,8 +477,8 @@ async function apiFetch(url, options = {}) {
 let currentUser=null, allReqs=[], allLandings=[], vessels=[];
 let editingReqId=null, editingLandId=null, dirPopupType=null, currencyList=["USD"];
 let selectedIds = new Set(); let currentBulkType = null;
-let myChart = null; // for Chart.js
-let editingVesselId=null, editingCatId=null; // Fixed missing vars
+let myChart = null; 
+let editingVesselId=null, editingCatId=null;
 
 /* ================== DARK MODE ================== */
 const darkModeBtn = document.getElementById("darkModeBtn");
@@ -609,12 +618,9 @@ function renderCancelled() {
 
 function renderDelivered() {
   const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
-  // Filter logic for delivered tab
   const paidF=document.getElementById("filterDeliveredReqPaid").value;
   const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
   
-  // Combine Reqs and Landings for Delivered History? Or just Reqs? 
-  // Based on your UI, it seems like separate tabs, but let's consolidate Reqs here.
   allReqs.filter(r=>r.delivered).forEach(r=>{
       if(paidF!=="" && String(r.paid)!=paidF) return;
       if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
@@ -671,9 +677,25 @@ async function deleteItem(id, type) {
     if(type==='req') endpoint = `/api/requisitions/${id}`;
     if(type==='land') endpoint = `/api/landings/${id}`;
     if(type==='dir') endpoint = `/api/directory/${id}`;
+    if(type==='cat') endpoint = `/api/categories/${id}`;
+    if(type==='ves') endpoint = `/api/vessels/${id}`;
+    if(type==='user') endpoint = `/api/users/${id}`;
+    if(type==='backup') endpoint = `/api/backups/${encodeURIComponent(id)}`;
     
-    try { await apiFetch(endpoint, {method:"DELETE"}); await afterDataLoad(); } 
+    try { await apiFetch(endpoint, {method:"DELETE"}); 
+          if(type==='backup') await loadAdminData(); 
+          else await afterDataLoad(); 
+    } 
     catch(e) { alert(e.error === "admin_required" ? "Admin only" : "Error deleting"); }
+}
+
+async function restoreBackup(name) {
+    if(!confirm("Restore this backup? Current data will be replaced.")) return;
+    try {
+        await apiFetch(`/api/backups/${encodeURIComponent(name)}/restore`, {method:"POST"});
+        alert("Restored successfully. Refreshing...");
+        await afterDataLoad();
+    } catch(e) { alert("Error restoring backup."); }
 }
 
 document.getElementById("saveReqBtn").onclick = async () => {
@@ -875,7 +897,20 @@ async function loadAdminData() {
         us.forEach(u=>uT.innerHTML+=`<tr><td>${u.username}</td><td>${u.role}</td><td><button onclick="deleteItem('${u.username}', 'user')">Del</button></td></tr>`);
 
         const bT=document.querySelector("#backupTable tbody"); bT.innerHTML="";
-        backs.forEach(b=>bT.innerHTML+=`<tr><td>${b.name}</td><td>${b.created_at}</td><td>${(b.size/1024).toFixed(1)}KB</td><td><button onclick="window.open('/api/backups/${b.name}/download')">DL</button></td></tr>`);
+        backs.forEach(b=>{
+            // RE-ADDED: Three buttons (Download, Restore, Delete)
+            bT.innerHTML+=`
+            <tr>
+              <td>${b.name}</td>
+              <td>${b.created_at}</td>
+              <td>${(b.size/1024).toFixed(1)}KB</td>
+              <td>
+                <button class="secondary" style="padding:2px 6px;" onclick="window.open('/api/backups/${b.name}/download')">DL</button>
+                <button class="secondary" style="padding:2px 6px;" onclick="restoreBackup('${b.name}')">Restore</button>
+                <button class="danger" style="padding:2px 6px;" onclick="deleteItem('${b.name}', 'backup')">Del</button>
+              </td>
+            </tr>`;
+        });
     }
 }
 // Simple admin adds (condensed)
@@ -883,19 +918,25 @@ document.getElementById("addCatBtn").onclick=async()=>{ await apiFetch("/api/cat
 document.getElementById("addVesselBtn").onclick=async()=>{ await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name:document.getElementById("vesselName").value})}); await loadAdminData(); };
 document.getElementById("saveUserBtn").onclick=async()=>{ await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username:document.getElementById("adminUsername").value, password:document.getElementById("adminPassword").value, role:document.getElementById("adminRole").value})}); await loadAdminData(); };
 document.getElementById("createBackupBtn").onclick=async()=>{ await apiFetch("/api/backup/create",{method:"POST"}); await loadAdminData(); };
+document.getElementById("downloadBackupBtn").onclick=()=>{ window.open("/api/backup/download", "_blank"); }; // Re-added listener
 document.getElementById("refreshBackupsBtn").onclick=loadAdminData;
 
+// RE-ADDED: Upload Listener
+document.getElementById("uploadBackupBtn").onclick=async()=>{
+  const input=document.getElementById("uploadBackupInput"); const err=document.getElementById("backupError"); err.textContent="";
+  if(!input || !input.files || !input.files.length){ err.textContent="Please choose .xlsx file."; return; }
+  const file=input.files[0]; if(!file.name.toLowerCase().endsWith(".xlsx")){ err.textContent="Only .xlsx allowed."; return; }
+  const fd=new FormData(); fd.append("file", file);
+  try{ const res=await fetch("/api/upload", {method:"POST", body: fd, credentials:"same-origin"}); if(!res.ok){ let j={}; try{ j=await res.json(); }catch{} throw j; } input.value=""; await afterDataLoad(); await loadAdminData(); alert("Uploaded."); }catch(e){ err.textContent="Upload failed."; }
+};
+
 async function updateDashboard() {
-  // Simple dashboard update
   document.getElementById("summaryOpenReqNotDel").textContent = allReqs.filter(r=>!r.delivered && (r.status||'open')==='open').length;
   document.getElementById("summaryOpenReqUnpaid").textContent = allReqs.filter(r=>!r.paid && (r.status||'open')==='open').length;
-  
-  // Update recent table
   const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
   allReqs.slice(-5).reverse().forEach(r=>t.innerHTML+=`<tr><td>${r.po_number||r.number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${r.amount_usd}</td><td>${r.status}</td></tr>`);
 }
 
-// Dir Popups
 function openDirPopup(type){ dirPopupType=type; document.getElementById("dirPopupBackdrop").classList.remove("hidden"); document.getElementById("dirPopup").classList.remove("hidden"); }
 function closeDirPopup(){ document.getElementById("dirPopupBackdrop").classList.add("hidden"); document.getElementById("dirPopup").classList.add("hidden"); }
 document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
