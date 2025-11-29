@@ -70,11 +70,6 @@
     .tag.red { background:#fee2e2; color:#991b1b; }
     .tag.gray { background:#f3f4f6; color:#374151; }
     
-    .status-pill { padding:2px 8px; border-radius:999px; font-size:11px; font-weight: 600; text-transform: uppercase; }
-    .status-open { background:#e0e7ff; color:#4338ca; }
-    .status-cancelled { background:#fee2e2; color:#991b1b; }
-    .status-delivered { background:#dcfce7; color:#15803d; }
-    
     /* Utilities */
     .error { color:#dc2626; font-size:13px; margin-top:6px; }
     .hidden { display:none !important; }
@@ -101,6 +96,10 @@
     .summary-item { flex:1 1 180px; background:var(--bg-body); padding:12px; border-radius:8px; border:1px solid var(--border-color); font-size:13px; }
     .summary-label { opacity: 0.7; font-size:12px; font-weight: 500; text-transform: uppercase; }
     .summary-value { font-size:20px; font-weight:700; margin-top:4px; }
+
+    /* Quick Action Buttons */
+    button.small-action { padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #059669; }
+    button.small-action:hover { background: #047857; }
 
     /* Mobile */
     @media (max-width: 768px) {
@@ -478,7 +477,6 @@ let currentUser=null, allReqs=[], allLandings=[], vessels=[];
 let editingReqId=null, editingLandId=null, dirPopupType=null, currencyList=["USD"];
 let selectedIds = new Set(); let currentBulkType = null;
 let myChart = null; 
-let editingVesselId=null, editingCatId=null;
 
 /* ================== DARK MODE ================== */
 const darkModeBtn = document.getElementById("darkModeBtn");
@@ -490,14 +488,18 @@ darkModeBtn.onclick = () => {
 
 /* ================== HELPER FUNCTIONS ================== */
 function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
-function quarterOfMonth(m){ if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4"; }
+function formatMoney(amount) { return parseFloat(amount || 0).toLocaleString('en-US', {style:'currency', currency:'USD'}); }
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => { alert("Copied: " + text); }); }
 
 /* ================== DATA LOADING ================== */
 async function afterDataLoad() {
   selectedIds.clear(); toggleBulkBar();
-  await loadOptions(); await loadData(); await updateDashboard(); await loadAdminData();
+  await loadOptions(); await loadData(); 
+  await updateDashboard(); // Updates simple counters & top 5
+  calculateOverviewTotals(); // Updates the financial breakdown
+  await loadAdminData();
 }
+
 async function loadOptions(){
     try { const res = await apiFetch("/api/currencies"); currencyList = res.currencies || ["USD"]; } catch {}
     const fillSel = (id) => {
@@ -514,6 +516,17 @@ async function loadOptions(){
         if(cur) el.value=cur;
     };
     fillVes("reqVessel"); fillVes("landVessel"); fillVes("ovVesselFilter");
+
+    // Fill Months/Years in Dashboard
+    const mSel = document.getElementById("ovMonthFilter");
+    if(mSel && mSel.options.length <= 1) {
+        ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m,i)=> mSel.add(new Option(m, i+1)));
+    }
+    const ySel = document.getElementById("ovYearFilter");
+    if(ySel && ySel.options.length <= 1) {
+        const y = new Date().getFullYear();
+        for(let i=y; i>=y-3; i--) ySel.add(new Option(i, i));
+    }
 
     try { const cats=await apiFetch("/api/categories"); 
        const cSel=document.getElementById("reqCategory"); if(cSel){ cSel.innerHTML='<option value="">Select</option>'; cats.forEach(c=>cSel.add(new Option(c.abbr, c.abbr))); }
@@ -556,6 +569,11 @@ function renderReqTable() {
         const copyBtn = `<button onclick="copyToClipboard('${copyText}')" class="secondary" style="padding:2px 6px; font-size:10px;" title="Copy">📋</button>`;
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
         
+        // FIXED: Added Single Row Action Buttons
+        let actionBtns = '';
+        if(!r.paid) actionBtns += `<button class="small-action toggle-paid" data-id="${r.id}" title="Mark Paid">$</button>`;
+        if(!r.delivered) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
+        
         tr.innerHTML = `
             <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
             <td>${r.po_number||""} ${copyBtn}</td>
@@ -567,13 +585,27 @@ function renderReqTable() {
             <td>${moneyDisplay}</td>
             <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
             <td>${r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'}</td>
-            <td><button class="edit-req" data-id="${r.id}">Edit</button><button class="danger delete-req" data-id="${r.id}">Del</button></td>
+            <td style="white-space:nowrap;">
+               ${actionBtns}
+               <button class="edit-req secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
+               <button class="danger delete-req" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">X</button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
     
+    // Attach Listeners
     document.querySelectorAll(".edit-req").forEach(b=>b.onclick=()=>editReq(b.dataset.id));
     document.querySelectorAll(".delete-req").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'req'));
+    // New Single Actions
+    document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{
+        await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) });
+        await afterDataLoad();
+    });
+    document.querySelectorAll(".toggle-del").forEach(b=>b.onclick=async()=>{
+        await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) });
+        await afterDataLoad();
+    });
     attachBulkListeners('req');
 }
 
@@ -590,6 +622,12 @@ function renderLandTable() {
         const tr = document.createElement("tr");
         const moneyDisplay = `<span class="money-tip" title="Original: ${r.currency} ${r.amount_original}">${r.amount_usd.toFixed(2)}</span>`;
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
+        
+        // FIXED: Added Single Row Action Buttons
+        let actionBtns = '';
+        if(!r.paid) actionBtns += `<button class="small-action toggle-land-paid" data-id="${r.id}">$</button>`;
+        if(!r.delivered) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
+
         tr.innerHTML = `
             <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
             <td>${r.vessel}</td>
@@ -600,12 +638,25 @@ function renderLandTable() {
             <td>${moneyDisplay}</td>
             <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
             <td>${r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'}</td>
-            <td><button class="edit-land" data-id="${r.id}">Edit</button><button class="danger delete-land" data-id="${r.id}">Del</button></td>
+            <td style="white-space:nowrap;">
+                ${actionBtns}
+                <button class="edit-land secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
+                <button class="danger delete-land" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">X</button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
     document.querySelectorAll(".edit-land").forEach(b=>b.onclick=()=>editLand(b.dataset.id));
     document.querySelectorAll(".delete-land").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'land'));
+    
+    document.querySelectorAll(".toggle-land-paid").forEach(b=>b.onclick=async()=>{
+        await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) });
+        await afterDataLoad();
+    });
+    document.querySelectorAll(".toggle-land-del").forEach(b=>b.onclick=async()=>{
+        await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) });
+        await afterDataLoad();
+    });
     attachBulkListeners('land');
 }
 
@@ -625,7 +676,7 @@ function renderDelivered() {
       if(paidF!=="" && String(r.paid)!=paidF) return;
       if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
       const tr=document.createElement("tr");
-      tr.innerHTML=`<td>PO</td><td>${r.po_number||r.number}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.amount_usd}</td><td>${r.paid?'Yes':'No'}</td>`;
+      tr.innerHTML=`<td>PO</td><td>${r.po_number||r.number}</td><td>${r.description}</td><td>${r.supplier}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'Yes':'No'}</td>`;
       tbody.appendChild(tr);
   });
 }
@@ -658,6 +709,7 @@ async function editReq(id) {
     document.getElementById("reqTotal").value=r.amount_original; document.getElementById("reqCurrency").value=r.currency;
     document.getElementById("reqUrgency").value=r.urgency; document.getElementById("reqPaid").checked=!!r.paid;
     document.getElementById("reqFormTitle").scrollIntoView({behavior:"smooth"});
+    document.querySelector("[data-tab='requisitions']").click();
 }
 
 async function editLand(id) {
@@ -669,6 +721,7 @@ async function editLand(id) {
     document.getElementById("landLanded").value=r.landed_date||""; document.getElementById("landAmount").value=r.amount_original;
     document.getElementById("landCurrency").value=r.currency; document.getElementById("landPaid").checked=!!r.paid;
     document.getElementById("landFormTitle").scrollIntoView({behavior:"smooth"});
+    document.querySelector("[data-tab='landings']").click();
 }
 
 async function deleteItem(id, type) {
@@ -740,11 +793,82 @@ document.getElementById("cancelLandEditBtn").onclick = () => {
     document.querySelectorAll("#tab-landings input").forEach(i=>i.value="");
 };
 
-/* ================== FILTERS ================== */
+/* ================== FILTERS & DASHBOARD ================== */
 document.getElementById("applyReqFilterBtn").onclick=renderReqTable;
 document.getElementById("clearReqFilterBtn").onclick=()=>{ document.querySelectorAll("#tab-requisitions .filter-row select, #tab-requisitions .filter-row input").forEach(i=>i.value=""); renderReqTable(); };
 document.getElementById("applyLandingFilterBtn").onclick=renderLandTable;
 document.getElementById("applyDeliveredReqFilterBtn").onclick=renderDelivered;
+
+// FIXED: Dashboard Logic
+async function updateDashboard() {
+  document.getElementById("summaryOpenReqNotDel").textContent = allReqs.filter(r=>!r.delivered && (r.status||'open')==='open').length;
+  document.getElementById("summaryOpenReqUnpaid").textContent = allReqs.filter(r=>!r.paid && (r.status||'open')==='open').length;
+  document.getElementById("summaryOpenLandNotDel").textContent = allLandings.filter(r=>!r.delivered).length;
+  document.getElementById("summaryOpenLandUnpaid").textContent = allLandings.filter(r=>!r.paid).length;
+  
+  // Update Recent Table
+  const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
+  allReqs.slice(-5).reverse().forEach(r=>t.innerHTML+=`<tr><td>${r.po_number||r.number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>$${r.amount_usd.toFixed(2)}</td><td>${r.status||'open'}</td></tr>`);
+
+  // FIXED: Top 5 Suppliers
+  const supMap = {};
+  allReqs.forEach(r => {
+      const s = r.supplier || "Unknown";
+      supMap[s] = (supMap[s] || 0) + (r.amount_usd || 0);
+  });
+  const sorted = Object.entries(supMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  const ul = document.getElementById("ovTopSuppliers"); ul.innerHTML = "";
+  if(sorted.length === 0) ul.innerHTML = "<li>No data</li>";
+  sorted.forEach(([k,v]) => {
+      ul.innerHTML += `<li style="margin-bottom:4px; display:flex; justify-content:space-between; font-size:13px;"><span>${k}</span> <strong>$${v.toLocaleString()}</strong></li>`;
+  });
+}
+
+// FIXED: Financial Totals Logic
+document.getElementById("ovApplyTotalsBtn").onclick = calculateOverviewTotals;
+document.getElementById("ovClearTotalsBtn").onclick = () => {
+    ["ovTypeFilter","ovVesselFilter","ovPaidFilter","ovMonthFilter","ovYearFilter","ovCategoryFilter"].forEach(id => document.getElementById(id).value = "");
+    calculateOverviewTotals();
+};
+
+function calculateOverviewTotals() {
+    const typeF = document.getElementById("ovTypeFilter").value; // req, land
+    const vesF = document.getElementById("ovVesselFilter").value;
+    const paidF = document.getElementById("ovPaidFilter").value; // "1" or "0"
+    const monthF = document.getElementById("ovMonthFilter").value;
+    const yearF = document.getElementById("ovYearFilter").value;
+    const catF = document.getElementById("ovCategoryFilter").value;
+
+    let items = [];
+    if(typeF === 'req') items = [...allReqs];
+    else if(typeF === 'land') items = [...allLandings];
+    else items = [...allReqs, ...allLandings];
+
+    items = items.filter(i => {
+        if((i.status||'open') === 'cancelled') return false;
+        if(vesF && i.vessel !== vesF) return false;
+        if(paidF !== "" && String(!!i.paid) !== String(paidF === "1")) return false;
+        if(catF && i.category !== catF) return false; // Note: landings might not have category
+        
+        const d = parseDateSafe(i.date_ordered || i.landed_date);
+        if(yearF && (!d || d.getFullYear() != yearF)) return false;
+        if(monthF && (!d || (d.getMonth() + 1) != monthF)) return false;
+        return true;
+    });
+
+    const total = items.reduce((acc, c) => acc + (c.amount_usd || 0), 0);
+    const paid = items.filter(i => i.paid).reduce((acc, c) => acc + (c.amount_usd || 0), 0);
+    const unpaid = items.filter(i => !i.paid).reduce((acc, c) => acc + (c.amount_usd || 0), 0);
+
+    document.getElementById("ovAllTotal").textContent = formatMoney(total);
+    document.getElementById("ovPaidMonthTotal").textContent = formatMoney(paid);
+    document.getElementById("ovUnpaidMonthTotal").textContent = formatMoney(unpaid);
+    
+    // Year total (ignoring month filter)
+    let yearItems = (typeF==='land'?allLandings:allReqs).filter(i=>(i.status||'open')!=='cancelled' && i.paid);
+    if(yearF) yearItems = yearItems.filter(i=>{ const d=parseDateSafe(i.date_ordered||i.landed_date); return d && d.getFullYear()==yearF; });
+    document.getElementById("ovPaidYearTotal").textContent = formatMoney(yearItems.reduce((acc,c)=>acc+c.amount_usd,0));
+}
 
 /* ================== BULK ACTIONS ================== */
 function attachBulkListeners(type) {
@@ -791,7 +915,7 @@ function exportTableToCSV(tableId, filename) {
 document.getElementById("exportReqBtn").onclick=()=>exportTableToCSV("reqTable", "orders.csv");
 document.getElementById("exportLandBtn").onclick=()=>exportTableToCSV("landingTable", "landings.csv");
 
-/* ================== CHART OPTION 1 ================== */
+/* ================== CHART ================== */
 document.getElementById("openChartBtn").onclick = () => {
     document.getElementById("chartBackdrop").classList.remove("hidden");
     document.getElementById("chartPopup").classList.remove("hidden");
@@ -878,7 +1002,6 @@ async function refreshSession() {
   if (adminTab) { if (isAdmin) adminTab.classList.remove("hidden"); else adminTab.classList.add("hidden"); }
 }
 
-// RESTORED LOGIN LOGIC (Was Missing)
 document.getElementById("loginBtn").onclick = async () => {
     const u=document.getElementById("loginUsername").value, p=document.getElementById("loginPassword").value;
     try { await apiFetch("/api/login", { method:"POST", body: JSON.stringify({username:u, password:p}) }); document.getElementById("loginCard").classList.add("hidden"); await refreshSession(); await afterDataLoad(); } 
@@ -886,7 +1009,6 @@ document.getElementById("loginBtn").onclick = async () => {
 };
 
 async function loadAdminData() {
-    // Only load if admin
     if(currentUser && currentUser.role === "admin") {
         let cats=[], vs=[], us=[], backs=[];
         try { cats=await apiFetch("/api/categories"); } catch{}
@@ -905,7 +1027,6 @@ async function loadAdminData() {
 
         const bT=document.querySelector("#backupTable tbody"); bT.innerHTML="";
         backs.forEach(b=>{
-            // RE-ADDED: Three buttons (Download, Restore, Delete)
             bT.innerHTML+=`
             <tr>
               <td>${b.name}</td>
@@ -920,7 +1041,7 @@ async function loadAdminData() {
         });
     }
 }
-// Simple admin adds (condensed)
+
 document.getElementById("addCatBtn").onclick=async()=>{ await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name:document.getElementById("catName").value, abbr:document.getElementById("catAbbr").value})}); await loadAdminData(); };
 document.getElementById("addVesselBtn").onclick=async()=>{ await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name:document.getElementById("vesselName").value})}); await loadAdminData(); };
 document.getElementById("saveUserBtn").onclick=async()=>{ await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username:document.getElementById("adminUsername").value, password:document.getElementById("adminPassword").value, role:document.getElementById("adminRole").value})}); await loadAdminData(); };
@@ -928,7 +1049,6 @@ document.getElementById("createBackupBtn").onclick=async()=>{ await apiFetch("/a
 document.getElementById("downloadBackupBtn").onclick=()=>{ window.open("/api/backup/download", "_blank"); }; 
 document.getElementById("refreshBackupsBtn").onclick=loadAdminData;
 
-// RE-ADDED: Upload Listener
 document.getElementById("uploadBackupBtn").onclick=async()=>{
   const input=document.getElementById("uploadBackupInput"); const err=document.getElementById("backupError"); err.textContent="";
   if(!input || !input.files || !input.files.length){ err.textContent="Please choose .xlsx file."; return; }
@@ -937,15 +1057,12 @@ document.getElementById("uploadBackupBtn").onclick=async()=>{
   try{ const res=await fetch("/api/upload", {method:"POST", body: fd, credentials:"same-origin"}); if(!res.ok){ let j={}; try{ j=await res.json(); }catch{} throw j; } input.value=""; await afterDataLoad(); await loadAdminData(); alert("Uploaded."); }catch(e){ err.textContent="Upload failed."; }
 };
 
-async function updateDashboard() {
-  document.getElementById("summaryOpenReqNotDel").textContent = allReqs.filter(r=>!r.delivered && (r.status||'open')==='open').length;
-  document.getElementById("summaryOpenReqUnpaid").textContent = allReqs.filter(r=>!r.paid && (r.status||'open')==='open').length;
-  const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
-  allReqs.slice(-5).reverse().forEach(r=>t.innerHTML+=`<tr><td>${r.po_number||r.number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${r.amount_usd}</td><td>${r.status}</td></tr>`);
-}
-
 function openDirPopup(type){ dirPopupType=type; document.getElementById("dirPopupBackdrop").classList.remove("hidden"); document.getElementById("dirPopup").classList.remove("hidden"); }
 function closeDirPopup(){ document.getElementById("dirPopupBackdrop").classList.add("hidden"); document.getElementById("dirPopup").classList.add("hidden"); }
+
+// FIXED: Added New Supplier Button logic
+document.getElementById("newSupplierBtn").onclick=()=>openDirPopup("supplier");
+
 document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
 document.getElementById("dirNewWorkshopBtn").onclick=()=>openDirPopup("workshop");
 document.getElementById("dirPopupCancelBtn").onclick=closeDirPopup;
