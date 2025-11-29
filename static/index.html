@@ -878,6 +878,13 @@ async function refreshSession() {
   if (adminTab) { if (isAdmin) adminTab.classList.remove("hidden"); else adminTab.classList.add("hidden"); }
 }
 
+// RESTORED LOGIN LOGIC (Was Missing)
+document.getElementById("loginBtn").onclick = async () => {
+    const u=document.getElementById("loginUsername").value, p=document.getElementById("loginPassword").value;
+    try { await apiFetch("/api/login", { method:"POST", body: JSON.stringify({username:u, password:p}) }); document.getElementById("loginCard").classList.add("hidden"); await refreshSession(); await afterDataLoad(); } 
+    catch(e) { document.getElementById("loginError").textContent = "Login Failed"; }
+};
+
 async function loadAdminData() {
     // Only load if admin
     if(currentUser && currentUser.role === "admin") {
@@ -906,7 +913,7 @@ async function loadAdminData() {
               <td>${(b.size/1024).toFixed(1)}KB</td>
               <td>
                 <button class="secondary" style="padding:2px 6px;" onclick="window.open('/api/backups/${b.name}/download')">DL</button>
-                <button class="secondary" style="padding:2px 6px;" onclick="restoreBackup('${b.name}')">Restore</button>
+                <button class="secondary" style="padding:2px 6px;" onclick="restoreBackup('${b.name}')">Rest</button>
                 <button class="danger" style="padding:2px 6px;" onclick="deleteItem('${b.name}', 'backup')">Del</button>
               </td>
             </tr>`;
@@ -918,7 +925,7 @@ document.getElementById("addCatBtn").onclick=async()=>{ await apiFetch("/api/cat
 document.getElementById("addVesselBtn").onclick=async()=>{ await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name:document.getElementById("vesselName").value})}); await loadAdminData(); };
 document.getElementById("saveUserBtn").onclick=async()=>{ await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username:document.getElementById("adminUsername").value, password:document.getElementById("adminPassword").value, role:document.getElementById("adminRole").value})}); await loadAdminData(); };
 document.getElementById("createBackupBtn").onclick=async()=>{ await apiFetch("/api/backup/create",{method:"POST"}); await loadAdminData(); };
-document.getElementById("downloadBackupBtn").onclick=()=>{ window.open("/api/backup/download", "_blank"); }; // Re-added listener
+document.getElementById("downloadBackupBtn").onclick=()=>{ window.open("/api/backup/download", "_blank"); }; 
 document.getElementById("refreshBackupsBtn").onclick=loadAdminData;
 
 // RE-ADDED: Upload Listener
