@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     /* Base Styles */
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin:0; background:#f5f5f5; color: #333; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin:0; background:#f5f5f5; color: #333; padding-bottom: 60px; }
     
     /* Header */
     header { background:#1f2937; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
@@ -43,6 +43,8 @@
     button.secondary:hover { background:#4b5563; }
     button.danger { background:#dc2626; }
     button.danger:hover { background:#b91c1c; }
+    button.success { background:#059669; }
+    button.success:hover { background:#047857; }
 
     /* Tables */
     table { width:100%; border-collapse:collapse; font-size:13px; min-width: 800px; }
@@ -65,6 +67,10 @@
     .error { color:#dc2626; font-size:13px; margin-top:6px; }
     .hidden { display:none !important; }
 
+    /* Bulk Action Bar */
+    .bulk-bar { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; padding:10px 20px; border-radius:8px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); display:flex; align-items:center; gap:12px; z-index:100; transition: transform 0.2s; }
+    .bulk-bar.hidden { display:none; }
+    
     /* Login & Popups */
     #loginCard { max-width:320px; margin:40px auto; position:relative; z-index:10; }
     .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border-radius:8px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); padding:20px; max-width:400px; width:90%; z-index:50; max-height: 90vh; overflow-y: auto; }
@@ -82,6 +88,9 @@
     
     /* Urgency */
     .row-urgent td { color: #b91c1c; font-weight: 600; background-color: #fef2f2; }
+    
+    /* Checkbox column */
+    .chk-col { width: 30px; text-align: center; }
 
     @media (max-width: 768px) {
       header { flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -92,7 +101,8 @@
       .filter-row > div { min-width: 100%; flex: 1 1 100%; }
       .filter-row button { width: 100%; margin-bottom: 4px; }
       .summary-item { flex: 1 1 40%; }
-      input[type="checkbox"] { transform: scale(1.2); margin-right: 6px; }
+      input[type="checkbox"] { transform: scale(1.2); }
+      .bulk-bar { width: 90%; flex-wrap: wrap; justify-content: center; bottom: 10px; }
     }
   </style>
 </head>
@@ -108,12 +118,8 @@
 
 <div id="loginCard" class="card hidden">
   <h2>Login</h2>
-  <label>Username
-    <input type="text" id="loginUsername" />
-  </label>
-  <label>Password
-    <input type="password" id="loginPassword" />
-  </label>
+  <label>Username <input type="text" id="loginUsername" /></label>
+  <label>Password <input type="password" id="loginPassword" /></label>
   <div style="margin-top: 16px;">
     <button id="loginBtn" style="width:100%">Login</button>
   </div>
@@ -123,23 +129,24 @@
 <div id="dirPopupBackdrop" class="hidden"></div>
 <div id="dirPopup" class="popup hidden">
   <h3 id="dirPopupTitle">New entry</h3>
-  <label>Name
-    <input type="text" id="dirPopupName" />
-  </label>
-  <label>Email
-    <input type="email" id="dirPopupEmail" />
-  </label>
-  <label>Phone
-    <input type="text" id="dirPopupPhone" />
-  </label>
-  <label>Location / Address
-    <input type="text" id="dirPopupAddress" />
-  </label>
+  <label>Name <input type="text" id="dirPopupName" /></label>
+  <label>Email <input type="email" id="dirPopupEmail" /></label>
+  <label>Phone <input type="text" id="dirPopupPhone" /></label>
+  <label>Location / Address <input type="text" id="dirPopupAddress" /></label>
   <div id="dirPopupError" class="error"></div>
   <div style="margin-top:16px; display:flex; gap: 10px; justify-content: flex-end;">
     <button id="dirPopupCancelBtn" class="secondary" style="flex:1;">Cancel</button>
     <button id="dirPopupSaveBtn" style="flex:1;">Save</button>
   </div>
+</div>
+
+<div id="bulkActionBar" class="bulk-bar hidden">
+  <span style="font-weight:600; font-size:14px;"><span id="bulkCount">0</span> Selected</span>
+  <div style="height:20px; width:1px; background:#4b5563;"></div>
+  <button class="success" id="bulkMarkPaidBtn" style="padding:4px 10px; font-size:12px;">Mark Paid</button>
+  <button class="secondary" id="bulkMarkUnpaidBtn" style="padding:4px 10px; font-size:12px;">Mark Unpaid</button>
+  <button class="success" id="bulkMarkDeliveredBtn" style="padding:4px 10px; font-size:12px;">Mark Delivered</button>
+  <button class="secondary" id="bulkCancelBtn" style="padding:4px 10px; font-size:12px;">Cancel Selection</button>
 </div>
 
 <div id="app">
@@ -158,85 +165,22 @@
       <div class="card">
         <h2>Dashboard</h2>
         <div class="summary-grid">
-          <div class="summary-item">
-            <div class="summary-label">Open POs (Not Delivered)</div>
-            <div class="summary-value" id="summaryOpenReqNotDel">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Open POs (Unpaid)</div>
-            <div class="summary-value" id="summaryOpenReqUnpaid">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Landed Items (Not Delivered)</div>
-            <div class="summary-value" id="summaryOpenLandNotDel">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Landed Items (Unpaid)</div>
-            <div class="summary-value" id="summaryOpenLandUnpaid">0</div>
-          </div>
+          <div class="summary-item"><div class="summary-label">Open POs (Not Delivered)</div><div class="summary-value" id="summaryOpenReqNotDel">0</div></div>
+          <div class="summary-item"><div class="summary-label">Open POs (Unpaid)</div><div class="summary-value" id="summaryOpenReqUnpaid">0</div></div>
+          <div class="summary-item"><div class="summary-label">Landed Items (Not Delivered)</div><div class="summary-value" id="summaryOpenLandNotDel">0</div></div>
+          <div class="summary-item"><div class="summary-label">Landed Items (Unpaid)</div><div class="summary-value" id="summaryOpenLandUnpaid">0</div></div>
         </div>
       </div>
-
       <div class="card">
         <h2>Paid Totals (Filters)</h2>
         <div class="filter-row">
-          <div>
-            <label>Type
-              <select id="ovTypeFilter">
-                <option value="">All</option>
-                <option value="req">Orders (POs)</option>
-                <option value="land">Workshops (Landed)</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Vessel
-              <select id="ovVesselFilter">
-                <option value="">All</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Paid?
-              <select id="ovPaidFilter">
-                <option value="">All</option>
-                <option value="1">Paid</option>
-                <option value="0">Unpaid</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Month
-              <select id="ovMonthFilter">
-                <option value="">All months</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Quarter
-              <select id="ovQuarterFilter">
-                <option value="">All quarters</option>
-                <option value="Q1">Q1</option>
-                <option value="Q2">Q2</option>
-                <option value="Q3">Q3</option>
-                <option value="Q4">Q4</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Category
-              <select id="ovCategoryFilter">
-                <option value="">All categories</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label>Year
-              <select id="ovYearFilter">
-                <option value="">All years</option>
-              </select>
-            </label>
-          </div>
+          <div><label>Type<select id="ovTypeFilter"><option value="">All</option><option value="req">Orders (POs)</option><option value="land">Workshops (Landed)</option></select></label></div>
+          <div><label>Vessel<select id="ovVesselFilter"><option value="">All</option></select></label></div>
+          <div><label>Paid?<select id="ovPaidFilter"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
+          <div><label>Month<select id="ovMonthFilter"><option value="">All months</option></select></label></div>
+          <div><label>Quarter<select id="ovQuarterFilter"><option value="">All quarters</option><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></label></div>
+          <div><label>Category<select id="ovCategoryFilter"><option value="">All categories</option></select></label></div>
+          <div><label>Year<select id="ovYearFilter"><option value="">All years</option></select></label></div>
           <div style="flex-grow: 1;"> <label>&nbsp;</label>
             <div style="display:flex; gap:8px;">
                <button id="ovApplyTotalsBtn" style="flex:1;">Apply</button>
@@ -244,64 +188,33 @@
             </div>
           </div>
         </div>
-
         <div class="summary-grid" style="margin-top:10px;">
-          <div class="summary-item">
-            <div class="summary-label">Total Paid (Period)</div>
-            <div class="summary-value" id="ovPaidMonthTotal">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Total Paid (Year)</div>
-            <div class="summary-value" id="ovPaidYearTotal">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Period)</div>
-            <div class="summary-value" id="ovUnpaidMonthTotal">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label" style="color:#b91c1c;">Total Unpaid (Year)</div>
-            <div class="summary-value" id="ovUnpaidYearTotal">0</div>
-          </div>
-          
-          <div class="summary-item">
-            <div class="summary-label">Total Amount (Filtered)</div>
-            <div class="summary-value" id="ovAllTotal">0</div>
-          </div>
+          <div class="summary-item"><div class="summary-label">Total Paid (Period)</div><div class="summary-value" id="ovPaidMonthTotal">0</div></div>
+          <div class="summary-item"><div class="summary-label">Total Paid (Year)</div><div class="summary-value" id="ovPaidYearTotal">0</div></div>
+          <div class="summary-item"><div class="summary-label" style="color:#b91c1c;">Total Unpaid (Period)</div><div class="summary-value" id="ovUnpaidMonthTotal">0</div></div>
+          <div class="summary-item"><div class="summary-label" style="color:#b91c1c;">Total Unpaid (Year)</div><div class="summary-value" id="ovUnpaidYearTotal">0</div></div>
+          <div class="summary-item"><div class="summary-label">Total Amount (Filtered)</div><div class="summary-value" id="ovAllTotal">0</div></div>
         </div>
-
         <h3 style="margin-top:16px;">Top 5 Suppliers (Selected Period)</h3>
-        <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;">
-          <li>—</li>
-        </ul>
+        <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;"><li>—</li></ul>
       </div>
-
       <div class="card">
         <h2>Recent Orders (POs)</h2>
         <div class="table-responsive">
             <table id="overviewReqTable">
             <thead>
-                <tr>
-                <th>PO #</th>
-                <th>Number</th>
-                <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
-                <th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th>
-                </tr>
+                <tr><th>PO #</th><th>Number</th><th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th><th>Ordered</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th></tr>
             </thead>
             <tbody></tbody>
             </table>
         </div>
       </div>
-      
       <div class="card">
         <h2>Recent Landed Items</h2>
         <div class="table-responsive">
             <table id="overviewLandTable">
             <thead>
-                <tr>
-                <th>Vessel</th><th>Description</th><th>Workshop</th>
-                <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
-                <th>Paid</th><th>Delivered</th><th>Status</th>
-                </tr>
+                <tr><th>Vessel</th><th>Description</th><th>Workshop</th><th>Expected</th><th>Landed</th><th>Amount (USD)</th><th>Paid</th><th>Delivered</th><th>Status</th></tr>
             </thead>
             <tbody></tbody>
             </table>
@@ -320,32 +233,15 @@
         </div>
         <div class="flex-row" style="margin-top:10px;">
            <div class="flex-1"><label>Category<select id="reqCategory"></select></label></div>
-          <div class="flex-1">
-            <label>Supplier
-              <div style="display:flex; gap:8px;">
-                <select id="reqSupplierSelect" style="flex:1;"></select>
-                <button id="newSupplierBtn" type="button" class="secondary" style="padding: 4px 10px;">+</button>
-              </div>
-            </label>
-          </div>
+          <div class="flex-1"><label>Supplier <div style="display:flex; gap:8px;"><select id="reqSupplierSelect" style="flex:1;"></select><button id="newSupplierBtn" type="button" class="secondary" style="padding: 4px 10px;">+</button></div></label></div>
           <div class="flex-1"><label>Date Ordered<input type="date" id="reqDateOrdered" /></label></div>
           <div class="flex-1"><label>Expected Date<input type="date" id="reqExpected" /></label></div>
         </div>
         <div class="flex-row" style="margin-top:10px;">
           <div class="flex-1"><label>Amount<input type="number" id="reqTotal" step="0.01" /></label></div>
           <div class="flex-1"><label>Currency<select id="reqCurrency"></select></label></div>
-          <div class="flex-1"><label>Urgency
-              <select id="reqUrgency">
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="low">Low</option>
-              </select>
-            </label></div>
-          <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;">
-            <label style="cursor: pointer; display:flex; align-items: center;">
-              <input type="checkbox" id="reqPaid" style="width: auto; margin-right: 8px;" /> Paid
-            </label>
-          </div>
+          <div class="flex-1"><label>Urgency<select id="reqUrgency"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select></label></div>
+          <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;"><label style="cursor: pointer; display:flex; align-items: center;"><input type="checkbox" id="reqPaid" style="width: auto; margin-right: 8px;" /> Paid</label></div>
         </div>
         <div style="margin-top:16px;">
           <button id="saveReqBtn">Save Order</button>
@@ -355,7 +251,10 @@
       </div>
 
       <div class="card">
-        <h2>Filter Orders</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2>Filter Orders</h2>
+          <button id="exportReqBtn" class="secondary" style="padding:6px 10px; font-size:13px;">Export CSV</button>
+        </div>
         <div class="filter-row">
           <div><label>Status<select id="filterReqStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></label></div>
           <div><label>Paid<select id="filterReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
@@ -377,6 +276,7 @@
             <table id="reqTable">
             <thead>
                 <tr>
+                <th class="chk-col"><input type="checkbox" id="reqSelectAll" /></th>
                 <th>ID</th><th>PO #</th><th>Number</th>
                 <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th><th>Urgency</th>
                 <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
@@ -394,8 +294,7 @@
             <table id="reqCancelledTable">
             <thead>
                 <tr>
-                <th>ID</th><th>Number</th>
-                <th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
+                <th>ID</th><th>Number</th><th>Description</th><th>Vessel</th><th>Category</th><th>Supplier</th>
                 <th>Ordered</th><th>Expected</th><th>Amount (USD)</th><th>Paid</th><th>Status</th>
                 </tr>
             </thead>
@@ -411,14 +310,7 @@
         <div class="flex-row">
           <div class="flex-1"><label>Vessel<select id="landVessel"></select></label></div>
           <div class="flex-1"><label>Description<input type="text" id="landDescription" /></label></div>
-          <div class="flex-1">
-            <label>Workshop
-              <div style="display:flex; gap:8px;">
-                <select id="landWorkshopSelect" style="flex:1;"></select>
-                <button id="newWorkshopBtn" type="button" class="secondary" style="padding: 4px 10px;">+</button>
-              </div>
-            </label>
-          </div>
+          <div class="flex-1"><label>Workshop <div style="display:flex; gap:8px;"><select id="landWorkshopSelect" style="flex:1;"></select><button id="newWorkshopBtn" type="button" class="secondary" style="padding: 4px 10px;">+</button></div></label></div>
         </div>
         <div class="flex-row" style="margin-top: 10px;">
           <div class="flex-1"><label>Expected Delivery Date<input type="date" id="landExpected" /></label></div>
@@ -427,11 +319,7 @@
         <div class="flex-row" style="margin-top: 10px;">
           <div class="flex-1"><label>Amount<input type="number" id="landAmount" step="0.01" /></label></div>
           <div class="flex-1"><label>Currency<select id="landCurrency"></select></label></div>
-          <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;">
-            <label style="cursor: pointer; display:flex; align-items: center;">
-              <input type="checkbox" id="landPaid" style="width: auto; margin-right: 8px;" /> Paid
-            </label>
-          </div>
+          <div class="flex-1" style="display: flex; align-items: center; padding-top: 24px;"><label style="cursor: pointer; display:flex; align-items: center;"><input type="checkbox" id="landPaid" style="width: auto; margin-right: 8px;" /> Paid</label></div>
         </div>
         <div style="margin-top:16px;">
           <button id="saveLandingBtn">Save Landed Item</button>
@@ -441,7 +329,10 @@
       </div>
 
       <div class="card">
-        <h2>Filter Landed Items</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2>Filter Landed Items</h2>
+          <button id="exportLandBtn" class="secondary" style="padding:6px 10px; font-size:13px;">Export CSV</button>
+        </div>
         <div class="filter-row">
           <div><label>Status<select id="filterLandingStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></label></div>
           <div><label>Paid<select id="filterLandingPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
@@ -463,6 +354,7 @@
             <table id="landingTable">
             <thead>
                 <tr>
+                <th class="chk-col"><input type="checkbox" id="landSelectAll" /></th>
                 <th>ID</th><th>Vessel</th><th>Description</th><th>Workshop</th>
                 <th>Expected</th><th>Landed Date</th><th>Amount (USD)</th>
                 <th>Paid</th><th>Delivered</th><th>Status</th><th>Actions</th>
@@ -650,49 +542,106 @@
 
 <script>
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
-    ...options
-  });
-  if (!res.ok) {
-    let err;
-    try { err = await res.json(); } catch { err = { error: "unknown" }; }
-    throw err;
-  }
+  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, credentials: "same-origin", ...options });
+  if (!res.ok) { let err; try { err = await res.json(); } catch { err = { error: "unknown" }; } throw err; }
   return res.json();
 }
-let currentUser = null;
-let allReqs = [];
-let allLandings = [];
-let vessels = [];
-let editingReqId = null;
-let editingLandId = null;
-let editingCatId = null;
-let editingVesselId = null;
-let dirPopupType = null;
-let currencyList = ["USD"];
+let currentUser=null; let allReqs=[], allLandings=[], vessels=[]; let editingReqId=null, editingLandId=null, editingCatId=null, editingVesselId=null;
+let dirPopupType=null; let currencyList=["USD"];
 
+// CSV Export Logic
+function exportTableToCSV(tableId, filename) {
+    const table = document.getElementById(tableId);
+    const rows = table.querySelectorAll('tr');
+    let csv = [];
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll('td, th');
+        if(rows[i].style.display === "none") continue; // skip hidden filtered rows
+        for (let j = 0; j < cols.length; j++) {
+            // Skip check column or action buttons column if desired, or just sanitize
+            if(cols[j].classList.contains("chk-col")) continue; // Skip checkboxes in CSV
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").replace(/(\s\s)/gm, " ");
+            data = data.replace(/"/g, '""');
+            row.push('"' + data + '"');
+        }
+        csv.push(row.join(","));
+    }
+    const blob = new Blob([csv.join("\n")], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.setAttribute('hidden', ''); a.setAttribute('href', url); a.setAttribute('download', filename);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+document.getElementById("exportReqBtn").onclick=()=>exportTableToCSV("reqTable", "requisitions_export.csv");
+document.getElementById("exportLandBtn").onclick=()=>exportTableToCSV("landingTable", "landings_export.csv");
+
+// Bulk Action Logic
+let selectedIds = new Set();
+let currentBulkType = null; // 'req' or 'land'
+
+function toggleBulkBar() {
+  const bar = document.getElementById("bulkActionBar");
+  const count = selectedIds.size;
+  document.getElementById("bulkCount").textContent = count;
+  if(count > 0) bar.classList.remove("hidden"); else bar.classList.add("hidden");
+}
+
+function handleRowCheck(e, type, id) {
+  if(e.target.checked) { selectedIds.add(id); currentBulkType = type; }
+  else { selectedIds.delete(id); if(selectedIds.size===0) currentBulkType=null; }
+  toggleBulkBar();
+}
+
+function attachCheckboxListeners(type) {
+  const tableId = type === 'req' ? 'reqTable' : 'landingTable';
+  document.querySelectorAll(`#${tableId} .row-select`).forEach(chk => {
+    chk.addEventListener('change', (e) => handleRowCheck(e, type, +chk.dataset.id));
+  });
+}
+
+// Bulk API call
+async function runBulkAction(action) {
+  if(selectedIds.size === 0) return;
+  if(!confirm(`Perform '${action}' on ${selectedIds.size} items?`)) return;
+  const endpoint = currentBulkType === 'req' ? '/api/requisitions/bulk' : '/api/landings/bulk';
+  try {
+    await apiFetch(endpoint, { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds), action }) });
+    selectedIds.clear(); toggleBulkBar();
+    await afterDataLoad();
+  } catch(e) { alert("Bulk action failed."); }
+}
+document.getElementById("bulkMarkPaidBtn").onclick = () => runBulkAction("mark_paid");
+document.getElementById("bulkMarkUnpaidBtn").onclick = () => runBulkAction("mark_unpaid");
+document.getElementById("bulkMarkDeliveredBtn").onclick = () => runBulkAction("mark_delivered");
+document.getElementById("bulkCancelBtn").onclick = () => { selectedIds.clear(); toggleBulkBar(); document.querySelectorAll(".row-select").forEach(c=>c.checked=false); document.getElementById("reqSelectAll").checked=false; document.getElementById("landSelectAll").checked=false; };
+
+// Check all
+document.getElementById("reqSelectAll").onclick = (e) => {
+  const chks = document.querySelectorAll("#reqTable .row-select");
+  chks.forEach(c => { c.checked = e.target.checked; if(c.checked) selectedIds.add(+c.dataset.id); else selectedIds.delete(+c.dataset.id); });
+  currentBulkType = e.target.checked ? 'req' : (selectedIds.size>0?currentBulkType:null);
+  toggleBulkBar();
+};
+document.getElementById("landSelectAll").onclick = (e) => {
+  const chks = document.querySelectorAll("#landingTable .row-select");
+  chks.forEach(c => { c.checked = e.target.checked; if(c.checked) selectedIds.add(+c.dataset.id); else selectedIds.delete(+c.dataset.id); });
+  currentBulkType = e.target.checked ? 'land' : (selectedIds.size>0?currentBulkType:null);
+  toggleBulkBar();
+};
+
+/* --- Existing Logic Below (Shortened for fit, same logic as before) --- */
 function quarterOfMonth(m){ if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4"; }
 function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
 
 async function loadCurrencies() {
   try { const res = await apiFetch("/api/currencies"); currencyList = res.currencies || ["USD"]; } catch { currencyList = ["USD","EUR","AED","GBP","LBP"]; }
-  const reqCurSel = document.getElementById("reqCurrency");
-  const landCurSel = document.getElementById("landCurrency");
-  reqCurSel.innerHTML = ""; landCurSel.innerHTML = "";
-  currencyList.forEach(cur => {
-    const o1 = document.createElement("option"); o1.value = cur; o1.textContent = cur; reqCurSel.appendChild(o1);
-    const o2 = document.createElement("option"); o2.value = cur; o2.textContent = cur; landCurSel.appendChild(o2);
-  });
-  if (!reqCurSel.value) reqCurSel.value = "USD";
-  if (!landCurSel.value) landCurSel.value = "USD";
+  const reqCurSel = document.getElementById("reqCurrency"); const landCurSel = document.getElementById("landCurrency"); reqCurSel.innerHTML = ""; landCurSel.innerHTML = "";
+  currencyList.forEach(cur => { const o1 = document.createElement("option"); o1.value = cur; o1.textContent = cur; reqCurSel.appendChild(o1); const o2 = document.createElement("option"); o2.value = cur; o2.textContent = cur; landCurSel.appendChild(o2); });
+  if (!reqCurSel.value) reqCurSel.value = "USD"; if (!landCurSel.value) landCurSel.value = "USD";
 }
 
 async function refreshSession() {
   try { currentUser = await apiFetch("/api/session"); } catch { currentUser = null; }
-  const userInfo = document.getElementById("userInfo");
-  const loginCard = document.getElementById("loginCard");
+  const userInfo = document.getElementById("userInfo"); const loginCard = document.getElementById("loginCard");
   if (currentUser && currentUser.username) {
     userInfo.innerHTML = `<span><strong>${currentUser.username}</strong> (${currentUser.role})</span><button id="logoutBtn" class="secondary" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Logout</button>`;
     document.getElementById("logoutBtn").onclick = async () => { await apiFetch("/api/logout", { method:"POST" }); currentUser = null; loginCard.classList.add("hidden"); await refreshSession(); await afterDataLoad(); };
@@ -704,14 +653,10 @@ async function refreshSession() {
   const isAdmin = currentUser && currentUser.role === "admin";
   const adminTab = document.getElementById("adminTab");
   if (adminTab) { if (isAdmin) adminTab.classList.remove("hidden"); else adminTab.classList.add("hidden"); }
-  ["catName","catAbbr","addCatBtn","cancelCatEditBtn","adminUsername","adminPassword","adminRole","saveUserBtn","vesselName","addVesselBtn","cancelVesselEditBtn"].forEach(id=>{
-    const el = document.getElementById(id); if (el) el.disabled = !isAdmin && (id!=="adminRole");
-  });
+  ["catName","catAbbr","addCatBtn","cancelCatEditBtn","adminUsername","adminPassword","adminRole","saveUserBtn","vesselName","addVesselBtn","cancelVesselEditBtn"].forEach(id=>{ const el = document.getElementById(id); if (el) el.disabled = !isAdmin && (id!=="adminRole"); });
 }
 document.getElementById("loginBtn").onclick = async () => {
-  const u = document.getElementById("loginUsername").value.trim();
-  const p = document.getElementById("loginPassword").value;
-  const errDiv = document.getElementById("loginError"); errDiv.textContent = "";
+  const u = document.getElementById("loginUsername").value.trim(); const p = document.getElementById("loginPassword").value; const errDiv = document.getElementById("loginError"); errDiv.textContent = "";
   try { await apiFetch("/api/login", { method:"POST", body: JSON.stringify({ username:u, password:p }) }); document.getElementById("loginCard").classList.add("hidden"); document.getElementById("loginUsername").value = ""; document.getElementById("loginPassword").value = ""; await refreshSession(); await afterDataLoad(true); } catch(e) { errDiv.textContent = e.error === "invalid_credentials" ? "Invalid username or password." : "Login failed."; }
 };
 document.querySelectorAll(".tab").forEach(tab => {
@@ -724,6 +669,10 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById(`tab-${t}`).classList.remove("hidden");
   });
 });
+
+/* ... (Remaining helper functions: loadOverviewTotalsFilters, updateOverviewPaidTotals, Directory Logic, Vessel Logic, Category Logic, User Admin Logic - SAME AS BEFORE, condensed here) ... */
+// To save space, assuming previous logic blocks for these sections are retained. 
+// IMPORTANT: The key changes below are in loadAllRequisitions and loadAllLandings to add Checkboxes.
 
 async function loadOverviewTotalsFilters() {
   let reqs = allReqs, lands = allLandings;
@@ -846,7 +795,6 @@ async function loadDirectoryPage(){
   document.querySelectorAll(".delete-dir").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete this directory entry?")) return; try { await apiFetch(`/api/directory/${+btn.dataset.id}`, {method:"DELETE"}); await loadDirectoryPage(); await loadDirectoryOptions(); } catch(e) { alert(e.error === "admin_required" ? "Only Admin can delete." : "Error deleting."); } }; });
   document.querySelectorAll(".edit-dir").forEach(btn=>{ btn.onclick=()=>{ const r = JSON.parse(btn.dataset.obj); openDirPopup(r.type); document.getElementById("dirPopupTitle").textContent = "Edit " + r.type; document.getElementById("dirPopupName").value = r.name; document.getElementById("dirPopupEmail").value = r.email||""; document.getElementById("dirPopupPhone").value = r.phone||""; document.getElementById("dirPopupAddress").value = r.address||""; document.getElementById("dirPopup").dataset.editId = r.id; }; });
 }
-
 async function loadVessels(){
   try { vessels=await apiFetch("/api/vessels"); } catch { vessels=[]; }
   const reqSel=document.getElementById("reqVessel"); const landSel=document.getElementById("landVessel");
@@ -862,7 +810,6 @@ document.getElementById("addVesselBtn").onclick=async ()=>{
   try{ if(editingVesselId){ await apiFetch(`/api/vessels/${editingVesselId}`,{method:"PATCH",body:JSON.stringify({name})}); }else{ await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name})}); } editingVesselId=null; document.getElementById("vesselName").value=""; document.getElementById("cancelVesselEditBtn").classList.add("hidden"); await loadVessels(); }catch(e){ err.textContent="Error saving vessel."; }
 };
 document.getElementById("cancelVesselEditBtn").onclick=()=>{ editingVesselId=null; document.getElementById("vesselName").value=""; document.getElementById("cancelVesselEditBtn").classList.add("hidden"); };
-
 async function loadCategories(){
   let cats=[]; try{ cats=await apiFetch("/api/categories"); }catch{}
   const catSelect=document.getElementById("reqCategory");
@@ -877,7 +824,6 @@ document.getElementById("addCatBtn").onclick=async ()=>{
   try{ if(editingCatId){ await apiFetch(`/api/categories/${editingCatId}`,{method:"PATCH",body:JSON.stringify({name,abbr})}); }else{ await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name,abbr})}); } editingCatId=null; document.getElementById("catName").value=""; document.getElementById("catAbbr").value=""; document.getElementById("cancelCatEditBtn").classList.add("hidden"); await loadCategories(); await loadOverviewTotalsFilters(); }catch(e){ err.textContent="Error saving category."; }
 };
 document.getElementById("cancelCatEditBtn").onclick=()=>{ editingCatId=null; document.getElementById("catName").value=""; document.getElementById("catAbbr").value=""; document.getElementById("cancelCatEditBtn").classList.add("hidden"); };
-
 async function loadUsersAdmin(){
   let users=[]; try{ users=await apiFetch("/api/users"); }catch{}
   const tbody=document.querySelector("#userTable tbody"); tbody.innerHTML="";
@@ -889,6 +835,8 @@ document.getElementById("saveUserBtn").onclick=async ()=>{
   try{ await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username,password,role})}); document.getElementById("adminUsername").value=""; document.getElementById("adminPassword").value=""; document.getElementById("adminRole").value="user"; await loadUsersAdmin(); }catch(e){ err.textContent="Error saving user."; }
 };
 
+
+// REQUISITIONS LOAD (Updated for Checkboxes)
 async function loadAllRequisitions(){
   let rows=[]; try{ rows=await apiFetch("/api/requisitions"); }catch{}
   allReqs=rows;
@@ -897,22 +845,44 @@ async function loadAllRequisitions(){
   const paidFilter=document.getElementById("filterReqPaid").value;
   const delFilter=document.getElementById("filterReqDelivered").value;
   const search=document.getElementById("filterReqSearch").value.toLowerCase();
+  
   rows.forEach(r=>{
     const matchesStatus=!statusFilter||(r.status||"open")===statusFilter;
     const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter;
     const matchesDel=delFilter===""||String(r.delivered||0)===delFilter;
     const matchesSearch=!search||(r.number||"").toLowerCase().includes(search)||(r.vessel||"").toLowerCase().includes(search)||(r.supplier||"").toLowerCase().includes(search);
     if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
+
     const isUrgent = (r.urgency || "normal").toLowerCase() === "high";
     const tr=document.createElement("tr");
     if(isUrgent) tr.className = "row-urgent";
+    
+    // Checkbox State persistence
+    const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
+    
     const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>';
     const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>';
     let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-    tr.innerHTML=`<td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${(r.urgency||"normal")}</td><td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td><td><button class="edit-req" data-id="${r.id}">Edit</button><button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button><button class="secondary mark-delivered-req" data-id="${r.id}">Delivered</button><button class="danger cancel-req" data-id="${r.id}">Cancel</button><button class="danger delete-req" data-id="${r.id}">Delete</button></td>`;
+    
+    tr.innerHTML=`
+      <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''} /></td>
+      <td>${r.id}</td><td>${r.po_number||""}</td><td>${r.number}</td>
+      <td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td>
+      <td>${(r.urgency||"normal")}</td><td>${r.date_ordered||""}</td><td>${r.expected||""}</td>
+      <td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td>
+      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
+      <td>
+        <button class="edit-req" data-id="${r.id}">Edit</button>
+        <button class="secondary toggle-paid-req" data-id="${r.id}">Paid</button>
+        <button class="secondary mark-delivered-req" data-id="${r.id}">Delivered</button>
+        <button class="danger cancel-req" data-id="${r.id}">Cancel</button>
+        <button class="danger delete-req" data-id="${r.id}">Delete</button>
+      </td>`;
     tbody.appendChild(tr);
   });
+  
   attachReqRowActions();
+  attachCheckboxListeners('req');
 }
 function attachReqRowActions(){
   document.querySelectorAll(".toggle-paid-req").forEach(btn=>{ btn.onclick=async ()=>{ try{ await apiFetch(`/api/requisitions/${+btn.dataset.id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); } catch{ alert("Error."); } }; });
@@ -930,27 +900,38 @@ document.getElementById("saveReqBtn").onclick=async ()=>{
   try{ const payload={number, po_number, description, vessel, category, supplier, date_ordered, expected, amount:parseFloat(total), currency, urgency, paid}; if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`,{method:"PATCH",body:JSON.stringify(payload)}); else await apiFetch("/api/requisitions",{method:"POST",body:JSON.stringify(payload)}); document.getElementById("cancelReqEditBtn").onclick(); await afterDataLoad(); }catch(e){ err.textContent="Error saving order."; }
 };
 
-async function loadOverviewRequisitions(){
-  let rows=allReqs; if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
-  const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
-  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
-    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'; const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'; let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-    const isUrgent = (r.urgency || "normal").toLowerCase() === "high"; const tr=document.createElement("tr"); if(isUrgent) tr.className = "row-urgent";
-    tr.innerHTML=`<td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${r.urgency||"normal"}</td><td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`; tbody.appendChild(tr);
-  });
-}
-
+// LANDINGS LOAD (Updated for Checkboxes)
 async function loadAllLandings(){
   let rows=[]; try{ rows=await apiFetch("/api/landings"); }catch{} allLandings=rows;
   const tbody=document.querySelector("#landingTable tbody"); tbody.innerHTML="";
   const statusFilter=document.getElementById("filterLandingStatus").value; const paidFilter=document.getElementById("filterLandingPaid").value; const delFilter=document.getElementById("filterLandingDelivered").value; const search=document.getElementById("filterLandingSearch").value.toLowerCase();
+  
   rows.forEach(r=>{
     const matchesStatus=!statusFilter||(r.status||"open")===statusFilter; const matchesPaid=paidFilter===""||String(r.paid||0)===paidFilter; const matchesDel=delFilter===""||String(r.delivered||0)===delFilter; const matchesSearch=!search||(r.vessel||"").toLowerCase().includes(search)||(r.item||"").toLowerCase().includes(search)||(r.workshop||"").toLowerCase().includes(search);
     if(!(matchesStatus&&matchesPaid&&matchesDel&&matchesSearch)) return;
-    const tr=document.createElement("tr"); const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'; const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'; let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
-    tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td><td><button class="edit-land" data-id="${r.id}">Edit</button><button class="secondary toggle-paid-land" data-id="${r.id}">Paid</button><button class="secondary mark-delivered-land" data-id="${r.id}">Delivered</button><button class="danger cancel-land" data-id="${r.id}">Cancel</button><button class="danger delete-land" data-id="${r.id}">Delete</button></td>`; tbody.appendChild(tr);
+
+    const tr=document.createElement("tr"); 
+    const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
+
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'; const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'; let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    tr.innerHTML=`
+      <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''} /></td>
+      <td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td>
+      <td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td>
+      <td>${paidTag}</td><td>${delTag}</td>
+      <td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>
+      <td>
+        <button class="edit-land" data-id="${r.id}">Edit</button>
+        <button class="secondary toggle-paid-land" data-id="${r.id}">Paid</button>
+        <button class="secondary mark-delivered-land" data-id="${r.id}">Delivered</button>
+        <button class="danger cancel-land" data-id="${r.id}">Cancel</button>
+        <button class="danger delete-land" data-id="${r.id}">Delete</button>
+      </td>`; 
+    tbody.appendChild(tr);
   });
+  
   attachLandingActions();
+  attachCheckboxListeners('land');
 }
 function attachLandingActions(){
   document.querySelectorAll(".toggle-paid-land").forEach(btn=>{ btn.onclick=async ()=>{ try{ await apiFetch(`/api/landings/${+btn.dataset.id}/toggle_paid`,{method:"PATCH"}); await afterDataLoad(); } catch{ alert("Error."); } }; });
@@ -968,12 +949,16 @@ document.getElementById("saveLandingBtn").onclick=async ()=>{
   try{ const payload={vessel,item:desc,workshop,amount:parseFloat(amount),currency,expected,landed_date:landed,paid}; if(editingLandId) await apiFetch(`/api/landings/${editingLandId}`,{method:"PATCH",body:JSON.stringify(payload)}); else await apiFetch("/api/landings",{method:"POST",body:JSON.stringify(payload)}); document.getElementById("cancelLandEditBtn").onclick(); await afterDataLoad(); }catch(e){ err.textContent="Error saving."; }
 };
 
-async function fillCancelledTables(){
-  const reqBody=document.querySelector("#reqCancelledTable tbody"); const landBody=document.querySelector("#landingCancelledTable tbody"); reqBody.innerHTML=""; landBody.innerHTML="";
-  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; reqBody.appendChild(tr); });
-  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; landBody.appendChild(tr); });
+/* --- The rest is same as before --- */
+async function loadOverviewRequisitions(){
+  let rows=allReqs; if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
+  const tbody=document.querySelector("#overviewReqTable tbody"); tbody.innerHTML="";
+  rows.slice().sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,10).forEach(r=>{
+    const paidTag=r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'; const delTag=r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'; let statusClass="status-open"; if((r.status||"open")==="cancelled") statusClass="status-cancelled"; if(r.delivered) statusClass="status-delivered";
+    const isUrgent = (r.urgency || "normal").toLowerCase() === "high"; const tr=document.createElement("tr"); if(isUrgent) tr.className = "row-urgent";
+    tr.innerHTML=`<td>${r.po_number||""}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${r.urgency||"normal"}</td><td>${r.date_ordered||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`; tbody.appendChild(tr);
+  });
 }
-
 async function loadOverviewLandings(){
   let rows=allLandings; if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
   const tbody=document.querySelector("#overviewLandTable tbody"); tbody.innerHTML="";
@@ -982,7 +967,11 @@ async function loadOverviewLandings(){
     const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${paidTag}</td><td>${delTag}</td><td><span class="status-pill ${statusClass}">${r.status||"open"}</span></td>`; tbody.appendChild(tr);
   });
 }
-
+async function fillCancelledTables(){
+  const reqBody=document.querySelector("#reqCancelledTable tbody"); const landBody=document.querySelector("#landingCancelledTable tbody"); reqBody.innerHTML=""; landBody.innerHTML="";
+  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.id}</td><td>${r.number}</td><td>${r.description||""}</td><td>${r.vessel}</td><td>${r.category||""}</td><td>${r.supplier||""}</td><td>${r.date_ordered||""}</td><td>${r.expected||""}</td><td>${(r.total_amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; reqBody.appendChild(tr); });
+  allLandings.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${r.id}</td><td>${r.vessel}</td><td>${r.item||""}</td><td>${r.workshop||""}</td><td>${r.expected||""}</td><td>${r.landed_date||""}</td><td>${(r.amount||0).toFixed(2)}</td><td>${r.paid?"Paid":"Unpaid"}</td><td>${r.status||"open"}</td>`; landBody.appendChild(tr); });
+}
 async function loadDeliveredRequisitions(){
   let rows=allReqs; if(!rows.length){ try{ rows=await apiFetch("/api/requisitions"); }catch{ rows=[]; } }
   const paidFilter=document.getElementById("filterDeliveredReqPaid").value; const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
@@ -996,7 +985,6 @@ async function loadDeliveredRequisitions(){
 }
 document.getElementById("applyDeliveredReqFilterBtn").onclick=loadDeliveredRequisitions;
 document.getElementById("clearDeliveredReqFilterBtn").onclick=async ()=>{ ["filterDeliveredReqPaid","filterDeliveredReqSearch"].forEach(id=>document.getElementById(id).value=""); await loadDeliveredRequisitions(); };
-
 async function loadDeliveredLandings(){
   let rows=allLandings; if(!rows.length){ try{ rows=await apiFetch("/api/landings"); }catch{ rows=[]; } }
   const paidFilter=document.getElementById("filterDeliveredLandPaid").value; const search=document.getElementById("filterDeliveredLandSearch").value.toLowerCase();
@@ -1009,7 +997,6 @@ async function loadDeliveredLandings(){
 }
 document.getElementById("applyDeliveredLandFilterBtn").onclick=loadDeliveredLandings;
 document.getElementById("clearDeliveredLandFilterBtn").onclick=async ()=>{ ["filterDeliveredLandPaid","filterDeliveredLandSearch"].forEach(id=>document.getElementById(id).value=""); await loadDeliveredLandings(); };
-
 async function updateSummaryCounts(){
   let reqs=allReqs, lands=allLandings; if(!reqs.length){ try{ reqs=await apiFetch("/api/requisitions"); }catch{ reqs=[]; } } if(!lands.length){ try{ lands=await apiFetch("/api/landings"); }catch{ lands=[]; } }
   document.getElementById("summaryOpenReqNotDel").textContent=reqs.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
@@ -1017,11 +1004,10 @@ async function updateSummaryCounts(){
   document.getElementById("summaryOpenLandNotDel").textContent=lands.filter(r=>!r.delivered&&(r.status||"open")==="open").length;
   document.getElementById("summaryOpenLandUnpaid").textContent=lands.filter(r=>!r.delivered&&!r.paid&&(r.status||"open")==="open").length;
 }
-
 async function afterDataLoad() {
+  selectedIds.clear(); toggleBulkBar();
   await loadDirectoryOptions(); await loadCategories(); await loadVessels(); await loadDirectoryPage(); await loadUsersAdmin(); await loadAllRequisitions(); await loadAllLandings(); await loadOverviewRequisitions(); await loadOverviewLandings(); await loadDeliveredRequisitions(); await loadDeliveredLandings(); await fillCancelledTables(); await updateSummaryCounts(); await loadOverviewTotalsFilters();
 }
-
 async function loadBackupsAdmin(){
   const err=document.getElementById("backupError"); const tbody=document.querySelector("#backupTable tbody"); if(!tbody) return; tbody.innerHTML=""; err.textContent="";
   try{
@@ -1036,11 +1022,9 @@ async function loadBackupsAdmin(){
     document.querySelectorAll(".delete-backup").forEach(btn=>{ btn.onclick=async ()=>{ if(!confirm("Delete?")) return; try{ await apiFetch(`/api/backups/${encodeURIComponent(btn.dataset.name)}`, {method:"DELETE"}); await loadBackupsAdmin(); }catch{ alert("Error deleting."); } }; });
   }catch(e){ err.textContent=e.error==="admin_required"?"Only admin can access backups.":"Error loading backups."; }
 }
-
 document.getElementById("downloadBackupBtn")?.addEventListener("click", ()=>{ window.open("/api/backup/download", "_blank"); });
 document.getElementById("createBackupBtn")?.addEventListener("click", async ()=>{ if(!confirm("Create server backup?")) return; try { await apiFetch("/api/backup/create", {method: "POST"}); await loadBackupsAdmin(); alert("Created."); } catch(e) { alert("Error creating."); } });
 document.getElementById("refreshBackupsBtn")?.addEventListener("click", loadBackupsAdmin);
-
 document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>{
   const input=document.getElementById("uploadBackupInput"); const err=document.getElementById("backupError"); err.textContent="";
   if(!input || !input.files || !input.files.length){ err.textContent="Please choose .xlsx file."; return; }
@@ -1048,11 +1032,8 @@ document.getElementById("uploadBackupBtn")?.addEventListener("click", async ()=>
   const fd=new FormData(); fd.append("file", file);
   try{ const res=await fetch("/api/upload", {method:"POST", body: fd, credentials:"same-origin"}); if(!res.ok){ let j={}; try{ j=await res.json(); }catch{} throw j; } input.value=""; await afterDataLoad(); await loadBackupsAdmin(); alert("Uploaded."); }catch(e){ err.textContent="Upload failed."; }
 });
-
 (async function init(){ await loadCurrencies(); await refreshSession(); await afterDataLoad(); if(document.getElementById("adminTab") && !document.getElementById("adminTab").classList.contains("hidden")) { await loadBackupsAdmin(); } })();
-// Add tab listener to load backups when admin tab clicked
 document.querySelector('[data-tab="admin"]').addEventListener("click", loadBackupsAdmin);
 </script>
-
 </body>
 </html>
