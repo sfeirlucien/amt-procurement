@@ -601,8 +601,12 @@ function renderReqTable() {
         
         const moneyDisplay = `<span class="money-tip" title="Original: ${r.currency} ${r.amount_original}">${r.amount_usd.toFixed(2)}</span>`;
         const supDisplay = `<span class="clickable-supplier" onclick="showSupplierHistory('${r.supplier}')">${r.supplier}</span>`;
-        const copyText = `PO: ${r.po_number||r.number}, ${r.description}, Supplier: ${r.supplier}`;
-        const copyBtn = `<button onclick="copyToClipboard('${copyText}')" class="secondary" style="padding:2px 6px; font-size:10px;" title="Copy">📋</button>`;
+        
+        // MODIFIED: COPY TEXT LOGIC
+        const paidStatus = r.paid ? "Paid" : "Unpaid";
+        const copyText = `PO: ${r.po_number||r.number}\nDesc: ${r.description}\nSupplier: ${r.supplier}\nExpected: ${r.expected||"N/A"}\nAmount: ${formatMoney(r.amount_usd)}\nPayment: ${paidStatus}`;
+        
+        const copyBtn = `<button onclick="copyToClipboard(\`${copyText}\`)" class="secondary" style="padding:2px 6px; font-size:10px;" title="Copy">📋</button>`;
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
         
         let actionBtns = '';
