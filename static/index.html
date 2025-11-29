@@ -99,7 +99,11 @@
 
     /* Quick Action Buttons */
     button.small-action { padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #059669; }
-    button.small-action:hover { background: #047857; }
+    button.small-action:hover { opacity: 0.9; }
+    
+    /* New Tracking Button Style */
+    a.track-btn { display:inline-block; padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #8b5cf6; color:white; border-radius:6px; text-decoration:none; font-weight:500; text-align: center; vertical-align: middle; }
+    a.track-btn:hover { background: #7c3aed; }
 
     /* Mobile */
     @media (max-width: 768px) {
@@ -285,6 +289,7 @@
         <div class="flex-row" style="margin-top:10px;">
           <div class="flex-1"><label>Amount<input type="number" id="reqTotal" step="0.01" /></label></div>
           <div class="flex-1"><label>Currency<select id="reqCurrency"></select></label></div>
+          <div class="flex-1"><label>Tracking URL<input type="text" id="reqTracking" placeholder="https://dhl..." /></label></div>
           <div class="flex-1"><label>Urgency<select id="reqUrgency"><option value="normal">Normal</option><option value="high">High</option></select></label></div>
           <div class="flex-1" style="padding-top:24px;"><label><input type="checkbox" id="reqPaid" style="width:auto; margin-right:8px;"/> Paid</label></div>
         </div>
@@ -441,6 +446,13 @@
            <div class="flex-row"><input id="adminUsername" placeholder="User"><input type="password" id="adminPassword" placeholder="Pass"><select id="adminRole"><option value="user">User</option><option value="admin">Admin</option></select><button id="saveUserBtn">Add</button></div>
            <table id="userTable" style="margin-top:5px;"><thead><tr><th>User</th><th>Role</th><th>Act</th></tr></thead><tbody></tbody></table>
         </div>
+        
+        <div class="card">
+           <h3>Activity Log (Who did what?)</h3>
+           <div class="table-responsive">
+              <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
+           </div>
+        </div>
 
         <div class="card" id="backupCard">
             <h3>Backups</h3>
@@ -495,8 +507,8 @@ function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => 
 async function afterDataLoad() {
   selectedIds.clear(); toggleBulkBar();
   await loadOptions(); await loadData(); 
-  await updateDashboard(); // Updates simple counters & top 5
-  calculateOverviewTotals(); // Updates the financial breakdown
+  await updateDashboard(); 
+  calculateOverviewTotals();
   await loadAdminData();
 }
 
@@ -517,7 +529,6 @@ async function loadOptions(){
     };
     fillVes("reqVessel"); fillVes("landVessel"); fillVes("ovVesselFilter");
 
-    // Fill Months/Years in Dashboard
     const mSel = document.getElementById("ovMonthFilter");
     if(mSel && mSel.options.length <= 1) {
         ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m,i)=> mSel.add(new Option(m, i+1)));
@@ -569,8 +580,11 @@ function renderReqTable() {
         const copyBtn = `<button onclick="copyToClipboard('${copyText}')" class="secondary" style="padding:2px 6px; font-size:10px;" title="Copy">📋</button>`;
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
         
-        // FIXED: Added Single Row Action Buttons
         let actionBtns = '';
+        // FEATURE: Tracking Link Button (Only shows if url exists)
+        if(r.tracking_url && r.tracking_url.length > 5) {
+             actionBtns += `<a href="${r.tracking_url}" target="_blank" class="track-btn" title="Track Shipment">✈️</a>`;
+        }
         if(!r.paid) actionBtns += `<button class="small-action toggle-paid" data-id="${r.id}" title="Mark Paid">$</button>`;
         if(!r.delivered) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
         
@@ -594,10 +608,8 @@ function renderReqTable() {
         tbody.appendChild(tr);
     });
     
-    // Attach Listeners
     document.querySelectorAll(".edit-req").forEach(b=>b.onclick=()=>editReq(b.dataset.id));
     document.querySelectorAll(".delete-req").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'req'));
-    // New Single Actions
     document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{
         await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) });
         await afterDataLoad();
@@ -623,7 +635,6 @@ function renderLandTable() {
         const moneyDisplay = `<span class="money-tip" title="Original: ${r.currency} ${r.amount_original}">${r.amount_usd.toFixed(2)}</span>`;
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
         
-        // FIXED: Added Single Row Action Buttons
         let actionBtns = '';
         if(!r.paid) actionBtns += `<button class="small-action toggle-land-paid" data-id="${r.id}">$</button>`;
         if(!r.delivered) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
@@ -707,6 +718,7 @@ async function editReq(id) {
     document.getElementById("reqCategory").value=r.category; document.getElementById("reqSupplierSelect").value=r.supplier;
     document.getElementById("reqDateOrdered").value=r.date_ordered; document.getElementById("reqExpected").value=r.expected||"";
     document.getElementById("reqTotal").value=r.amount_original; document.getElementById("reqCurrency").value=r.currency;
+    document.getElementById("reqTracking").value=r.tracking_url||""; // Added tracking population
     document.getElementById("reqUrgency").value=r.urgency; document.getElementById("reqPaid").checked=!!r.paid;
     document.getElementById("reqFormTitle").scrollIntoView({behavior:"smooth"});
     document.querySelector("[data-tab='requisitions']").click();
@@ -758,6 +770,7 @@ document.getElementById("saveReqBtn").onclick = async () => {
         category: document.getElementById("reqCategory").value, supplier: document.getElementById("reqSupplierSelect").value,
         date_ordered: document.getElementById("reqDateOrdered").value, expected: document.getElementById("reqExpected").value,
         amount: document.getElementById("reqTotal").value, currency: document.getElementById("reqCurrency").value,
+        tracking_url: document.getElementById("reqTracking").value, // Added tracking save
         urgency: document.getElementById("reqUrgency").value, paid: document.getElementById("reqPaid").checked
     };
     if(!payload.number || !payload.vessel || !payload.amount) { alert("Missing fields"); return; }
@@ -799,18 +812,15 @@ document.getElementById("clearReqFilterBtn").onclick=()=>{ document.querySelecto
 document.getElementById("applyLandingFilterBtn").onclick=renderLandTable;
 document.getElementById("applyDeliveredReqFilterBtn").onclick=renderDelivered;
 
-// FIXED: Dashboard Logic
 async function updateDashboard() {
   document.getElementById("summaryOpenReqNotDel").textContent = allReqs.filter(r=>!r.delivered && (r.status||'open')==='open').length;
   document.getElementById("summaryOpenReqUnpaid").textContent = allReqs.filter(r=>!r.paid && (r.status||'open')==='open').length;
   document.getElementById("summaryOpenLandNotDel").textContent = allLandings.filter(r=>!r.delivered).length;
   document.getElementById("summaryOpenLandUnpaid").textContent = allLandings.filter(r=>!r.paid).length;
   
-  // Update Recent Table
   const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
   allReqs.slice(-5).reverse().forEach(r=>t.innerHTML+=`<tr><td>${r.po_number||r.number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>$${r.amount_usd.toFixed(2)}</td><td>${r.status||'open'}</td></tr>`);
 
-  // FIXED: Top 5 Suppliers
   const supMap = {};
   allReqs.forEach(r => {
       const s = r.supplier || "Unknown";
@@ -824,7 +834,6 @@ async function updateDashboard() {
   });
 }
 
-// FIXED: Financial Totals Logic
 document.getElementById("ovApplyTotalsBtn").onclick = calculateOverviewTotals;
 document.getElementById("ovClearTotalsBtn").onclick = () => {
     ["ovTypeFilter","ovVesselFilter","ovPaidFilter","ovMonthFilter","ovYearFilter","ovCategoryFilter"].forEach(id => document.getElementById(id).value = "");
@@ -832,9 +841,9 @@ document.getElementById("ovClearTotalsBtn").onclick = () => {
 };
 
 function calculateOverviewTotals() {
-    const typeF = document.getElementById("ovTypeFilter").value; // req, land
+    const typeF = document.getElementById("ovTypeFilter").value;
     const vesF = document.getElementById("ovVesselFilter").value;
-    const paidF = document.getElementById("ovPaidFilter").value; // "1" or "0"
+    const paidF = document.getElementById("ovPaidFilter").value;
     const monthF = document.getElementById("ovMonthFilter").value;
     const yearF = document.getElementById("ovYearFilter").value;
     const catF = document.getElementById("ovCategoryFilter").value;
@@ -848,7 +857,7 @@ function calculateOverviewTotals() {
         if((i.status||'open') === 'cancelled') return false;
         if(vesF && i.vessel !== vesF) return false;
         if(paidF !== "" && String(!!i.paid) !== String(paidF === "1")) return false;
-        if(catF && i.category !== catF) return false; // Note: landings might not have category
+        if(catF && i.category !== catF) return false; 
         
         const d = parseDateSafe(i.date_ordered || i.landed_date);
         if(yearF && (!d || d.getFullYear() != yearF)) return false;
@@ -864,7 +873,6 @@ function calculateOverviewTotals() {
     document.getElementById("ovPaidMonthTotal").textContent = formatMoney(paid);
     document.getElementById("ovUnpaidMonthTotal").textContent = formatMoney(unpaid);
     
-    // Year total (ignoring month filter)
     let yearItems = (typeF==='land'?allLandings:allReqs).filter(i=>(i.status||'open')!=='cancelled' && i.paid);
     if(yearF) yearItems = yearItems.filter(i=>{ const d=parseDateSafe(i.date_ordered||i.landed_date); return d && d.getFullYear()==yearF; });
     document.getElementById("ovPaidYearTotal").textContent = formatMoney(yearItems.reduce((acc,c)=>acc+c.amount_usd,0));
@@ -1039,6 +1047,24 @@ async function loadAdminData() {
               </td>
             </tr>`;
         });
+        
+        // Audit Log Fetch with Safety Check
+        const auditTable = document.querySelector("#auditTable tbody");
+        auditTable.innerHTML = "";
+        try {
+            const logs = await apiFetch("/api/audit");
+            // Expecting array: [{user: 'admin', action: 'Created Order', target: 'PO-123', date: '2025...'}]
+            if(Array.isArray(logs)) {
+                logs.slice(0, 50).forEach(log => {
+                    auditTable.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${log.date}</td></tr>`;
+                });
+            } else {
+                auditTable.innerHTML = "<tr><td colspan='4' style='color:#666; font-style:italic;'>Log empty or unavailable</td></tr>";
+            }
+        } catch(e) {
+            // This prevents crash if backend doesn't have the audit endpoint yet
+            auditTable.innerHTML = "<tr><td colspan='4' style='color:#666; font-style:italic;'>No audit log available (Requires backend update)</td></tr>";
+        }
     }
 }
 
@@ -1060,7 +1086,6 @@ document.getElementById("uploadBackupBtn").onclick=async()=>{
 function openDirPopup(type){ dirPopupType=type; document.getElementById("dirPopupBackdrop").classList.remove("hidden"); document.getElementById("dirPopup").classList.remove("hidden"); }
 function closeDirPopup(){ document.getElementById("dirPopupBackdrop").classList.add("hidden"); document.getElementById("dirPopup").classList.add("hidden"); }
 
-// FIXED: Added New Supplier Button logic
 document.getElementById("newSupplierBtn").onclick=()=>openDirPopup("supplier");
 
 document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
