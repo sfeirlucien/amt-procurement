@@ -599,6 +599,9 @@ async function loadData() {
 }
 
 /* ================== TABLE RENDERING ================== */
+// HELPER TO FIX TRUTHINESS ISSUE
+const getBoolVal = (val) => (val === 1 || val === '1' || val === true || val === 'true') ? '1' : '0';
+
 function renderReqTable() {
     const tbody = document.querySelector("#reqTable tbody"); tbody.innerHTML="";
     const statusF=document.getElementById("filterReqStatus").value, paidF=document.getElementById("filterReqPaid").value, delF=document.getElementById("filterReqDelivered").value, search=document.getElementById("filterReqSearch").value.toLowerCase();
@@ -606,8 +609,11 @@ function renderReqTable() {
     allReqs.forEach(r => {
         if((r.status||"open")==="cancelled") return; 
         if(statusF && (r.status||"open")!==statusF) return;
-        if(paidF!=="" && String(r.paid)!=paidF) return;
-        if(delF!=="" && String(r.delivered)!=delF) return;
+        
+        // FIXED FILTERING LOGIC
+        if(paidF !== "" && getBoolVal(r.paid) !== paidF) return;
+        if(delF !== "" && getBoolVal(r.delivered) !== delF) return;
+        
         if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
 
         const isOverdue = !r.delivered && r.expected && new Date(r.expected) < new Date();
@@ -666,8 +672,11 @@ function renderLandTable() {
 
     allLandings.forEach(r => {
         if((r.status||"open")==="cancelled") return;
-        if(paidF!=="" && String(r.paid)!=paidF) return;
-        if(delF!=="" && String(r.delivered)!=delF) return;
+        
+        // FIXED FILTERING LOGIC
+        if(paidF !== "" && getBoolVal(r.paid) !== paidF) return;
+        if(delF !== "" && getBoolVal(r.delivered) !== delF) return;
+        
         if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
 
         const tr = document.createElement("tr");
@@ -1188,3 +1197,5 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 </body>
 </html>
+
+
