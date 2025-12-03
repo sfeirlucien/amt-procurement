@@ -70,6 +70,7 @@
     .tag { padding:2px 8px; border-radius:999px; font-size:11px; font-weight: 500; }
     .tag.green { background:#dcfce7; color:#166534; }
     .tag.red { background:#fee2e2; color:#991b1b; }
+    .tag.yellow { background:#fef9c3; color:#854d0e; }
     .tag.gray { background:#f3f4f6; color:#374151; }
     
     /* Utilities */
@@ -104,6 +105,8 @@
     button.small-action:hover { opacity: 0.9; }
     button.small-action.danger { background: #dc2626; }
     button.small-action.warning { background: #d97706; }
+    button.small-action.secondary { background: #6b7280; }
+    button.small-action.info { background: #3b82f6; }
     
     /* New Tracking Button Style */
     a.track-btn { display:inline-block; padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #8b5cf6; color:white; border-radius:6px; text-decoration:none; font-weight:500; text-align: center; vertical-align: middle; }
@@ -154,9 +157,29 @@
   </div>
 </div>
 
+<div id="docPopupBackdrop" class="popup-backdrop hidden"></div>
+<div id="docPopup" class="popup hidden">
+  <h3>Documents</h3>
+  <div style="margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+      <label>Upload File
+      <input type="file" id="docUploadInput" />
+      </label>
+      <button id="docUploadBtn" class="success" style="margin-top:8px;">Upload</button>
+  </div>
+  <div class="table-responsive">
+      <table id="docTable"><thead><tr><th>Name</th><th>Uploaded By</th><th>Date</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div style="text-align:right; margin-top:10px;">
+    <button onclick="closeDocPopup()" class="secondary">Close</button>
+  </div>
+</div>
+
 <div id="supHistBackdrop" class="popup-backdrop hidden"></div>
 <div id="supHistPopup" class="popup hidden">
-  <h3 id="supHistTitle">Supplier History</h3>
+  <div style="display:flex; justify-content:space-between;">
+      <h3 id="supHistTitle">Supplier History</h3>
+      <div id="supScoreDisplay" style="font-weight:bold; color:#d97706;"></div>
+  </div>
   <div class="table-responsive">
     <table id="supHistTable">
       <thead><tr><th>Date</th><th>PO #</th><th>Item</th><th>Amount</th></tr></thead>
@@ -165,6 +188,20 @@
   </div>
   <div style="text-align:right; margin-top:10px;">
     <button onclick="document.getElementById('supHistBackdrop').classList.add('hidden'); document.getElementById('supHistPopup').classList.add('hidden');" class="secondary">Close</button>
+  </div>
+</div>
+
+<div id="agingPopupBackdrop" class="popup-backdrop hidden"></div>
+<div id="agingPopup" class="popup hidden" style="max-width:800px;">
+  <h3>Aging Report (Unpaid Invoices)</h3>
+  <div class="table-responsive">
+    <table id="agingTable">
+      <thead><tr><th>PO #</th><th>Supplier</th><th>Amount</th><th>Days Unpaid</th><th>Group</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div style="text-align:right; margin-top:10px;">
+    <button onclick="document.getElementById('agingPopupBackdrop').classList.add('hidden'); document.getElementById('agingPopup').classList.add('hidden');" class="secondary">Close</button>
   </div>
 </div>
 
@@ -229,6 +266,7 @@
   <button class="success" id="bulkMarkPaidBtn">Paid</button>
   <button class="secondary" id="bulkMarkUnpaidBtn">Unpaid</button>
   <button class="success" id="bulkMarkDeliveredBtn">Delivered</button>
+  <button class="warning" id="bulkMarkPartialBtn">Mark Partial</button>
   <button class="secondary" id="bulkCancelBtn">Cancel</button>
 </div>
 
@@ -258,7 +296,10 @@
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2>Paid Totals</h2>
-          <button id="openChartBtn" class="success" style="font-size:13px;">📊 Analytics Charts</button>
+          <div style="display:flex; gap:10px;">
+             <button id="showAgingBtn" class="warning" style="font-size:13px;">🕒 Aging Report</button>
+             <button id="openChartBtn" class="success" style="font-size:13px;">📊 Analytics Charts</button>
+          </div>
         </div>
         
         <div class="filter-row">
@@ -312,7 +353,10 @@
           <div class="flex-1"><label>Currency<select id="reqCurrency"></select></label></div>
           <div class="flex-1"><label>Tracking URL<input type="text" id="reqTracking" placeholder="https://dhl..." /></label></div>
           <div class="flex-1"><label>Urgency<select id="reqUrgency"><option value="normal">Normal</option><option value="high">High</option></select></label></div>
-          <div class="flex-1" style="padding-top:24px;"><label><input type="checkbox" id="reqPaid" style="width:auto; margin-right:8px;"/> Paid</label></div>
+          <div class="flex-1" style="padding-top:24px;">
+              <label><input type="checkbox" id="reqPaid" style="width:auto; margin-right:8px;"/> Paid</label>
+              <label style="margin-top:4px; font-size:11px; color:#666;">(Documents upload available after saving)</label>
+          </div>
         </div>
         <div style="margin-top:16px;">
           <button id="saveReqBtn">Save Order</button>
@@ -519,6 +563,8 @@ let selectedIds = new Set(); let currentBulkType = null;
 let myChart = null; 
 // Audit Log Cache
 let allAuditLogs = [];
+// Document Context
+let docContext = { type: null, id: null };
 
 /* ================== DARK MODE ================== */
 const darkModeBtn = document.getElementById("darkModeBtn");
@@ -532,6 +578,8 @@ darkModeBtn.onclick = () => {
 function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
 function formatMoney(amount) { return parseFloat(amount || 0).toLocaleString('en-US', {style:'currency', currency:'USD'}); }
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => { alert("Copied: " + text); }); }
+// Fix boolean truthiness issues
+const getBoolVal = (val) => (val === 1 || val === '1' || val === true || val === 'true') ? '1' : '0';
 
 /* ================== DATA LOADING ================== */
 async function afterDataLoad() {
@@ -599,9 +647,6 @@ async function loadData() {
 }
 
 /* ================== TABLE RENDERING ================== */
-// HELPER TO FIX TRUTHINESS ISSUE
-const getBoolVal = (val) => (val === 1 || val === '1' || val === true || val === 'true') ? '1' : '0';
-
 function renderReqTable() {
     const tbody = document.querySelector("#reqTable tbody"); tbody.innerHTML="";
     const statusF=document.getElementById("filterReqStatus").value, paidF=document.getElementById("filterReqPaid").value, delF=document.getElementById("filterReqDelivered").value, search=document.getElementById("filterReqSearch").value.toLowerCase();
@@ -626,16 +671,27 @@ function renderReqTable() {
         
         const paidStatus = r.paid ? "Paid" : "Unpaid";
         const copyText = `PO: ${r.po_number||r.number}\nDesc: ${r.description}\nSupplier: ${r.supplier}\nExpected: ${r.expected||"N/A"}\nAmount: ${formatMoney(r.amount_usd)}\nPayment: ${paidStatus}`;
-        
         const copyBtn = `<button onclick="copyToClipboard(\`${copyText}\`)" class="secondary" style="padding:2px 6px; font-size:10px;" title="Copy">📋</button>`;
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
         
+        // Logic for delivery Status
+        let delBadge = '<span class="tag gray">Open</span>';
+        let delVal = r.delivered; // 0, 1, 2
+        if(delVal == 1) delBadge = '<span class="tag green">Delivered</span>';
+        else if(delVal == 2) delBadge = '<span class="tag yellow">Partial</span>';
+
         let actionBtns = '';
         if(r.tracking_url && r.tracking_url.length > 5) {
              actionBtns += `<a href="${r.tracking_url}" target="_blank" class="track-btn" title="Track Shipment">✈️</a>`;
         }
+        // Documents Button
+        actionBtns += `<button class="small-action info doc-btn" data-id="${r.id}" data-type="req" title="Documents">📎</button>`;
+        // Print PO
+        actionBtns += `<button class="small-action secondary print-btn" onclick="generatePO(${r.id})" title="Print PO">🖨️</button>`;
+
         if(!r.paid) actionBtns += `<button class="small-action toggle-paid" data-id="${r.id}" title="Mark Paid">$</button>`;
-        if(!r.delivered) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
+        // Only show check if not fully delivered
+        if(delVal != 1) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
         actionBtns += `<button class="small-action danger toggle-cancel" data-id="${r.id}" title="Cancel Order">⊘</button>`;
         
         tr.innerHTML = `
@@ -648,7 +704,7 @@ function renderReqTable() {
             <td>${r.expected||""} ${isOverdue?'⚠️':''}</td>
             <td>${moneyDisplay}</td>
             <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
-            <td>${r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'}</td>
+            <td>${delBadge}</td>
             <td style="white-space:nowrap;">
                ${actionBtns}
                <button class="edit-req secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
@@ -660,6 +716,7 @@ function renderReqTable() {
     
     document.querySelectorAll(".edit-req").forEach(b=>b.onclick=()=>editReq(b.dataset.id));
     document.querySelectorAll(".delete-req").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'req'));
+    document.querySelectorAll(".doc-btn").forEach(b=>b.onclick=()=>openDocPopup(b.dataset.id, b.dataset.type));
     document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
     document.querySelectorAll(".toggle-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
     document.querySelectorAll(".toggle-cancel").forEach(b=>b.onclick=async()=>{ if(confirm("Move to Cancelled?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }});
@@ -672,20 +729,23 @@ function renderLandTable() {
 
     allLandings.forEach(r => {
         if((r.status||"open")==="cancelled") return;
-        
-        // FIXED FILTERING LOGIC
         if(paidF !== "" && getBoolVal(r.paid) !== paidF) return;
         if(delF !== "" && getBoolVal(r.delivered) !== delF) return;
-        
         if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
 
         const tr = document.createElement("tr");
         const moneyDisplay = `<span class="money-tip" title="Original: ${r.currency} ${r.amount_original}">${r.amount_usd.toFixed(2)}</span>`;
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
         
+        let delBadge = '<span class="tag gray">Open</span>';
+        let delVal = r.delivered;
+        if(delVal == 1) delBadge = '<span class="tag green">Delivered</span>';
+        else if(delVal == 2) delBadge = '<span class="tag yellow">Partial</span>';
+
         let actionBtns = '';
+        actionBtns += `<button class="small-action info doc-btn" data-id="${r.id}" data-type="land" title="Documents">📎</button>`;
         if(!r.paid) actionBtns += `<button class="small-action toggle-land-paid" data-id="${r.id}">$</button>`;
-        if(!r.delivered) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
+        if(delVal != 1) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
 
         tr.innerHTML = `
             <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
@@ -696,7 +756,7 @@ function renderLandTable() {
             <td>${r.landed_date||""}</td>
             <td>${moneyDisplay}</td>
             <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
-            <td>${r.delivered?'<span class="tag green">Delivered</span>':'<span class="tag gray">Open</span>'}</td>
+            <td>${delBadge}</td>
             <td style="white-space:nowrap;">
                 ${actionBtns}
                 <button class="edit-land secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
@@ -707,27 +767,110 @@ function renderLandTable() {
     });
     document.querySelectorAll(".edit-land").forEach(b=>b.onclick=()=>editLand(b.dataset.id));
     document.querySelectorAll(".delete-land").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'land'));
+    document.querySelectorAll(".doc-btn").forEach(b=>b.onclick=()=>openDocPopup(b.dataset.id, b.dataset.type));
     
     document.querySelectorAll(".toggle-land-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
     document.querySelectorAll(".toggle-land-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
     attachBulkListeners('land');
 }
 
+/* ================== DOCUMENTS ================== */
+async function openDocPopup(id, type) {
+    docContext = { id, type };
+    document.getElementById("docPopupBackdrop").classList.remove("hidden");
+    document.getElementById("docPopup").classList.remove("hidden");
+    await loadDocuments();
+}
+function closeDocPopup() {
+    document.getElementById("docPopupBackdrop").classList.add("hidden");
+    document.getElementById("docPopup").classList.add("hidden");
+}
+async function loadDocuments() {
+    const t = document.querySelector("#docTable tbody"); t.innerHTML = "<tr><td colspan='3'>Loading...</td></tr>";
+    try {
+        const docs = await apiFetch(`/api/documents/${docContext.type}/${docContext.id}`);
+        t.innerHTML = "";
+        if(docs.length === 0) t.innerHTML = "<tr><td colspan='3'>No documents found.</td></tr>";
+        docs.forEach(d => {
+            t.innerHTML += `<tr><td><a href="/static/uploads/${d.filename}" target="_blank">${d.filename}</a></td><td>${d.uploaded_by}</td><td>${d.uploaded_at}</td></tr>`;
+        });
+    } catch(e) { t.innerHTML = "<tr><td colspan='3'>Error loading docs.</td></tr>"; }
+}
+document.getElementById("docUploadBtn").onclick = async () => {
+    const input = document.getElementById("docUploadInput");
+    if(!input.files.length) return alert("Select a file first");
+    const fd = new FormData();
+    fd.append("file", input.files[0]);
+    fd.append("parent_id", docContext.id);
+    fd.append("parent_type", docContext.type);
+    
+    try {
+        const res = await fetch("/api/documents/upload", {method:"POST", body:fd, credentials:"same-origin"});
+        if(res.ok) { alert("Uploaded!"); input.value=""; await loadDocuments(); }
+        else alert("Upload failed");
+    } catch(e) { alert("Error uploading"); }
+};
+
+/* ================== GENERATE PO ================== */
+function generatePO(id) {
+    const r = allReqs.find(x => x.id == id);
+    if(!r) return;
+    const w = window.open("", "_blank");
+    w.document.write(`
+      <html><head><title>Purchase Order ${r.po_number || r.number}</title>
+      <style>
+        body{font-family:sans-serif; padding:40px;}
+        .header{display:flex;justify-content:space-between;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px;}
+        h1{margin:0;}
+        .details{display:flex;justify-content:space-between;margin-bottom:40px;}
+        table{width:100%;border-collapse:collapse;margin-top:20px;}
+        th,td{border:1px solid #ccc;padding:10px;text-align:left;}
+        th{background:#f3f4f6;}
+      </style>
+      </head><body>
+      <div class="header">
+        <div><h1>Purchase Order</h1><p>AMT Procurement</p></div>
+        <div style="text-align:right;"><h2>${r.po_number || r.number}</h2><p>Date: ${r.date_ordered}</p></div>
+      </div>
+      <div class="details">
+        <div><strong>Vendor:</strong><br>${r.supplier}</div>
+        <div><strong>Ship To:</strong><br>Vessel: ${r.vessel}<br>Attn: Captain</div>
+      </div>
+      <table>
+        <thead><tr><th>Description</th><th>Category</th><th>Amount (${r.currency})</th></tr></thead>
+        <tbody><tr><td>${r.description}</td><td>${r.category}</td><td>${r.amount_original}</td></tr></tbody>
+      </table>
+      <div style="margin-top:40px; text-align:right;">
+         <p><strong>Total (USD Est): $${r.amount_usd}</strong></p>
+      </div>
+      <div style="margin-top:60px; border-top:1px solid #333; padding-top:10px;">Authorized Signature</div>
+      <script>window.print();<\/script>
+      </body></html>
+    `);
+    w.document.close();
+}
+
+/* ================== AGING REPORT ================== */
+document.getElementById("showAgingBtn").onclick = async () => {
+    document.getElementById("agingPopupBackdrop").classList.remove("hidden");
+    document.getElementById("agingPopup").classList.remove("hidden");
+    const t = document.querySelector("#agingTable tbody"); t.innerHTML = "<tr><td colspan='5'>Loading...</td></tr>";
+    try {
+        const data = await apiFetch("/api/reports/aging");
+        t.innerHTML = "";
+        if(data.length === 0) t.innerHTML = "<tr><td colspan='5'>No unpaid invoices found. Good job!</td></tr>";
+        data.forEach(d => {
+            t.innerHTML += `<tr><td>${d.po}</td><td>${d.supplier}</td><td>$${d.amount}</td><td>${d.days}</td><td><span class="tag red">${d.group}</span></td></tr>`;
+        });
+    } catch { t.innerHTML = "<tr><td colspan='5'>Error loading report.</td></tr>"; }
+};
+
+/* ================== SHARED (Cancelled, Delivered, etc) ================== */
 function renderCancelled() {
   const reqBody=document.querySelector("#reqCancelledTable tbody"); reqBody.innerHTML="";
   allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ 
       const tr=document.createElement("tr"); 
-      tr.innerHTML=`
-        <td>${r.po_number||r.number}</td>
-        <td>${r.description}</td>
-        <td>${r.vessel}</td>
-        <td>${r.supplier}</td>
-        <td>${r.amount_usd}</td>
-        <td><span class="tag red">Cancelled</span></td>
-        <td>
-            <button class="small-action warning recover-req" data-id="${r.id}" title="Recover">↺</button>
-            <button class="small-action danger perm-delete-req" data-id="${r.id}" title="Delete Forever">X</button>
-        </td>`; 
+      tr.innerHTML=`<td>${r.po_number||r.number}</td><td>${r.description}</td><td>${r.vessel}</td><td>${r.supplier}</td><td>${r.amount_usd}</td><td><span class="tag red">Cancelled</span></td><td><button class="small-action warning recover-req" data-id="${r.id}" title="Recover">↺</button><button class="small-action danger perm-delete-req" data-id="${r.id}" title="Delete Forever">X</button></td>`; 
       reqBody.appendChild(tr); 
   });
   document.querySelectorAll(".recover-req").forEach(b=>b.onclick=async()=>{ if(confirm("Recover this order?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"open"})}); await afterDataLoad(); }});
@@ -739,8 +882,8 @@ function renderDelivered() {
   const paidF=document.getElementById("filterDeliveredReqPaid").value;
   const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
   
-  allReqs.filter(r=>r.delivered).forEach(r=>{
-      if(paidF!=="" && String(r.paid)!=paidF) return;
+  allReqs.filter(r=>r.delivered == 1).forEach(r=>{
+      if(paidF!=="" && getBoolVal(r.paid)!=paidF) return;
       if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
       const tr=document.createElement("tr");
       tr.innerHTML=`<td>PO</td><td>${r.po_number||r.number}</td><td>${r.description}</td><td>${r.supplier}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'Yes':'No'}</td>`;
@@ -833,6 +976,11 @@ document.getElementById("saveReqBtn").onclick = async () => {
     try {
         if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`, {method:"PATCH", body:JSON.stringify(payload)});
         else await apiFetch("/api/requisitions", {method:"POST", body:JSON.stringify(payload)});
+        
+        // Handle file upload if present in Add Mode
+        const fileInput = document.getElementById("docUploadInput"); // Reusing document popup input is tricky, normally separate.
+        // Simplified: Documents are added AFTER saving via the list.
+        
         document.getElementById("cancelReqEditBtn").click(); await afterDataLoad();
     } catch(e) { alert("Error saving"); }
 };
@@ -912,7 +1060,7 @@ function calculateOverviewTotals() {
     items = items.filter(i => {
         if((i.status||'open') === 'cancelled') return false;
         if(vesF && i.vessel !== vesF) return false;
-        if(paidF !== "" && String(!!i.paid) !== String(paidF === "1")) return false;
+        if(paidF !== "" && getBoolVal(i.paid) !== paidF) return false;
         if(catF && i.category !== catF) return false; 
         
         const d = parseDateSafe(i.date_ordered || i.landed_date);
@@ -959,25 +1107,10 @@ async function runBulk(action) {
 document.getElementById("bulkMarkPaidBtn").onclick=()=>runBulk("mark_paid");
 document.getElementById("bulkMarkUnpaidBtn").onclick=()=>runBulk("mark_unpaid");
 document.getElementById("bulkMarkDeliveredBtn").onclick=()=>runBulk("mark_delivered");
+document.getElementById("bulkMarkPartialBtn").onclick=()=>runBulk("mark_partial");
 document.getElementById("bulkCancelBtn").onclick=()=>{ selectedIds.clear(); toggleBulkBar(); document.querySelectorAll(".row-select").forEach(c=>c.checked=false); };
 document.getElementById("reqSelectAll").onclick=(e)=>{ document.querySelectorAll("#reqTable .row-select").forEach(c=>{c.checked=e.target.checked; c.dispatchEvent(new Event('change'));}); };
 document.getElementById("landSelectAll").onclick=(e)=>{ document.querySelectorAll("#landingTable .row-select").forEach(c=>{c.checked=e.target.checked; c.dispatchEvent(new Event('change'));}); };
-
-/* ================== CSV EXPORT ================== */
-function exportTableToCSV(tableId, filename) {
-    const table = document.getElementById(tableId); const rows = table.querySelectorAll('tr'); let csv = [];
-    for(let i=0; i<rows.length; i++) {
-        if(rows[i].style.display==="none") continue;
-        const row = [], cols = rows[i].querySelectorAll('td, th');
-        for(let j=0; j<cols.length; j++) if(!cols[j].classList.contains("chk-col")) row.push('"'+cols[j].innerText.replace(/"/g, '""')+'"');
-        csv.push(row.join(","));
-    }
-    const blob = new Blob([csv.join("\n")], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-}
-document.getElementById("exportReqBtn").onclick=()=>exportTableToCSV("reqTable", "orders.csv");
-document.getElementById("exportLandBtn").onclick=()=>exportTableToCSV("landingTable", "landings.csv");
 
 /* ================== CHART ================== */
 document.getElementById("openChartBtn").onclick = () => {
@@ -1043,10 +1176,19 @@ function updateChart() {
 }
 
 /* ================== OPTION 16: SUPPLIER HISTORY ================== */
-function showSupplierHistory(supplierName) {
+async function showSupplierHistory(supplierName) {
     if(!supplierName) return;
     const tbody = document.querySelector("#supHistTable tbody"); tbody.innerHTML="";
     document.getElementById("supHistTitle").textContent = "History: " + supplierName;
+    document.getElementById("supScoreDisplay").textContent = "Loading Score...";
+    
+    // Fetch Score
+    try {
+        const res = await apiFetch(`/api/vendors/${supplierName}/score`);
+        let stars = "⭐".repeat(Math.round(res.score));
+        document.getElementById("supScoreDisplay").textContent = `Rating: ${res.score} / 5 ${stars}`;
+    } catch { document.getElementById("supScoreDisplay").textContent = ""; }
+
     const items = allReqs.filter(r => r.supplier === supplierName).sort((a,b)=>b.id-a.id).slice(0, 10);
     items.forEach(i => {
         const tr = document.createElement("tr");
@@ -1197,5 +1339,3 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 </body>
 </html>
-
-
