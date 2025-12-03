@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Dubai Time (GMT+4), Audit Filters, Tracking URL, Smart Backup
+FIXED: Documents, Vendor Score, Aging Report, PO Gen, Dubai Time
 """
 
 import os
@@ -32,6 +32,7 @@ CORS(app, supports_credentials=True, origins=[
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
 FX_CACHE_FILE = os.path.join(BASE_DIR, "fx_cache.json")
@@ -49,7 +50,7 @@ SHEETS: Dict[str, List[str]] = {
         "amount_original", "currency", "amount_usd",
         "paid", "delivered", "status",
         "po_number", "remarks", "urgency", "tracking_url",
-        "created_by", "created_at", "updated_at"
+        "created_by", "created_at", "updated_at", "delivery_status" # Added delivery_status (0=Open, 1=Delivered, 2=Partial)
     ],
     "landings": [
         "id", "vessel", "item", "workshop",
@@ -65,6 +66,7 @@ SHEETS: Dict[str, List[str]] = {
     "categories": ["id", "name", "abbr", "created_at"],
     "vessels": ["id", "name", "created_at"],
     "logs": ["timestamp", "user", "action", "target", "details"],
+    "documents": ["id", "parent_type", "parent_id", "filename", "uploaded_at", "uploaded_by"]
 }
 
 # -------------------------------------------------
@@ -132,6 +134,7 @@ def ensure_db() -> None:
         wb.save(DB_FILE)
 
     os.makedirs(BACKUP_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def get_wb() -> Workbook:
     ensure_db()
@@ -230,14 +233,6 @@ def require_admin():
     if u["role"] != "admin":
         return jsonify({"error": "admin_required"}), 403
     return None
-
-def can_edit_row(row: Dict[str, Any]) -> bool:
-    u = current_user()
-    if not u:
-        return False
-    if u["role"] == "admin":
-        return True
-    return (row.get("created_by") or "") == u["username"]
 
 # -------------------------------------------------
 # FX helpers
@@ -397,9 +392,7 @@ def session_info():
 def get_audit_log():
     if require_admin(): return require_admin()
     rows = read_rows("logs")
-    # Sort by timestamp desc
     rows.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
-    
     out = []
     for r in rows:
         out.append({
@@ -410,7 +403,103 @@ def get_audit_log():
         })
     return jsonify(out)
 
-# --- FX ---
+# --- NEW: Vendor Score & Reports ---
+@app.get("/api/vendors/<name>/score")
+def get_vendor_score(name):
+    # FEATURE 4: Vendor Scorecard
+    reqs = read_rows("requisitions")
+    vendor_reqs = [r for r in reqs if r.get("supplier") == name]
+    if not vendor_reqs:
+        return jsonify({"score": 0, "total": 0})
+    
+    total = len(vendor_reqs)
+    # Simple Logic: Delivered orders count as positive points
+    delivered = sum(1 for r in vendor_reqs if r.get("delivered") in [1, 2, "1", "True"]) # Handle types
+    
+    # Base score out of 5
+    score = (delivered / total) * 5
+    # Cap at 5, min 1
+    score = max(1.0, min(5.0, score))
+    
+    return jsonify({"score": round(score, 1), "total": total})
+
+@app.get("/api/reports/aging")
+def get_aging_report():
+    # FEATURE 13: Aging Report
+    reqs = read_rows("requisitions")
+    now = get_dubai_time()
+    
+    unpaid = []
+    for r in reqs:
+        # Check if NOT paid and NOT cancelled
+        status = (r.get("status") or "open").lower()
+        paid_val = r.get("paid")
+        is_paid = paid_val in [1, "1", True, "true"]
+        
+        if not is_paid and status != "cancelled":
+            date_ord = r.get("date_ordered")
+            if not date_ord: continue
+            
+            try:
+                d_obj = datetime.strptime(str(date_ord), "%Y-%m-%d")
+                delta = (now - d_obj).days
+            except:
+                delta = 0
+            
+            group = "< 30 Days"
+            if delta > 90: group = "> 90 Days"
+            elif delta > 60: group = "60-90 Days"
+            elif delta > 30: group = "30-60 Days"
+            
+            unpaid.append({
+                "po": r.get("po_number") or r.get("number"),
+                "supplier": r.get("supplier"),
+                "amount": r.get("amount_usd"),
+                "days": delta,
+                "group": group
+            })
+            
+    return jsonify(unpaid)
+
+# --- NEW: Document Uploads ---
+@app.post("/api/documents/upload")
+def upload_order_doc():
+    if require_login(): return require_login()
+    if "file" not in request.files: return jsonify({"error": "missing_file"}), 400
+    
+    file = request.files["file"]
+    parent_type = request.form.get("parent_type", "req") # req or land
+    parent_id = request.form.get("parent_id")
+    
+    if not file or not parent_id: return jsonify({"error": "missing_data"}), 400
+    
+    filename = secure_filename(file.filename)
+    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    save_name = f"{parent_type}_{parent_id}_{ts}_{filename}"
+    file.save(os.path.join(UPLOAD_FOLDER, save_name))
+    
+    # Save metadata
+    row = {
+        "id": next_id("documents"),
+        "parent_type": parent_type,
+        "parent_id": parent_id,
+        "filename": save_name,
+        "uploaded_at": now_iso(),
+        "uploaded_by": current_user()["username"]
+    }
+    append_row("documents", row)
+    log_action("Upload Doc", target=f"{parent_type} {parent_id}", details=filename)
+    
+    return jsonify({"ok": True})
+
+@app.get("/api/documents/<ptype>/<pid>")
+def list_documents(ptype, pid):
+    if require_login(): return require_login()
+    docs = read_rows("documents")
+    filtered = [d for d in docs if str(d.get("parent_type")) == str(ptype) and str(d.get("parent_id")) == str(pid)]
+    return jsonify(filtered)
+
+# --- FX & Backup Routes ---
 @app.get("/api/currencies")
 def api_currencies():
     return jsonify({"currencies": sorted(set(fetch_fx_rates("USD").keys()) | {"USD"})})
@@ -419,9 +508,6 @@ def api_currencies():
 def api_fx():
     return jsonify({"base": "USD", "rates": fetch_fx_rates("USD")})
 
-# -------------------------------------------------
-# Backup routes
-# -------------------------------------------------
 @app.get("/api/backup")
 def download_backup_legacy():
     return download_backup_direct()
@@ -451,7 +537,6 @@ def api_list_backups():
         if not fn.lower().endswith(".xlsx"): continue
         fp = os.path.join(BACKUP_DIR, fn)
         st = os.stat(fp)
-        # Convert file mtime (UTC/Server) to Dubai Time
         dt_dubai = datetime.utcfromtimestamp(st.st_mtime) + timedelta(hours=4)
         out.append({
             "name": fn,
@@ -608,7 +693,18 @@ def list_requisitions():
 def add_requisition():
     if require_login(): return require_login()
     d=request.json
-    row={**d, "id":next_id("requisitions"), "created_by":current_user()["username"], "created_at":now_iso()}
+    # FIX: Force boolean fields to integer 1/0
+    val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
+    val_delivered = 1 if d.get("delivered") in [True, "true", 1, "1"] else 0
+    
+    row={
+        **d, 
+        "id":next_id("requisitions"), 
+        "created_by":current_user()["username"], 
+        "created_at":now_iso(),
+        "paid": val_paid,
+        "delivered": val_delivered
+    }
     row["amount_usd"] = round(to_usd(float(d.get("amount") or 0), d.get("currency")),2)
     append_row("requisitions", row)
     log_action("Add Req", target=str(row.get("po_number") or row.get("number")), details=row.get("description"))
@@ -617,10 +713,12 @@ def add_requisition():
 def edit_requisition(rid):
     if require_login(): return require_login()
     d=request.json
+    if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
+    if "delivered" in d: d["delivered"] = int(d.get("delivered") or 0) # Supports 0,1,2 now
+
     if "amount" in d: d["amount_usd"] = round(to_usd(float(d["amount"]), d.get("currency","USD")),2)
     
     if update_row_by_id("requisitions", rid, d): 
-        # Check if status was updated
         if "status" in d:
             log_action("Status Change", target=f"Req {rid}", details=d["status"])
         else:
@@ -653,15 +751,18 @@ def bulk_req_action():
     if not ids or not action: return jsonify({"error":"missing_args"}), 400
     
     updates = {}
+    # 0=Open, 1=Delivered (Legacy), 2=Partial (New)
+    # We will assume 'delivered' column now holds: 0=No, 1=Yes, 2=Partial
     if action == "mark_paid": updates = {"paid": 1}
     elif action == "mark_unpaid": updates = {"paid": 0}
     elif action == "mark_delivered": updates = {"delivered": 1}
     elif action == "mark_undelivered": updates = {"delivered": 0}
+    # FEATURE 8: Partial Delivery
+    elif action == "mark_partial": updates = {"delivered": 2}
     else: return jsonify({"error":"invalid_action"}), 400
     
     updates["updated_at"] = now_iso()
     count = 0
-    # Process Loop
     for rid in ids:
         if update_row_by_id("requisitions", int(rid), updates):
             count += 1
@@ -679,7 +780,14 @@ def list_landings():
 def add_landing():
     if require_login(): return require_login()
     d=request.json
-    row={**d, "id":next_id("landings"), "created_by":current_user()["username"], "created_at":now_iso()}
+    val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
+    row={
+        **d, 
+        "id":next_id("landings"), 
+        "created_by":current_user()["username"], 
+        "created_at":now_iso(),
+        "paid": val_paid
+    }
     row["amount_usd"] = round(to_usd(float(d.get("amount") or 0), d.get("currency")),2)
     append_row("landings", row)
     log_action("Add Landing", target=row.get("vessel"), details=row.get("item"))
@@ -688,6 +796,7 @@ def add_landing():
 def edit_landing(lid):
     if require_login(): return require_login()
     d=request.json
+    if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     if "amount" in d: d["amount_usd"] = round(to_usd(float(d["amount"]), d.get("currency","USD")),2)
     update_row_by_id("landings", lid, d)
     log_action("Edit Landing", target=f"Land {lid}")
@@ -720,6 +829,7 @@ def bulk_land_action():
     elif action == "mark_unpaid": updates = {"paid": 0}
     elif action == "mark_delivered": updates = {"delivered": 1}
     elif action == "mark_undelivered": updates = {"delivered": 0}
+    elif action == "mark_partial": updates = {"delivered": 2}
     else: return jsonify({"error":"invalid_action"}), 400
     
     updates["updated_at"] = now_iso()
