@@ -46,9 +46,9 @@
     .flex-1 { flex:1 1 0; min-width:240px; }
     label { display:block; font-size:13px; font-weight: 500; margin-bottom:4px; color: var(--text-main); opacity: 0.8; }
     
-    input, select { width:100%; padding:8px 10px; margin-top:2px; box-sizing:border-box; font-size:16px; 
+    input, select, textarea { width:100%; padding:8px 10px; margin-top:2px; box-sizing:border-box; font-size:16px; 
       border: 1px solid var(--input-border); border-radius: 4px; background-color: var(--input-bg); color: var(--text-main); }
-    input:focus, select:focus { outline: none; border-color: #2563eb; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #2563eb; }
     
     /* Buttons */
     button { padding:8px 14px; font-size:14px; font-weight: 500; border-radius:6px; border:none; cursor:pointer; background:#2563eb; color:#fff; transition: opacity 0.2s; }
@@ -154,6 +154,26 @@
   <div style="margin-top:16px; display:flex; gap: 10px; justify-content: flex-end;">
     <button id="dirPopupCancelBtn" class="secondary" style="flex:1;">Cancel</button>
     <button id="dirPopupSaveBtn" style="flex:1;">Save</button>
+  </div>
+</div>
+
+<div id="ratePopupBackdrop" class="popup-backdrop hidden"></div>
+<div id="ratePopup" class="popup hidden">
+  <h3>Rate Supplier/Workshop</h3>
+  <input type="hidden" id="rateDirId">
+  <label>Rating (1-5)</label>
+  <select id="rateScore">
+      <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+      <option value="4">⭐⭐⭐⭐ (4 - Good)</option>
+      <option value="3">⭐⭐⭐ (3 - Average)</option>
+      <option value="2">⭐⭐ (2 - Poor)</option>
+      <option value="1">⭐ (1 - Terrible)</option>
+  </select>
+  <label>Comments / Remarks</label>
+  <textarea id="rateComment" rows="4" placeholder="Enter feedback here..."></textarea>
+  <div style="margin-top:16px; text-align:right;">
+    <button onclick="closeRatePopup()" class="secondary">Cancel</button>
+    <button id="saveRateBtn" class="success">Save Rating</button>
   </div>
 </div>
 
@@ -465,7 +485,7 @@
            <button id="dirNewWorkshopBtn" class="secondary">Add Workshop</button>
         </div>
         <div class="table-responsive">
-            <table id="directoryTable"><thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead><tbody></tbody></table>
+            <table id="directoryTable"><thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Rating</th><th>Remarks</th><th>Actions</th></tr></thead><tbody></tbody></table>
         </div>
       </div>
     </div>
@@ -666,7 +686,12 @@ function renderReqTable() {
         if(isOverdue) tr.classList.add("row-overdue");
         if(r.urgency==="high") tr.classList.add("row-urgent");
         
-        const moneyDisplay = `<span class="money-tip" title="Original: ${r.currency} ${r.amount_original}">${r.amount_usd.toFixed(2)}</span>`;
+        // FIXED: Check for existence before display
+        const cur = r.currency || 'USD';
+        const amtOrg = r.amount_original || r.amount_usd || 0;
+        const moneyTooltip = `Original: ${cur} ${amtOrg}`;
+        const moneyDisplay = `<span class="money-tip" title="${moneyTooltip}">${formatMoney(r.amount_usd)}</span>`;
+        
         const supDisplay = `<span class="clickable-supplier" onclick="showSupplierHistory('${r.supplier}')">${r.supplier}</span>`;
         
         const paidStatus = r.paid ? "Paid" : "Unpaid";
@@ -692,6 +717,10 @@ function renderReqTable() {
         if(!r.paid) actionBtns += `<button class="small-action toggle-paid" data-id="${r.id}" title="Mark Paid">$</button>`;
         // Only show check if not fully delivered
         if(delVal != 1) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
+        
+        // Added Partial Delivery Button
+        actionBtns += `<button class="small-action warning toggle-part" data-id="${r.id}" title="Mark Partial">½</button>`;
+        
         actionBtns += `<button class="small-action danger toggle-cancel" data-id="${r.id}" title="Cancel Order">⊘</button>`;
         
         tr.innerHTML = `
@@ -719,6 +748,7 @@ function renderReqTable() {
     document.querySelectorAll(".doc-btn").forEach(b=>b.onclick=()=>openDocPopup(b.dataset.id, b.dataset.type));
     document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
     document.querySelectorAll(".toggle-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
+    document.querySelectorAll(".toggle-part").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_partial" }) }); await afterDataLoad(); });
     document.querySelectorAll(".toggle-cancel").forEach(b=>b.onclick=async()=>{ if(confirm("Move to Cancelled?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }});
     attachBulkListeners('req');
 }
@@ -746,6 +776,7 @@ function renderLandTable() {
         actionBtns += `<button class="small-action info doc-btn" data-id="${r.id}" data-type="land" title="Documents">📎</button>`;
         if(!r.paid) actionBtns += `<button class="small-action toggle-land-paid" data-id="${r.id}">$</button>`;
         if(delVal != 1) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
+        actionBtns += `<button class="small-action warning toggle-land-part" data-id="${r.id}" title="Mark Partial">½</button>`;
 
         tr.innerHTML = `
             <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
@@ -771,6 +802,7 @@ function renderLandTable() {
     
     document.querySelectorAll(".toggle-land-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
     document.querySelectorAll(".toggle-land-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
+    document.querySelectorAll(".toggle-land-part").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_partial" }) }); await afterDataLoad(); });
     attachBulkListeners('land');
 }
 
@@ -809,6 +841,34 @@ document.getElementById("docUploadBtn").onclick = async () => {
         if(res.ok) { alert("Uploaded!"); input.value=""; await loadDocuments(); }
         else alert("Upload failed");
     } catch(e) { alert("Error uploading"); }
+};
+
+/* ================== RATE POPUP (Directory) ================== */
+function openRatePopup(id) {
+    document.getElementById("rateDirId").value = id;
+    document.getElementById("ratePopupBackdrop").classList.remove("hidden");
+    document.getElementById("ratePopup").classList.remove("hidden");
+}
+function closeRatePopup() {
+    document.getElementById("ratePopupBackdrop").classList.add("hidden");
+    document.getElementById("ratePopup").classList.add("hidden");
+    document.getElementById("rateComment").value = "";
+    document.getElementById("rateScore").value = "5";
+}
+document.getElementById("saveRateBtn").onclick = async () => {
+    const id = document.getElementById("rateDirId").value;
+    const rating = document.getElementById("rateScore").value;
+    const comment = document.getElementById("rateComment").value;
+    
+    try {
+        await apiFetch(`/api/directory/${id}`, {
+            method: "PATCH", 
+            body: JSON.stringify({ rating: rating, rating_comment: comment })
+        });
+        closeRatePopup();
+        await loadAdminData(); // Refresh directory is actually in main load
+        await afterDataLoad(); // Refresh everything
+    } catch(e) { alert("Error saving rating"); }
 };
 
 /* ================== GENERATE PO ================== */
@@ -895,7 +955,26 @@ function renderDirectory(rows) {
   const tbody=document.querySelector("#directoryTable tbody"); tbody.innerHTML="";
   rows.forEach(r=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.type}</td><td>${r.name}</td><td>${r.email||""}</td><td>${r.phone||""}</td><td><button class="secondary edit-dir" data-id="${r.id}" data-obj='${JSON.stringify(r).replace(/'/g, "&#39;")}'>Edit</button><button class="danger delete-dir" data-id="${r.id}">Del</button></td>`;
+    // Show rating stars
+    let stars = "";
+    if(r.rating) stars = "⭐".repeat(parseInt(r.rating));
+    
+    // Show comment icon if exists
+    let remark = "";
+    if(r.rating_comment) remark = `<span title="${r.rating_comment}" style="cursor:help;">💬</span>`;
+
+    tr.innerHTML=`
+      <td>${r.type}</td>
+      <td>${r.name}</td>
+      <td>${r.email||""}</td>
+      <td>${r.phone||""}</td>
+      <td>${stars}</td>
+      <td>${remark}</td>
+      <td style="white-space:nowrap;">
+        <button class="small-action info rate-btn" data-id="${r.id}" title="Rate Supplier">⭐ Rate</button>
+        <button class="secondary edit-dir" data-id="${r.id}" data-obj='${JSON.stringify(r).replace(/'/g, "&#39;")}'>Edit</button>
+        <button class="danger delete-dir" data-id="${r.id}">Del</button>
+      </td>`;
     tbody.appendChild(tr);
   });
   document.querySelectorAll(".delete-dir").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'dir'));
@@ -905,6 +984,7 @@ function renderDirectory(rows) {
       document.getElementById("dirPopupPhone").value=r.phone||""; document.getElementById("dirPopupAddress").value=r.address||"";
       document.getElementById("dirPopup").dataset.editId=r.id;
   });
+  document.querySelectorAll(".rate-btn").forEach(b=>b.onclick=()=>openRatePopup(b.dataset.id));
 }
 
 /* ================== CRUD ACTIONS ================== */
@@ -963,12 +1043,16 @@ async function restoreBackup(name) {
 }
 
 document.getElementById("saveReqBtn").onclick = async () => {
+    // FIX: ADD amount_original explicitely to payload
+    const valAmount = document.getElementById("reqTotal").value;
     const payload = {
         number: document.getElementById("reqNumber").value, po_number: document.getElementById("reqPONumber").value,
         description: document.getElementById("reqDescription").value, vessel: document.getElementById("reqVessel").value,
         category: document.getElementById("reqCategory").value, supplier: document.getElementById("reqSupplierSelect").value,
         date_ordered: document.getElementById("reqDateOrdered").value, expected: document.getElementById("reqExpected").value,
-        amount: document.getElementById("reqTotal").value, currency: document.getElementById("reqCurrency").value,
+        amount: valAmount,
+        amount_original: valAmount, // Ensure this is sent
+        currency: document.getElementById("reqCurrency").value,
         tracking_url: document.getElementById("reqTracking").value,
         urgency: document.getElementById("reqUrgency").value, paid: document.getElementById("reqPaid").checked
     };
@@ -991,10 +1075,12 @@ document.getElementById("cancelReqEditBtn").onclick = () => {
 };
 
 document.getElementById("saveLandingBtn").onclick = async () => {
+    const valAmount = document.getElementById("landAmount").value;
     const payload = {
         vessel: document.getElementById("landVessel").value, item: document.getElementById("landDescription").value,
         workshop: document.getElementById("landWorkshopSelect").value, expected: document.getElementById("landExpected").value,
-        landed_date: document.getElementById("landLanded").value, amount: document.getElementById("landAmount").value,
+        landed_date: document.getElementById("landLanded").value, amount: valAmount,
+        amount_original: valAmount, // Ensure sent
         currency: document.getElementById("landCurrency").value, paid: document.getElementById("landPaid").checked
     };
     if(!payload.vessel || !payload.item || !payload.amount) { alert("Missing fields"); return; }
