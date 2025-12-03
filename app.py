@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Documents, Vendor Score, Aging Report, PO Gen, Dubai Time
+UPDATED: Manual Ratings, Partial Delivery Button, Amount Fixes
 """
 
 import os
@@ -50,7 +50,7 @@ SHEETS: Dict[str, List[str]] = {
         "amount_original", "currency", "amount_usd",
         "paid", "delivered", "status",
         "po_number", "remarks", "urgency", "tracking_url",
-        "created_by", "created_at", "updated_at", "delivery_status" # Added delivery_status (0=Open, 1=Delivered, 2=Partial)
+        "created_by", "created_at", "updated_at", "delivery_status" 
     ],
     "landings": [
         "id", "vessel", "item", "workshop",
@@ -61,6 +61,7 @@ SHEETS: Dict[str, List[str]] = {
     ],
     "directory": [
         "id", "type", "name", "email", "phone", "address",
+        "rating", "rating_comment", # NEW FIELDS
         "created_by", "created_at"
     ],
     "categories": ["id", "name", "abbr", "created_at"],
@@ -399,29 +400,10 @@ def get_audit_log():
             "user": r.get("user") or "system",
             "action": r.get("action"),
             "target": r.get("target") or "",
+            "details": r.get("details") or "",
             "date": r.get("timestamp")
         })
     return jsonify(out)
-
-# --- NEW: Vendor Score & Reports ---
-@app.get("/api/vendors/<name>/score")
-def get_vendor_score(name):
-    # FEATURE 4: Vendor Scorecard
-    reqs = read_rows("requisitions")
-    vendor_reqs = [r for r in reqs if r.get("supplier") == name]
-    if not vendor_reqs:
-        return jsonify({"score": 0, "total": 0})
-    
-    total = len(vendor_reqs)
-    # Simple Logic: Delivered orders count as positive points
-    delivered = sum(1 for r in vendor_reqs if r.get("delivered") in [1, 2, "1", "True"]) # Handle types
-    
-    # Base score out of 5
-    score = (delivered / total) * 5
-    # Cap at 5, min 1
-    score = max(1.0, min(5.0, score))
-    
-    return jsonify({"score": round(score, 1), "total": total})
 
 @app.get("/api/reports/aging")
 def get_aging_report():
@@ -697,26 +679,37 @@ def add_requisition():
     val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     val_delivered = 1 if d.get("delivered") in [True, "true", 1, "1"] else 0
     
+    # Amount fix: Ensure amount_original is populated
+    amt_orig = d.get("amount_original")
+    if amt_orig is None or amt_orig == "":
+        amt_orig = d.get("amount") or 0
+
     row={
         **d, 
         "id":next_id("requisitions"), 
         "created_by":current_user()["username"], 
         "created_at":now_iso(),
         "paid": val_paid,
-        "delivered": val_delivered
+        "delivered": val_delivered,
+        "amount_original": amt_orig
     }
-    row["amount_usd"] = round(to_usd(float(d.get("amount") or 0), d.get("currency")),2)
+    row["amount_usd"] = round(to_usd(float(amt_orig), d.get("currency")),2)
     append_row("requisitions", row)
     log_action("Add Req", target=str(row.get("po_number") or row.get("number")), details=row.get("description"))
     return jsonify(row)
+
 @app.patch("/api/requisitions/<int:rid>")
 def edit_requisition(rid):
     if require_login(): return require_login()
     d=request.json
     if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     if "delivered" in d: d["delivered"] = int(d.get("delivered") or 0) # Supports 0,1,2 now
-
-    if "amount" in d: d["amount_usd"] = round(to_usd(float(d["amount"]), d.get("currency","USD")),2)
+    
+    # Amount fix: if updating amount, ensure amount_original is set
+    if "amount" in d or "amount_original" in d:
+        amt = d.get("amount_original") or d.get("amount") or 0
+        d["amount_original"] = amt
+        d["amount_usd"] = round(to_usd(float(amt), d.get("currency","USD")),2)
     
     if update_row_by_id("requisitions", rid, d): 
         if "status" in d:
@@ -781,14 +774,21 @@ def add_landing():
     if require_login(): return require_login()
     d=request.json
     val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
+    
+    # Amount fix
+    amt_orig = d.get("amount_original")
+    if amt_orig is None or amt_orig == "":
+        amt_orig = d.get("amount") or 0
+
     row={
         **d, 
         "id":next_id("landings"), 
         "created_by":current_user()["username"], 
         "created_at":now_iso(),
-        "paid": val_paid
+        "paid": val_paid,
+        "amount_original": amt_orig
     }
-    row["amount_usd"] = round(to_usd(float(d.get("amount") or 0), d.get("currency")),2)
+    row["amount_usd"] = round(to_usd(float(amt_orig), d.get("currency")),2)
     append_row("landings", row)
     log_action("Add Landing", target=row.get("vessel"), details=row.get("item"))
     return jsonify(row)
@@ -797,10 +797,17 @@ def edit_landing(lid):
     if require_login(): return require_login()
     d=request.json
     if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
-    if "amount" in d: d["amount_usd"] = round(to_usd(float(d["amount"]), d.get("currency","USD")),2)
+    
+    # Amount fix
+    if "amount" in d or "amount_original" in d:
+        amt = d.get("amount_original") or d.get("amount") or 0
+        d["amount_original"] = amt
+        d["amount_usd"] = round(to_usd(float(amt), d.get("currency","USD")),2)
+
     update_row_by_id("landings", lid, d)
     log_action("Edit Landing", target=f"Land {lid}")
     return jsonify({"ok":True})
+
 @app.patch("/api/landings/<int:lid>/toggle_paid")
 def toggle_paid_land(lid):
     if require_login(): return require_login()
@@ -858,7 +865,11 @@ def add_dir_quick():
 @app.patch("/api/directory/<int:did>")
 def edit_directory_entry(did: int):
     if require_login(): return require_login()
-    update_row_by_id("directory", did, request.json or {})
+    d = request.json or {}
+    # Handles rating, rating_comment, or standard fields
+    update_row_by_id("directory", did, d)
+    if "rating" in d:
+        log_action("Rate Contact", target=f"Dir {did}", details=f"Score: {d.get('rating')}")
     return jsonify({"ok": True})
 @app.delete("/api/directory/<int:did>")
 def del_dir(did):
