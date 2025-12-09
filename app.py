@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Document Uploads, Vendor Score, Aging Report, PO Gen, Dubai Time
+FIXED: Missing 'Download Local' Route added.
 """
 
 import os
@@ -82,7 +82,6 @@ def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 
 def ensure_db() -> None:
-    # 1. Create file if missing
     if not os.path.exists(DB_FILE):
         wb = Workbook()
         if "Sheet" in wb.sheetnames:
@@ -92,7 +91,6 @@ def ensure_db() -> None:
             ws.append(headers)
         wb.save(DB_FILE)
 
-    # 2. Load and migrate sheets
     try:
         wb = openpyxl.load_workbook(DB_FILE)
         modified = False
@@ -112,7 +110,6 @@ def ensure_db() -> None:
                     exist_headers.append(h)
                     modified = True
         
-        # Admin check
         ws = wb["users"]
         headers = [c.value for c in ws[1]]
         if "username" in headers:
@@ -459,12 +456,6 @@ def del_land(lid):
     if require_admin(): return require_admin()
     delete_row_by_id("landings", lid)
     return jsonify({"ok": True})
-@app.get("/api/backup/download")
-def download_backup_direct():
-    if require_admin(): return require_admin()
-    # Create a fresh backup immediately and send it
-    path = create_backup_file(suffix="_MANUAL")
-    return send_file(path, as_attachment=True, download_name=os.path.basename(path))
 @app.post("/api/landings/bulk")
 def bulk_land():
     if require_login(): return require_login()
@@ -568,6 +559,14 @@ def make_bk():
     if require_admin(): return require_admin()
     create_backup_file("_MANUAL")
     return jsonify({"ok": True})
+
+# --- FIXED: ADDED MISSING ROUTE ---
+@app.get("/api/backup/download")
+def dl_bk_direct():
+    if require_admin(): return require_admin()
+    path = create_backup_file(suffix="_MANUAL")
+    return send_file(path, as_attachment=True, download_name=os.path.basename(path))
+
 @app.get("/api/backups/<name>/download")
 def dl_bk(name):
     if require_admin(): return require_admin()
