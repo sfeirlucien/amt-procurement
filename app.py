@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-FIXED: Missing 'Download Local' Route added.
+FIXED: Excel now opens on 'Requisitions' tab by default (not Logs).
 """
 
 import os
@@ -81,6 +81,17 @@ def now_iso() -> str:
 def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 
+def save_wb(wb: Workbook) -> None:
+    """Saves the workbook but forces Requisitions to be the active sheet."""
+    try:
+        if "requisitions" in wb.sheetnames:
+            wb.active = wb.sheetnames.index("requisitions")
+        elif "users" in wb.sheetnames:
+             wb.active = wb.sheetnames.index("users")
+        wb.save(DB_FILE)
+    except Exception as e:
+        print(f"Error saving DB: {e}")
+
 def ensure_db() -> None:
     if not os.path.exists(DB_FILE):
         wb = Workbook()
@@ -89,7 +100,7 @@ def ensure_db() -> None:
         for sname, headers in SHEETS.items():
             ws = wb.create_sheet(sname)
             ws.append(headers)
-        wb.save(DB_FILE)
+        save_wb(wb)
 
     try:
         wb = openpyxl.load_workbook(DB_FILE)
@@ -125,7 +136,7 @@ def ensure_db() -> None:
                 modified = True
 
         if modified:
-            wb.save(DB_FILE)
+            save_wb(wb)
             
     except Exception as e:
         print(f"DB Init Error: {e}")
@@ -153,7 +164,7 @@ def append_row(sheet: str, row: Dict[str, Any]) -> None:
     ws = wb[sheet]
     headers = [c.value for c in ws[1]]
     ws.append([row.get(h) for h in headers])
-    wb.save(DB_FILE)
+    save_wb(wb)
 
 def next_id(sheet: str) -> int:
     rows = read_rows(sheet)
@@ -176,7 +187,7 @@ def update_row_by_id(sheet: str, row_id: int, updates: Dict[str, Any]) -> bool:
                 if k in headers:
                     c_idx = headers.index(k) + 1
                     ws.cell(r_idx, c_idx).value = v
-            wb.save(DB_FILE)
+            save_wb(wb)
             return True
     return False
 
@@ -189,7 +200,7 @@ def delete_row_by_id(sheet: str, row_id: int) -> bool:
     for r_idx in range(2, ws.max_row + 1):
         if ws.cell(r_idx, id_col).value == row_id:
             ws.delete_rows(r_idx, 1)
-            wb.save(DB_FILE)
+            save_wb(wb)
             return True
     return False
 
@@ -536,7 +547,7 @@ def del_user(username):
     for r in range(2, ws.max_row+1):
         if ws.cell(r, 1).value == username:
             ws.delete_rows(r, 1)
-            wb.save(DB_FILE)
+            save_wb(wb)
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
@@ -560,7 +571,6 @@ def make_bk():
     create_backup_file("_MANUAL")
     return jsonify({"ok": True})
 
-# --- FIXED: ADDED MISSING ROUTE ---
 @app.get("/api/backup/download")
 def dl_bk_direct():
     if require_admin(): return require_admin()
