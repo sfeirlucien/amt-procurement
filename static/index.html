@@ -540,7 +540,6 @@
                <div style="flex:1;"><input type="number" id="auditFDay" placeholder="Day (1-31)" min="1" max="31"></div>
                <div style="flex:0;"><button id="auditApplyBtn">Filter</button></div>
            </div>
-           <!-- Added max-height container -->
            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
               <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
            </div>
@@ -1361,8 +1360,9 @@ function renderAuditLog() {
     const fD = document.getElementById("auditFDay").value;
 
     const filtered = allAuditLogs.filter(log => {
-        if(!log.date) return false;
-        const d = new Date(log.date);
+        // FIXED: USE 'timestamp', NOT 'date'
+        if(!log.timestamp) return false;
+        const d = new Date(log.timestamp);
         if(fY && d.getFullYear() != fY) return false;
         if(fM && (d.getMonth()+1) != fM) return false;
         if(fD && d.getDate() != fD) return false;
@@ -1375,7 +1375,9 @@ function renderAuditLog() {
     }
 
     filtered.forEach(log => {
-        tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${log.date.replace("T"," ")}</td></tr>`;
+        // FIXED: USE 'timestamp', NOT 'date'
+        const timeDisplay = log.timestamp ? log.timestamp.replace("T"," ") : "";
+        tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${timeDisplay}</td></tr>`;
     });
 }
 document.getElementById("auditApplyBtn").onclick = renderAuditLog;
