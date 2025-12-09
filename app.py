@@ -459,6 +459,12 @@ def del_land(lid):
     if require_admin(): return require_admin()
     delete_row_by_id("landings", lid)
     return jsonify({"ok": True})
+@app.get("/api/backup/download")
+def download_backup_direct():
+    if require_admin(): return require_admin()
+    # Create a fresh backup immediately and send it
+    path = create_backup_file(suffix="_MANUAL")
+    return send_file(path, as_attachment=True, download_name=os.path.basename(path))
 @app.post("/api/landings/bulk")
 def bulk_land():
     if require_login(): return require_login()
