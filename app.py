@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-UPDATED: Manual Ratings, Partial Delivery Button, Amount Fixes
+UPDATED: Manual Ratings, Partial Delivery Button, Amount Fixes, Finance Role, CSV Export
 """
 
 import os
@@ -8,13 +8,15 @@ import json
 import hashlib
 import shutil
 import time
+import csv
+import io
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import requests
 import openpyxl
 from openpyxl import Workbook
-from flask import Flask, jsonify, request, session, send_from_directory, send_file
+from flask import Flask, jsonify, request, session, send_from_directory, send_file, make_response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -35,6 +37,7 @@ DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
+DEFAULT_FINANCE = {"username": "finance", "password": "finance123", "role": "finance"}
 FX_CACHE_FILE = os.path.join(BASE_DIR, "fx_cache.json")
 FX_CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
 
@@ -108,7 +111,7 @@ def ensure_db() -> None:
                 ws_exist.cell(1, ws_exist.max_column + 1).value = h
                 exist_headers.append(h)
 
-    # Ensure admin
+    # Ensure admin and finance users
     ws = wb["users"]
     headers = [c.value for c in ws[1]]
     if "username" in headers:
@@ -116,6 +119,7 @@ def ensure_db() -> None:
         p_col = headers.index("password_hash") + 1
         r_col = headers.index("role") + 1
 
+        # Check/Create Admin
         admin_row = None
         for r_idx in range(2, ws.max_row + 1):
             if ws.cell(r_idx, u_col).value == "admin":
@@ -132,6 +136,18 @@ def ensure_db() -> None:
                 ws.cell(admin_row, p_col).value = default_hash
             if cur_role != "admin":
                 ws.cell(admin_row, r_col).value = "admin"
+
+        # Check/Create Finance
+        finance_row = None
+        for r_idx in range(2, ws.max_row + 1):
+            if ws.cell(r_idx, u_col).value == "finance":
+                finance_row = r_idx
+                break
+        
+        finance_hash = hash_pw(DEFAULT_FINANCE["password"])
+        if finance_row is None:
+            ws.append(["finance", finance_hash, "finance", now_iso()])
+
         wb.save(DB_FILE)
 
     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -233,6 +249,14 @@ def require_admin():
         return jsonify({"error": "login_required"}), 401
     if u["role"] != "admin":
         return jsonify({"error": "admin_required"}), 403
+    return None
+
+def require_write_access():
+    u = current_user()
+    if not u:
+        return jsonify({"error": "login_required"}), 401
+    if u["role"] == "finance":
+        return jsonify({"error": "read_only"}), 403
     return None
 
 # -------------------------------------------------
@@ -407,7 +431,8 @@ def get_audit_log():
 
 @app.get("/api/reports/aging")
 def get_aging_report():
-    # FEATURE 13: Aging Report
+    # Finance role can view this, so no strictly require_admin
+    if require_login(): return require_login()
     reqs = read_rows("requisitions")
     now = get_dubai_time()
     
@@ -446,7 +471,7 @@ def get_aging_report():
 # --- NEW: Document Uploads ---
 @app.post("/api/documents/upload")
 def upload_order_doc():
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     if "file" not in request.files: return jsonify({"error": "missing_file"}), 400
     
     file = request.files["file"]
@@ -671,9 +696,29 @@ def list_requisitions():
     rows=read_rows("requisitions")
     for r in rows: r["total_amount"]=float(r.get("amount_usd")or 0)
     return jsonify(rows)
+
+@app.get("/api/requisitions/export_csv")
+def export_requisitions_csv():
+    # Allow finance and regular users to export
+    if require_login(): return require_login()
+    
+    rows = read_rows("requisitions")
+    si = io.StringIO()
+    if rows:
+        cw = csv.writer(si)
+        keys = list(rows[0].keys())
+        cw.writerow(keys)
+        for r in rows:
+            cw.writerow([r.get(k) for k in keys])
+            
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=requisitions.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
 @app.post("/api/requisitions")
 def add_requisition():
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     d=request.json
     # FIX: Force boolean fields to integer 1/0
     val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
@@ -700,7 +745,7 @@ def add_requisition():
 
 @app.patch("/api/requisitions/<int:rid>")
 def edit_requisition(rid):
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     d=request.json
     if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     if "delivered" in d: d["delivered"] = int(d.get("delivered") or 0) # Supports 0,1,2 now
@@ -721,7 +766,7 @@ def edit_requisition(rid):
 
 @app.patch("/api/requisitions/<int:rid>/toggle_paid")
 def toggle_paid_req(rid):
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     rows=read_rows("requisitions")
     row=next((r for r in rows if int(r["id"])==rid),None)
     new_p = 0 if int(row.get("paid")or 0) else 1
@@ -737,7 +782,7 @@ def delete_req(rid):
 
 @app.post("/api/requisitions/bulk")
 def bulk_req_action():
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     data = request.json or {}
     ids = data.get("ids", [])
     action = data.get("action", "")
@@ -771,7 +816,7 @@ def list_landings():
     return jsonify(rows)
 @app.post("/api/landings")
 def add_landing():
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     d=request.json
     val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     
@@ -794,7 +839,7 @@ def add_landing():
     return jsonify(row)
 @app.patch("/api/landings/<int:lid>")
 def edit_landing(lid):
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     d=request.json
     if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     
@@ -810,7 +855,7 @@ def edit_landing(lid):
 
 @app.patch("/api/landings/<int:lid>/toggle_paid")
 def toggle_paid_land(lid):
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     rows=read_rows("landings")
     row=next((r for r in rows if int(r["id"])==lid),None)
     new_p = 0 if int(row.get("paid")or 0) else 1
@@ -825,7 +870,7 @@ def delete_land(lid):
 
 @app.post("/api/landings/bulk")
 def bulk_land_action():
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     data = request.json or {}
     ids = data.get("ids", [])
     action = data.get("action", "")
@@ -853,7 +898,7 @@ def bulk_land_action():
 def get_dir(): return jsonify(read_rows("directory"))
 @app.post("/api/directory")
 def add_directory_std():
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     d=request.json
     row={**d, "id":next_id("directory"), "created_by":current_user()["username"], "created_at":now_iso()}
     append_row("directory", row)
@@ -864,7 +909,7 @@ def add_dir_quick():
     return add_directory_std()
 @app.patch("/api/directory/<int:did>")
 def edit_directory_entry(did: int):
-    if require_login(): return require_login()
+    if require_write_access(): return require_write_access()
     d = request.json or {}
     # Handles rating, rating_comment, or standard fields
     update_row_by_id("directory", did, d)
