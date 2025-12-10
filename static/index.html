@@ -61,7 +61,8 @@
 
     /* Tables */
     table { width:100%; border-collapse:collapse; font-size:13px; min-width: 800px; }
-    th, td { border:1px solid var(--border-color); padding:8px 10px; text-align:left; vertical-align: middle; }
+    /* UPDATED: White-space nowrap to keep everything on one line */
+    th, td { border:1px solid var(--border-color); padding:8px 10px; text-align:left; vertical-align: middle; white-space: nowrap; }
     th { background: var(--th-bg); font-weight: 600; color: var(--th-text); }
     tr { background: var(--highlight-row); }
     .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; }
@@ -108,9 +109,18 @@
     button.small-action.secondary { background: #6b7280; }
     button.small-action.info { background: #3b82f6; }
     
-    /* New Tracking Button Style */
+    /* Tracking Button Style */
     a.track-btn { display:inline-block; padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #8b5cf6; color:white; border-radius:6px; text-decoration:none; font-weight:500; text-align: center; vertical-align: middle; }
     a.track-btn:hover { background: #7c3aed; }
+
+    /* === NEW: Action Dropdown Styles === */
+    .action-container { position: relative; display: inline-block; }
+    .dropdown-btn { background-color: #3b82f6; padding: 4px 10px; font-size: 11px; }
+    .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--bg-card); min-width: 140px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 5; border: 1px solid var(--border-color); border-radius: 4px; }
+    .dropdown-content button, .dropdown-content a { color: var(--text-main); padding: 8px 12px; text-decoration: none; display: block; background: none; border: none; width: 100%; text-align: left; font-size: 12px; border-bottom: 1px solid var(--border-color); }
+    .dropdown-content button:hover { background-color: var(--bg-body); }
+    .dropdown-content button:last-child { border-bottom: none; }
+    .show-drop { display: block; }
 
     /* Mobile */
     @media (max-width: 768px) {
@@ -354,7 +364,7 @@
     </div>
 
     <div id="tab-requisitions" class="hidden">
-      <div class="card">
+      <div class="card" id="reqAddCard">
         <h2 id="reqFormTitle">Add Ordered Requisition</h2>
         <div class="flex-row">
           <div class="flex-1"><label>PO Number<input type="text" id="reqPONumber" placeholder="PO-XXXX" /></label></div>
@@ -425,7 +435,7 @@
     </div>
 
     <div id="tab-landings" class="hidden">
-      <div class="card">
+      <div class="card" id="landAddCard">
         <h2 id="landFormTitle">Add Landed Item</h2>
         <div class="flex-row">
           <div class="flex-1"><label>Vessel<select id="landVessel"></select></label></div>
@@ -540,7 +550,6 @@
                <div style="flex:1;"><input type="number" id="auditFDay" placeholder="Day (1-31)" min="1" max="31"></div>
                <div style="flex:0;"><button id="auditApplyBtn">Filter</button></div>
            </div>
-           <!-- Added max-height container -->
            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
               <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
            </div>
@@ -594,12 +603,33 @@ darkModeBtn.onclick = () => {
     localStorage.setItem("theme", document.body.classList.contains("dark-mode") ? "dark" : "light");
 };
 
+// GLOBAL CLICK TO CLOSE DROPDOWNS
+window.onclick = function(event) {
+  if (!event.target.matches('.dropdown-btn')) {
+    var dropdowns = document.getElementsByClassName("dropdown-content");
+    for (var i = 0; i < dropdowns.length; i++) {
+      var openDropdown = dropdowns[i];
+      if (openDropdown.classList.contains('show-drop')) {
+        openDropdown.classList.remove('show-drop');
+      }
+    }
+  }
+}
+
 /* ================== HELPER FUNCTIONS ================== */
 function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
 function formatMoney(amount) { return parseFloat(amount || 0).toLocaleString('en-US', {style:'currency', currency:'USD'}); }
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => { alert("Copied: " + text); }); }
 // Fix boolean truthiness issues
 const getBoolVal = (val) => (val === 1 || val === '1' || val === true || val === 'true') ? '1' : '0';
+function toggleMenu(btn) {
+    // Close others
+    var dropdowns = document.getElementsByClassName("dropdown-content");
+    for (var i = 0; i < dropdowns.length; i++) {
+         if (dropdowns[i] !== btn.nextElementSibling) dropdowns[i].classList.remove('show-drop');
+    }
+    btn.nextElementSibling.classList.toggle("show-drop");
+}
 
 /* ================== DATA LOADING ================== */
 async function afterDataLoad() {
@@ -608,6 +638,15 @@ async function afterDataLoad() {
   await updateDashboard(); 
   calculateOverviewTotals();
   await loadAdminData();
+  
+  // Finance User Logic: Hide Add/Edit forms
+  const isFinance = currentUser && currentUser.username === 'finance';
+  if (isFinance) {
+     if(document.getElementById('reqAddCard')) document.getElementById('reqAddCard').classList.add('hidden');
+     if(document.getElementById('landAddCard')) document.getElementById('landAddCard').classList.add('hidden');
+     if(document.getElementById('dirNewSupplierBtn')) document.getElementById('dirNewSupplierBtn').classList.add('hidden');
+     if(document.getElementById('dirNewWorkshopBtn')) document.getElementById('dirNewWorkshopBtn').classList.add('hidden');
+  }
 }
 
 async function loadOptions(){
@@ -671,6 +710,9 @@ function renderReqTable() {
     const tbody = document.querySelector("#reqTable tbody"); tbody.innerHTML="";
     const statusF=document.getElementById("filterReqStatus").value, paidF=document.getElementById("filterReqPaid").value, delF=document.getElementById("filterReqDelivered").value, search=document.getElementById("filterReqSearch").value.toLowerCase();
     
+    // Check if user is finance
+    const isFinance = currentUser && currentUser.username === 'finance';
+
     allReqs.forEach(r => {
         if((r.status||"open")==="cancelled") return; 
         if(statusF && (r.status||"open")!==statusF) return;
@@ -705,24 +747,35 @@ function renderReqTable() {
         if(delVal == 1) delBadge = '<span class="tag green">Delivered</span>';
         else if(delVal == 2) delBadge = '<span class="tag yellow">Partial</span>';
 
-        let actionBtns = '';
-        if(r.tracking_url && r.tracking_url.length > 5) {
-             actionBtns += `<a href="${r.tracking_url}" target="_blank" class="track-btn" title="Track Shipment">✈️</a>`;
+        // === ACTION DROPDOWN LOGIC ===
+        let actionMenu = '';
+        if (r.tracking_url && r.tracking_url.length > 5) {
+             actionMenu += `<a href="${r.tracking_url}" target="_blank">✈️ Track Shipment</a>`;
         }
-        // Documents Button
-        actionBtns += `<button class="small-action info doc-btn" data-id="${r.id}" data-type="req" title="Documents">📎</button>`;
-        // Print PO
-        actionBtns += `<button class="small-action secondary print-btn" onclick="generatePO(${r.id})" title="Print PO">🖨️</button>`;
+        actionMenu += `<button class="doc-btn" data-id="${r.id}" data-type="req">📎 Documents</button>`;
+        actionMenu += `<button onclick="generatePO(${r.id})">🖨️ Print PO</button>`;
 
-        if(!r.paid) actionBtns += `<button class="small-action toggle-paid" data-id="${r.id}" title="Mark Paid">$</button>`;
-        // Only show check if not fully delivered
-        if(delVal != 1) actionBtns += `<button class="small-action toggle-del" data-id="${r.id}" title="Mark Delivered">✓</button>`;
-        
-        // Added Partial Delivery Button
-        actionBtns += `<button class="small-action warning toggle-part" data-id="${r.id}" title="Mark Partial">½</button>`;
-        
-        actionBtns += `<button class="small-action danger toggle-cancel" data-id="${r.id}" title="Cancel Order">⊘</button>`;
-        
+        // Hide modification actions for Finance user
+        if (!isFinance) {
+            if(!r.paid) actionMenu += `<button class="toggle-paid" data-id="${r.id}">$ Mark Paid</button>`;
+            if(delVal != 1) actionMenu += `<button class="toggle-del" data-id="${r.id}">✓ Mark Delivered</button>`;
+            actionMenu += `<button class="toggle-part" data-id="${r.id}">½ Mark Partial</button>`;
+            actionMenu += `<button class="toggle-cancel" data-id="${r.id}">⊘ Cancel Order</button>`;
+            actionMenu += `<button class="edit-req" data-id="${r.id}">✎ Edit</button>`;
+            actionMenu += `<button class="delete-req" style="color:red;" data-id="${r.id}">X Delete</button>`;
+        } else {
+             actionMenu += `<button style="color:#999; cursor:not-allowed;">(Read Only)</button>`;
+        }
+
+        const actionDropdown = `
+          <div class="action-container">
+             <button class="dropdown-btn" onclick="toggleMenu(this)">Actions ▼</button>
+             <div class="dropdown-content">
+                ${actionMenu}
+             </div>
+          </div>
+        `;
+
         tr.innerHTML = `
             <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
             <td>${r.po_number||""} ${copyBtn}</td>
@@ -734,15 +787,12 @@ function renderReqTable() {
             <td>${moneyDisplay}</td>
             <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
             <td>${delBadge}</td>
-            <td style="white-space:nowrap;">
-               ${actionBtns}
-               <button class="edit-req secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
-               <button class="danger delete-req" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">X</button>
-            </td>
+            <td>${actionDropdown}</td>
         `;
         tbody.appendChild(tr);
     });
     
+    // Attach Listeners
     document.querySelectorAll(".edit-req").forEach(b=>b.onclick=()=>editReq(b.dataset.id));
     document.querySelectorAll(".delete-req").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'req'));
     document.querySelectorAll(".doc-btn").forEach(b=>b.onclick=()=>openDocPopup(b.dataset.id, b.dataset.type));
@@ -756,6 +806,7 @@ function renderReqTable() {
 function renderLandTable() {
     const tbody = document.querySelector("#landingTable tbody"); tbody.innerHTML="";
     const paidF=document.getElementById("filterLandingPaid").value, delF=document.getElementById("filterLandingDelivered").value, search=document.getElementById("filterLandingSearch").value.toLowerCase();
+    const isFinance = currentUser && currentUser.username === 'finance';
 
     allLandings.forEach(r => {
         if((r.status||"open")==="cancelled") return;
@@ -774,9 +825,11 @@ function renderLandTable() {
 
         let actionBtns = '';
         actionBtns += `<button class="small-action info doc-btn" data-id="${r.id}" data-type="land" title="Documents">📎</button>`;
-        if(!r.paid) actionBtns += `<button class="small-action toggle-land-paid" data-id="${r.id}">$</button>`;
-        if(delVal != 1) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
-        actionBtns += `<button class="small-action warning toggle-land-part" data-id="${r.id}" title="Mark Partial">½</button>`;
+        if(!isFinance) {
+            if(!r.paid) actionBtns += `<button class="small-action toggle-land-paid" data-id="${r.id}">$</button>`;
+            if(delVal != 1) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
+            actionBtns += `<button class="small-action warning toggle-land-part" data-id="${r.id}" title="Mark Partial">½</button>`;
+        }
 
         tr.innerHTML = `
             <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
@@ -790,8 +843,8 @@ function renderLandTable() {
             <td>${delBadge}</td>
             <td style="white-space:nowrap;">
                 ${actionBtns}
-                <button class="edit-land secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
-                <button class="danger delete-land" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">X</button>
+                ${!isFinance ? `<button class="edit-land secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
+                <button class="danger delete-land" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">X</button>` : ''}
             </td>
         `;
         tbody.appendChild(tr);
@@ -870,6 +923,47 @@ document.getElementById("saveRateBtn").onclick = async () => {
         await afterDataLoad(); // Refresh everything
     } catch(e) { alert("Error saving rating"); }
 };
+
+/* ================== EXPORT CSV LOGIC (FIXED) ================== */
+document.getElementById("exportReqBtn").onclick = () => {
+    // Collect filters currently applied
+    const statusF=document.getElementById("filterReqStatus").value;
+    const paidF=document.getElementById("filterReqPaid").value;
+    const delF=document.getElementById("filterReqDelivered").value;
+    const search=document.getElementById("filterReqSearch").value.toLowerCase();
+    
+    // Filter data
+    const filtered = allReqs.filter(r => {
+        if((r.status||"open")==="cancelled") return false; 
+        if(statusF && (r.status||"open")!==statusF) return false;
+        if(paidF !== "" && getBoolVal(r.paid) !== paidF) return false;
+        if(delF !== "" && getBoolVal(r.delivered) !== delF) return false;
+        if(search && !JSON.stringify(r).toLowerCase().includes(search)) return false;
+        return true;
+    });
+
+    if (filtered.length === 0) return alert("No data to export");
+
+    // CSV Headers
+    let csv = "PO,Description,Vessel,Supplier,Ordered,Expected,Amount_USD,Paid,Delivered,Tracking\n";
+    
+    // CSV Rows
+    filtered.forEach(r => {
+        const desc = (r.description || "").replace(/,/g, " "); // Basic sanitization
+        const sup = (r.supplier || "").replace(/,/g, " ");
+        csv += `${r.po_number||r.number},${desc},${r.vessel},${sup},${r.date_ordered},${r.expected},${r.amount_usd},${r.paid?1:0},${r.delivered},${r.tracking_url||""}\n`;
+    });
+
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Requisitions_Export_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+};
+
 
 /* ================== GENERATE PO ================== */
 function generatePO(id) {
@@ -953,6 +1047,7 @@ function renderDelivered() {
 
 function renderDirectory(rows) {
   const tbody=document.querySelector("#directoryTable tbody"); tbody.innerHTML="";
+  const isFinance = currentUser && currentUser.username === 'finance';
   rows.forEach(r=>{
     const tr=document.createElement("tr");
     // Show rating stars
@@ -972,8 +1067,9 @@ function renderDirectory(rows) {
       <td>${remark}</td>
       <td style="white-space:nowrap;">
         <button class="small-action info rate-btn" data-id="${r.id}" title="Rate Supplier">⭐ Rate</button>
+        ${!isFinance ? `
         <button class="secondary edit-dir" data-id="${r.id}" data-obj='${JSON.stringify(r).replace(/'/g, "&#39;")}'>Edit</button>
-        <button class="danger delete-dir" data-id="${r.id}">Del</button>
+        <button class="danger delete-dir" data-id="${r.id}">Del</button>` : ''}
       </td>`;
     tbody.appendChild(tr);
   });
