@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-UPDATED: Partial Delivery, Remarks Field, Optimized Backup, CSV Fixes
+UPDATED: Aging Report, Audit Logs, Restore/Upload, Partial Delivery
 """
 
 import os
@@ -33,8 +33,7 @@ CORS(app, supports_credentials=True, origins=[
 ])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# WARNING: On Render/Heroku, this file is ephemeral and will reset on deploy.
-# Use a Persistent Disk or Database for production safety.
+# WARNING: On Render/Heroku, this file is ephemeral. Use a Persistent Disk for safety.
 DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 
@@ -100,7 +99,7 @@ def ensure_db() -> None:
 
     wb = openpyxl.load_workbook(DB_FILE)
 
-    # Header migration (add new columns if missing)
+    # Header migration
     for sname, headers in SHEETS.items():
         if sname not in wb.sheetnames:
             ws_new = wb.create_sheet(sname)
@@ -360,7 +359,6 @@ def check_and_run_smart_backup():
                 should_backup = True
                 
         if should_backup:
-            print(f"[{now_iso()}] Triggering Smart Auto-Backup...")
             create_backup_file(suffix="_AUTO")
     except Exception:
         pass
@@ -409,22 +407,75 @@ def session_info():
     if not u: return jsonify({"logged_in": False}), 401
     return jsonify({"logged_in": True, **u})
 
-# --- Audit Log ---
+# --- Activity Log ---
 @app.get("/api/audit")
 def get_audit_log():
     if require_admin(): return require_admin()
     rows = read_rows("logs")
     rows.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
-    return jsonify(rows)
+    
+    # Return last 500 logs to prevent overload
+    out = []
+    for r in rows[:500]:
+        out.append({
+            "user": r.get("user") or "system",
+            "action": r.get("action"),
+            "target": r.get("target") or "",
+            "details": r.get("details") or "",
+            "date": r.get("timestamp")
+        })
+    return jsonify(out)
 
-# --- NEW: Document Uploads ---
+# --- Aging Report ---
+@app.get("/api/reports/aging")
+def get_aging_report():
+    if require_login(): return require_login()
+    reqs = read_rows("requisitions")
+    now = get_dubai_time()
+    
+    unpaid = []
+    for r in reqs:
+        # Check if NOT paid and NOT cancelled
+        status = (r.get("status") or "open").lower()
+        paid_val = r.get("paid")
+        is_paid = paid_val in [1, "1", True, "true"]
+        
+        if not is_paid and status != "cancelled":
+            date_ord = r.get("date_ordered")
+            if not date_ord: continue
+            
+            try:
+                d_obj = datetime.strptime(str(date_ord), "%Y-%m-%d")
+                delta = (now - d_obj).days
+            except:
+                delta = 0
+            
+            # Categorize
+            group = "< 30 Days"
+            if delta > 90: group = "> 90 Days"
+            elif delta > 60: group = "60-90 Days"
+            elif delta > 30: group = "30-60 Days"
+            
+            unpaid.append({
+                "po": r.get("po_number") or r.get("number"),
+                "supplier": r.get("supplier"),
+                "amount": r.get("amount_usd"),
+                "days": delta,
+                "group": group
+            })
+            
+    # Sort by oldest first
+    unpaid.sort(key=lambda x: x["days"], reverse=True)
+    return jsonify(unpaid)
+
+# --- Document Uploads ---
 @app.post("/api/documents/upload")
 def upload_order_doc():
     if require_write_access(): return require_write_access()
     if "file" not in request.files: return jsonify({"error": "missing_file"}), 400
     
     file = request.files["file"]
-    parent_type = request.form.get("parent_type", "req") # req or land
+    parent_type = request.form.get("parent_type", "req")
     parent_id = request.form.get("parent_id")
     
     if not file or not parent_id: return jsonify({"error": "missing_data"}), 400
@@ -527,6 +578,8 @@ def upload_overwrite_db():
     file = request.files["file"]
     filename = secure_filename(file.filename or "")
     if not filename.endswith(".xlsx"): return jsonify({"error": "invalid_file_type"}), 400
+    
+    # Save temp and verify
     tmp_path = os.path.join(BASE_DIR, f"_upload_tmp.xlsx")
     file.save(tmp_path)
     try:
@@ -534,6 +587,8 @@ def upload_overwrite_db():
     except:
         os.remove(tmp_path)
         return jsonify({"error": "corrupt_excel"}), 400
+    
+    # Overwrite
     shutil.copy2(tmp_path, DB_FILE)
     os.remove(tmp_path)
     ensure_db()
@@ -605,7 +660,7 @@ def delete_user_api(username):
             return jsonify({"ok":True})
     return jsonify({"error":"not_found"}),404
 
-# --- REQUISITIONS (Point 7: Remarks, Partial) ---
+# --- REQUISITIONS ---
 @app.get("/api/requisitions")
 def list_requisitions():
     rows=read_rows("requisitions")
@@ -614,7 +669,6 @@ def list_requisitions():
 
 @app.get("/api/requisitions/export_csv")
 def export_requisitions_csv():
-    # FIX: Newline handling for cleaner Excel opening
     if require_login(): return require_login()
     rows = read_rows("requisitions")
     si = io.StringIO()
@@ -634,7 +688,6 @@ def export_requisitions_csv():
 def add_requisition():
     if require_write_access(): return require_write_access()
     d=request.json
-    # Force boolean fields to integer 1/0
     val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     # Delivery: 0=No, 1=Full, 2=Partial
     val_delivered = int(d.get("delivered") or 0)
@@ -651,7 +704,7 @@ def add_requisition():
         "paid": val_paid,
         "delivered": val_delivered,
         "amount_original": amt_orig,
-        "remarks": d.get("remarks", "") # Point 7: Remarks
+        "remarks": d.get("remarks", "")
     }
     row["amount_usd"] = round(to_usd(float(amt_orig), d.get("currency")),2)
     append_row("requisitions", row)
@@ -665,7 +718,6 @@ def edit_requisition(rid):
     if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     if "delivered" in d: d["delivered"] = int(d.get("delivered") or 0)
     
-    # Recalc Amount if changed
     if "amount" in d or "amount_original" in d:
         amt = d.get("amount_original") or d.get("amount") or 0
         d["amount_original"] = amt
@@ -695,12 +747,11 @@ def bulk_req_action():
     if not ids or not action: return jsonify({"error":"missing_args"}), 400
     
     updates = {}
-    # 0=Open, 1=Delivered (Full), 2=Partial
     if action == "mark_paid": updates = {"paid": 1}
     elif action == "mark_unpaid": updates = {"paid": 0}
     elif action == "mark_delivered": updates = {"delivered": 1}
     elif action == "mark_undelivered": updates = {"delivered": 0}
-    elif action == "mark_partial": updates = {"delivered": 2} # Point 7
+    elif action == "mark_partial": updates = {"delivered": 2}
     else: return jsonify({"error":"invalid_action"}), 400
     
     updates["updated_at"] = now_iso()
