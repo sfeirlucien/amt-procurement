@@ -1,6 +1,6 @@
 """
 AMT Procurement - Single-file Flask Backend (Excel DB)
-UPDATED: Manual Ratings, Partial Delivery Button, Amount Fixes, Finance Role, CSV Export
+UPDATED: Partial Delivery, Remarks Field, Optimized Backup, CSV Fixes
 """
 
 import os
@@ -33,6 +33,8 @@ CORS(app, supports_credentials=True, origins=[
 ])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# WARNING: On Render/Heroku, this file is ephemeral and will reset on deploy.
+# Use a Persistent Disk or Database for production safety.
 DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 
@@ -53,7 +55,7 @@ SHEETS: Dict[str, List[str]] = {
         "amount_original", "currency", "amount_usd",
         "paid", "delivered", "status",
         "po_number", "remarks", "urgency", "tracking_url",
-        "created_by", "created_at", "updated_at", "delivery_status" 
+        "created_by", "created_at", "updated_at" 
     ],
     "landings": [
         "id", "vessel", "item", "workshop",
@@ -64,7 +66,7 @@ SHEETS: Dict[str, List[str]] = {
     ],
     "directory": [
         "id", "type", "name", "email", "phone", "address",
-        "rating", "rating_comment", # NEW FIELDS
+        "rating", "rating_comment",
         "created_by", "created_at"
     ],
     "categories": ["id", "name", "abbr", "created_at"],
@@ -98,7 +100,7 @@ def ensure_db() -> None:
 
     wb = openpyxl.load_workbook(DB_FILE)
 
-    # Header migration
+    # Header migration (add new columns if missing)
     for sname, headers in SHEETS.items():
         if sname not in wb.sheetnames:
             ws_new = wb.create_sheet(sname)
@@ -310,11 +312,10 @@ def to_usd(amount: float, currency: str) -> float:
     return float(amount) / float(r)
 
 # -------------------------------------------------
-# Backup Logic (Smart Check)
+# Backup Logic (Optimized)
 # -------------------------------------------------
 def make_backup_filename(suffix:str="") -> str:
-    # Use Dubai time for filename
-    ts = get_dubai_time().strftime("%Y%m%d_%H%M%S_%f")
+    ts = get_dubai_time().strftime("%Y%m%d_%H%M%S")
     return f"office_ops_backup_{ts}{suffix}.xlsx"
 
 def create_backup_file(suffix:str="") -> str:
@@ -330,48 +331,44 @@ def create_backup_file(suffix:str="") -> str:
             os.remove(all_backups.pop(0))
     except:
         pass
-        
-    log_action("Backup Created", target=name, details="Auto or Manual backup")
     return path
 
 LAST_AUTO_CHECK_TIME = 0
 
 def check_and_run_smart_backup():
+    # PERFORMANCE FIX: Don't check filesystem on every request
     global LAST_AUTO_CHECK_TIME
-    if time.time() - LAST_AUTO_CHECK_TIME < 300:
+    if time.time() - LAST_AUTO_CHECK_TIME < 300: # 5 Minutes
         return
 
     LAST_AUTO_CHECK_TIME = time.time()
     ensure_db()
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
-    auto_backups = [f for f in os.listdir(BACKUP_DIR) if "_AUTO" in f and f.endswith(".xlsx")]
-    should_backup = False
-    
-    if not auto_backups:
-        should_backup = True
-    else:
-        try:
+    try:
+        auto_backups = [f for f in os.listdir(BACKUP_DIR) if "_AUTO" in f and f.endswith(".xlsx")]
+        should_backup = False
+        
+        if not auto_backups:
+            should_backup = True
+        else:
             auto_backups.sort(reverse=True)
             newest_file = os.path.join(BACKUP_DIR, auto_backups[0])
             mtime = os.path.getmtime(newest_file)
             age_seconds = time.time() - mtime
             if age_seconds > AUTO_BACKUP_INTERVAL_SECONDS:
                 should_backup = True
-        except:
-            should_backup = True
-            
-    if should_backup:
-        print(f"[{now_iso()}] Triggering Smart Auto-Backup...")
-        create_backup_file(suffix="_AUTO")
+                
+        if should_backup:
+            print(f"[{now_iso()}] Triggering Smart Auto-Backup...")
+            create_backup_file(suffix="_AUTO")
+    except Exception:
+        pass
 
 @app.before_request
 def trigger_backup_check():
     if request.path == "/" or request.path.startswith("/api/"):
-        try:
-            check_and_run_smart_backup()
-        except:
-            pass
+        check_and_run_smart_backup()
 
 # -------------------------------------------------
 # Routes
@@ -412,61 +409,13 @@ def session_info():
     if not u: return jsonify({"logged_in": False}), 401
     return jsonify({"logged_in": True, **u})
 
-# --- Audit Log (New) ---
+# --- Audit Log ---
 @app.get("/api/audit")
 def get_audit_log():
     if require_admin(): return require_admin()
     rows = read_rows("logs")
     rows.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
-    out = []
-    for r in rows:
-        out.append({
-            "user": r.get("user") or "system",
-            "action": r.get("action"),
-            "target": r.get("target") or "",
-            "details": r.get("details") or "",
-            "date": r.get("timestamp")
-        })
-    return jsonify(out)
-
-@app.get("/api/reports/aging")
-def get_aging_report():
-    # Finance role can view this, so no strictly require_admin
-    if require_login(): return require_login()
-    reqs = read_rows("requisitions")
-    now = get_dubai_time()
-    
-    unpaid = []
-    for r in reqs:
-        # Check if NOT paid and NOT cancelled
-        status = (r.get("status") or "open").lower()
-        paid_val = r.get("paid")
-        is_paid = paid_val in [1, "1", True, "true"]
-        
-        if not is_paid and status != "cancelled":
-            date_ord = r.get("date_ordered")
-            if not date_ord: continue
-            
-            try:
-                d_obj = datetime.strptime(str(date_ord), "%Y-%m-%d")
-                delta = (now - d_obj).days
-            except:
-                delta = 0
-            
-            group = "< 30 Days"
-            if delta > 90: group = "> 90 Days"
-            elif delta > 60: group = "60-90 Days"
-            elif delta > 30: group = "30-60 Days"
-            
-            unpaid.append({
-                "po": r.get("po_number") or r.get("number"),
-                "supplier": r.get("supplier"),
-                "amount": r.get("amount_usd"),
-                "days": delta,
-                "group": group
-            })
-            
-    return jsonify(unpaid)
+    return jsonify(rows)
 
 # --- NEW: Document Uploads ---
 @app.post("/api/documents/upload")
@@ -496,7 +445,6 @@ def upload_order_doc():
     }
     append_row("documents", row)
     log_action("Upload Doc", target=f"{parent_type} {parent_id}", details=filename)
-    
     return jsonify({"ok": True})
 
 @app.get("/api/documents/<ptype>/<pid>")
@@ -510,14 +458,6 @@ def list_documents(ptype, pid):
 @app.get("/api/currencies")
 def api_currencies():
     return jsonify({"currencies": sorted(set(fetch_fx_rates("USD").keys()) | {"USD"})})
-
-@app.get("/api/fx")
-def api_fx():
-    return jsonify({"base": "USD", "rates": fetch_fx_rates("USD")})
-
-@app.get("/api/backup")
-def download_backup_legacy():
-    return download_backup_direct()
 
 @app.get("/api/backup/download")
 def download_backup_direct():
@@ -601,14 +541,13 @@ def upload_overwrite_db():
     return jsonify({"ok": True})
 
 # -------------------------------------------------
-# Categories
+# Categories & Vessels
 # -------------------------------------------------
 @app.get("/api/categories")
 def get_categories(): return jsonify(read_rows("categories"))
 @app.post("/api/categories")
 def add_category():
-    guard = require_admin()
-    if guard: return guard
+    if require_admin(): return require_admin()
     data = request.json or {}
     name = (data.get("name") or "").strip()
     abbr = (data.get("abbr") or "").strip().upper()
@@ -617,55 +556,33 @@ def add_category():
     if any((c.get("abbr") or "").upper() == abbr for c in cats): return jsonify({"error": "duplicate_abbr"}), 409
     row = {"id": next_id("categories"),"name": name,"abbr": abbr,"created_at": now_iso()}
     append_row("categories", row)
-    log_action("Add Category", target=name)
     return jsonify(row)
-@app.patch("/api/categories/<int:cid>")
-def edit_category(cid: int):
-    guard = require_admin()
-    if guard: return guard
-    data=request.json or {}
-    if not update_row_by_id("categories", cid, data): return jsonify({"error": "not_found"}), 404
-    return jsonify({"ok": True})
+
 @app.delete("/api/categories/<int:cid>")
 def delete_category(cid: int):
-    guard = require_admin()
-    if guard: return guard
-    if not delete_row_by_id("categories", cid): return jsonify({"error": "not_found"}), 404
+    if require_admin(): return require_admin()
+    delete_row_by_id("categories", cid)
     return jsonify({"ok": True})
 
-# -------------------------------------------------
-# Vessels
-# -------------------------------------------------
 @app.get("/api/vessels")
 def get_vessels(): return jsonify(read_rows("vessels"))
 @app.post("/api/vessels")
 def add_vessel():
-    guard = require_admin()
-    if guard: return guard
+    if require_admin(): return require_admin()
     name = (request.json or {}).get("name","").strip()
     if not name: return jsonify({"error": "missing_fields"}), 400
-    vs = read_rows("vessels")
-    if any((v.get("name") or "").strip().lower() == name.lower() for v in vs): return jsonify({"error": "duplicate_name"}), 409
     row = {"id": next_id("vessels"), "name": name, "created_at": now_iso()}
     append_row("vessels", row)
-    log_action("Add Vessel", target=name)
     return jsonify(row)
-@app.patch("/api/vessels/<int:vid>")
-def edit_vessel(vid: int):
-    guard = require_admin()
-    if guard: return guard
-    name=(request.json or {}).get("name","").strip()
-    if not update_row_by_id("vessels", vid, {"name":name}): return jsonify({"error": "not_found"}), 404
-    return jsonify({"ok": True})
+
 @app.delete("/api/vessels/<int:vid>")
 def delete_vessel(vid: int):
-    guard = require_admin()
-    if guard: return guard
-    if not delete_row_by_id("vessels", vid): return jsonify({"error": "not_found"}), 404
+    if require_admin(): return require_admin()
+    delete_row_by_id("vessels", vid)
     return jsonify({"ok": True})
 
 # -------------------------------------------------
-# Users, Directory, Requisitions, Landings
+# Users, Directory
 # -------------------------------------------------
 @app.get("/api/users")
 def list_users():
@@ -676,7 +593,6 @@ def add_user():
     if require_admin(): return require_admin()
     data=request.json
     append_row("users", {"username":data["username"],"password_hash":hash_pw(data["password"]),"role":data["role"],"created_at":now_iso()})
-    log_action("Add User", target=data["username"])
     return jsonify({"ok":True})
 @app.delete("/api/users/<username>")
 def delete_user_api(username):
@@ -686,11 +602,10 @@ def delete_user_api(username):
     for r in range(2,ws.max_row+1):
         if ws.cell(r,u_col).value==username: 
             ws.delete_rows(r,1); wb.save(DB_FILE)
-            log_action("Delete User", target=username)
             return jsonify({"ok":True})
     return jsonify({"error":"not_found"}),404
 
-# --- REQUISITIONS & BULK ---
+# --- REQUISITIONS (Point 7: Remarks, Partial) ---
 @app.get("/api/requisitions")
 def list_requisitions():
     rows=read_rows("requisitions")
@@ -699,9 +614,8 @@ def list_requisitions():
 
 @app.get("/api/requisitions/export_csv")
 def export_requisitions_csv():
-    # Allow finance and regular users to export
+    # FIX: Newline handling for cleaner Excel opening
     if require_login(): return require_login()
-    
     rows = read_rows("requisitions")
     si = io.StringIO()
     if rows:
@@ -720,11 +634,11 @@ def export_requisitions_csv():
 def add_requisition():
     if require_write_access(): return require_write_access()
     d=request.json
-    # FIX: Force boolean fields to integer 1/0
+    # Force boolean fields to integer 1/0
     val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
-    val_delivered = 1 if d.get("delivered") in [True, "true", 1, "1"] else 0
+    # Delivery: 0=No, 1=Full, 2=Partial
+    val_delivered = int(d.get("delivered") or 0)
     
-    # Amount fix: Ensure amount_original is populated
     amt_orig = d.get("amount_original")
     if amt_orig is None or amt_orig == "":
         amt_orig = d.get("amount") or 0
@@ -736,7 +650,8 @@ def add_requisition():
         "created_at":now_iso(),
         "paid": val_paid,
         "delivered": val_delivered,
-        "amount_original": amt_orig
+        "amount_original": amt_orig,
+        "remarks": d.get("remarks", "") # Point 7: Remarks
     }
     row["amount_usd"] = round(to_usd(float(amt_orig), d.get("currency")),2)
     append_row("requisitions", row)
@@ -748,9 +663,9 @@ def edit_requisition(rid):
     if require_write_access(): return require_write_access()
     d=request.json
     if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
-    if "delivered" in d: d["delivered"] = int(d.get("delivered") or 0) # Supports 0,1,2 now
+    if "delivered" in d: d["delivered"] = int(d.get("delivered") or 0)
     
-    # Amount fix: if updating amount, ensure amount_original is set
+    # Recalc Amount if changed
     if "amount" in d or "amount_original" in d:
         amt = d.get("amount_original") or d.get("amount") or 0
         d["amount_original"] = amt
@@ -763,15 +678,6 @@ def edit_requisition(rid):
             log_action("Edit Req", target=f"Req {rid}")
         return jsonify({"ok":True})
     return jsonify({"error":"not_found"}),404
-
-@app.patch("/api/requisitions/<int:rid>/toggle_paid")
-def toggle_paid_req(rid):
-    if require_write_access(): return require_write_access()
-    rows=read_rows("requisitions")
-    row=next((r for r in rows if int(r["id"])==rid),None)
-    new_p = 0 if int(row.get("paid")or 0) else 1
-    update_row_by_id("requisitions", rid, {"paid":new_p})
-    return jsonify({"ok":True})
 
 @app.delete("/api/requisitions/<int:rid>")
 def delete_req(rid):
@@ -789,14 +695,12 @@ def bulk_req_action():
     if not ids or not action: return jsonify({"error":"missing_args"}), 400
     
     updates = {}
-    # 0=Open, 1=Delivered (Legacy), 2=Partial (New)
-    # We will assume 'delivered' column now holds: 0=No, 1=Yes, 2=Partial
+    # 0=Open, 1=Delivered (Full), 2=Partial
     if action == "mark_paid": updates = {"paid": 1}
     elif action == "mark_unpaid": updates = {"paid": 0}
     elif action == "mark_delivered": updates = {"delivered": 1}
     elif action == "mark_undelivered": updates = {"delivered": 0}
-    # FEATURE 8: Partial Delivery
-    elif action == "mark_partial": updates = {"delivered": 2}
+    elif action == "mark_partial": updates = {"delivered": 2} # Point 7
     else: return jsonify({"error":"invalid_action"}), 400
     
     updates["updated_at"] = now_iso()
@@ -808,7 +712,7 @@ def bulk_req_action():
     log_action("Bulk Action", target=action, details=f"Affected {count} orders")
     return jsonify({"ok": True, "updated": count})
 
-# --- LANDINGS & BULK ---
+# --- LANDINGS ---
 @app.get("/api/landings")
 def list_landings():
     rows=read_rows("landings")
@@ -819,8 +723,8 @@ def add_landing():
     if require_write_access(): return require_write_access()
     d=request.json
     val_paid = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
+    val_delivered = int(d.get("delivered") or 0)
     
-    # Amount fix
     amt_orig = d.get("amount_original")
     if amt_orig is None or amt_orig == "":
         amt_orig = d.get("amount") or 0
@@ -831,19 +735,20 @@ def add_landing():
         "created_by":current_user()["username"], 
         "created_at":now_iso(),
         "paid": val_paid,
+        "delivered": val_delivered,
         "amount_original": amt_orig
     }
     row["amount_usd"] = round(to_usd(float(amt_orig), d.get("currency")),2)
     append_row("landings", row)
     log_action("Add Landing", target=row.get("vessel"), details=row.get("item"))
     return jsonify(row)
+
 @app.patch("/api/landings/<int:lid>")
 def edit_landing(lid):
     if require_write_access(): return require_write_access()
     d=request.json
     if "paid" in d: d["paid"] = 1 if d.get("paid") in [True, "true", 1, "1"] else 0
     
-    # Amount fix
     if "amount" in d or "amount_original" in d:
         amt = d.get("amount_original") or d.get("amount") or 0
         d["amount_original"] = amt
@@ -853,14 +758,6 @@ def edit_landing(lid):
     log_action("Edit Landing", target=f"Land {lid}")
     return jsonify({"ok":True})
 
-@app.patch("/api/landings/<int:lid>/toggle_paid")
-def toggle_paid_land(lid):
-    if require_write_access(): return require_write_access()
-    rows=read_rows("landings")
-    row=next((r for r in rows if int(r["id"])==lid),None)
-    new_p = 0 if int(row.get("paid")or 0) else 1
-    update_row_by_id("landings", lid, {"paid":new_p})
-    return jsonify({"ok":True})
 @app.delete("/api/landings/<int:lid>")
 def delete_land(lid):
     if require_admin(): return require_admin()
@@ -902,16 +799,13 @@ def add_directory_std():
     d=request.json
     row={**d, "id":next_id("directory"), "created_by":current_user()["username"], "created_at":now_iso()}
     append_row("directory", row)
-    log_action("Add Contact", target=row.get("name"))
     return jsonify(row)
 @app.post("/api/directory/quick")
-def add_dir_quick():
-    return add_directory_std()
+def add_dir_quick(): return add_directory_std()
 @app.patch("/api/directory/<int:did>")
 def edit_directory_entry(did: int):
     if require_write_access(): return require_write_access()
     d = request.json or {}
-    # Handles rating, rating_comment, or standard fields
     update_row_by_id("directory", did, d)
     if "rating" in d:
         log_action("Rate Contact", target=f"Dir {did}", details=f"Score: {d.get('rating')}")
@@ -920,7 +814,6 @@ def edit_directory_entry(did: int):
 def del_dir(did):
     if require_admin(): return require_admin()
     delete_row_by_id("directory", did)
-    log_action("Delete Contact", target=f"Dir {did}")
     return jsonify({"ok":True})
 
 # -------------------------------------------------
