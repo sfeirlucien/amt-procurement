@@ -7,9 +7,8 @@
   <link rel="icon" type="image/png" href="static/ICON.jpg">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* === PROFESSIONAL DESIGN SYSTEM === */
+    /* === PROFESSIONAL ENTERPRISE THEME === */
     :root {
-      /* Palette */
       --primary: #0f172a;       /* Slate 900 */
       --primary-light: #334155; /* Slate 700 */
       --accent: #2563eb;        /* Royal Blue */
@@ -17,176 +16,135 @@
       --success: #10b981;       /* Emerald */
       --warning: #f59e0b;       /* Amber */
       --danger: #ef4444;        /* Red */
-      
-      /* Backgrounds */
       --bg-body: #f1f5f9;       /* Slate 100 */
       --bg-card: #ffffff;
-      --bg-header: #ffffff;
-      
-      /* Text */
       --text-main: #334155;     /* Slate 700 */
       --text-muted: #64748b;    /* Slate 500 */
       --text-header: #0f172a;
-      
-      /* Borders & Shadows */
       --border: #e2e8f0;
       --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
       --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
       --radius: 8px;
     }
-
-    /* Dark Mode Overrides */
     body.dark-mode {
-      --primary: #f8fafc; 
-      --bg-body: #0f172a;
-      --bg-card: #1e293b;
-      --bg-header: #1e293b;
-      --text-main: #cbd5e1;
-      --text-muted: #94a3b8;
-      --text-header: #f1f5f9;
-      --border: #334155;
-      --shadow-sm: none;
-      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+      --primary: #f8fafc; --bg-body: #0f172a; --bg-card: #1e293b; 
+      --text-main: #cbd5e1; --text-muted: #94a3b8; --text-header: #f1f5f9; 
+      --border: #334155; --shadow-sm: none;
     }
 
-    /* === RESET & BASE === */
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin:0; background: var(--bg-body); color: var(--text-main); padding-bottom: 80px; transition: background 0.3s, color 0.3s; font-size: 14px; line-height: 1.5; }
+    /* === BASE === */
+    body { font-family: 'Inter', system-ui, sans-serif; margin:0; background: var(--bg-body); color: var(--text-main); padding-bottom: 80px; font-size: 14px; }
     * { box-sizing: border-box; }
     
-    /* === LAYOUT === */
-    header { background: var(--bg-header); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow-sm); }
-    header h1 { margin:0; font-size: 20px; font-weight: 700; color: var(--text-header); letter-spacing: -0.5px; }
-    .logo-area { display: flex; align-items: center; gap: 12px; }
-    
-    .container { max-width: 1400px; margin: 24px auto; padding: 0 20px; }
-    
-    /* === NAVIGATION TABS === */
-    .tabs-wrapper { background: var(--primary); padding: 0 20px; box-shadow: var(--shadow-md); margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; }
+    /* === HEADER & TABS === */
+    header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+    header h1 { margin:0; font-size: 20px; font-weight: 700; color: var(--text-header); }
+    .tabs-wrapper { background: var(--primary); padding: 0 20px; margin: 24px auto; max-width: 1400px; border-radius: var(--radius); }
     .tabs { display:flex; overflow-x: auto; white-space: nowrap; }
-    .tabs::-webkit-scrollbar { height: 0px; }
-    .tab { padding: 16px 20px; color: #94a3b8; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s; border-bottom: 3px solid transparent; }
+    .tab { padding: 16px 20px; color: #94a3b8; cursor: pointer; font-weight: 500; transition: all 0.2s; border-bottom: 3px solid transparent; }
     .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
     .tab.active { color: #fff; border-bottom-color: var(--accent); background: rgba(255,255,255,0.1); }
 
-    /* === CARDS === */
-    .card { background: var(--bg-card); padding: 24px; margin-bottom: 24px; border-radius: var(--radius); box-shadow: var(--shadow-sm); border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
+    /* === LAYOUT === */
+    .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+    .card { background: var(--bg-card); padding: 24px; margin-bottom: 24px; border-radius: var(--radius); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
     .card h2 { margin-top:0; font-size: 18px; font-weight: 600; color: var(--text-header); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* === FORMS & INPUTS === */
-    label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
-    input, select, textarea { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-body); color: var(--text-header); transition: border 0.2s, box-shadow 0.2s; }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-    
-    /* === BUTTONS === */
-    button { padding: 8px 16px; font-size: 14px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--accent); color: white; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-    button:hover { background: var(--accent-hover); transform: translateY(-1px); }
-    button:active { transform: translateY(0); }
-    
+    /* === ELEMENTS === */
+    label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+    input, select, textarea { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-body); color: var(--text-header); }
+    button { padding: 8px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--accent); color: white; transition: 0.2s; }
+    button:hover { opacity: 0.9; transform: translateY(-1px); }
     button.secondary { background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border); }
-    button.secondary:hover { background: #e2e8f0; color: #0f172a; }
-    
-    button.danger { background: var(--danger); color: white; }
-    button.danger:hover { background: #dc2626; }
-    
-    button.success { background: var(--success); color: white; }
-    button.success:hover { background: #059669; }
-    
+    button.danger { background: var(--danger); }
+    button.success { background: var(--success); }
     button.warning { background: var(--warning); color: #fff; }
-    button.warning:hover { background: #d97706; }
-
-    /* === TABLES (Point 11: Sorting UI) === */
+    
+    /* === TABLES === */
     .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
-    
-    th { background: var(--bg-body); font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border); cursor: pointer; user-select: none; position: relative; }
-    th:hover { background: #e2e8f0; color: var(--text-header); }
-    th::after { content: '↕'; position: absolute; right: 8px; opacity: 0.3; font-size: 10px; }
-    th.sort-asc::after { content: '↑'; opacity: 1; color: var(--accent); }
-    th.sort-desc::after { content: '↓'; opacity: 1; color: var(--accent); }
-    
-    td { border-bottom: 1px solid var(--border); padding: 12px 16px; color: var(--text-main); vertical-align: middle; white-space: nowrap; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(37, 99, 235, 0.02); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
+    th { background: var(--bg-body); font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 11px; padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--border); cursor: pointer; }
+    td { border-bottom: 1px solid var(--border); padding: 10px 14px; vertical-align: middle; }
+    tr:hover td { background: rgba(37, 99, 235, 0.03); }
+
+    /* === DASHBOARD WIDGETS === */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .summary-item { background: var(--bg-body); padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+    .summary-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .summary-value { font-size: 24px; font-weight: 700; color: var(--text-header); margin-top: 4px; }
+    .top-list { list-style: none; padding: 0; margin: 0; }
+    .top-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
 
     /* === STATUS BADGES === */
-    .tag { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .tag.green { background: #d1fae5; color: #065f46; } /* Paid/Delivered */
-    .tag.red { background: #fee2e2; color: #991b1b; }   /* Unpaid/Cancelled */
-    .tag.yellow { background: #fef3c7; color: #92400e; } /* Partial */
-    .tag.gray { background: #f1f5f9; color: #475569; }  /* Open */
+    .tag { padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .tag.green { background: #dcfce7; color: #166534; }
+    .tag.red { background: #fee2e2; color: #991b1b; }
+    .tag.yellow { background: #fef9c3; color: #854d0e; }
+    .tag.gray { background: #f3f4f6; color: #4b5563; }
 
-    /* === DASHBOARD SUMMARY === */
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-    .summary-item { background: var(--bg-body); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); display: flex; flex-direction: column; }
-    .summary-label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-    .summary-value { font-size: 28px; font-weight: 700; color: var(--text-header); letter-spacing: -1px; }
-
-    /* === BULK BAR === */
-    .bulk-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 12px 24px; border-radius: 50px; box-shadow: var(--shadow-md); display: flex; gap: 16px; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .bulk-bar.visible { opacity: 1; pointer-events: auto; bottom: 40px; }
-    .bulk-bar span { font-weight: 600; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 16px; }
-
-    /* === DROPDOWN ACTIONS === */
-    .action-menu { position: relative; }
-    .drop-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 4px 8px; font-size: 16px; }
-    .drop-btn:hover { background: var(--bg-body); color: var(--accent); }
-    .drop-content { display: none; position: absolute; right: 0; top: 100%; background: var(--bg-card); min-width: 160px; box-shadow: var(--shadow-md); border-radius: 6px; border: 1px solid var(--border); z-index: 10; overflow: hidden; margin-top: 4px; }
-    .drop-content.show { display: block; animation: fadeIn 0.1s ease-out; }
-    .drop-content button, .drop-content a { display: block; width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-main); font-weight: 500; }
-    .drop-content button:hover, .drop-content a:hover { background: var(--bg-body); color: var(--accent); }
-    .drop-content button:last-child { border-bottom: none; }
-
-    /* === POPUPS === */
-    .popup-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 40; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-    .popup-backdrop.visible { opacity: 1; pointer-events: auto; }
-    .popup { background: var(--bg-card); width: 95%; max-width: 650px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 32px; box-shadow: var(--shadow-md); transform: scale(0.95); transition: transform 0.2s; }
-    .popup-backdrop.visible .popup { transform: scale(1); }
-
-    /* Helpers */
-    .hidden { display: none !important; }
-    .flex-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    /* === UTILS === */
+    .flex-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
     .flex-1 { flex: 1 1 200px; }
-    .error { color: var(--danger); font-size: 13px; margin-top: 8px; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    .hidden { display: none !important; }
+    .bulk-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 12px 24px; border-radius: 50px; box-shadow: var(--shadow-md); display: flex; gap: 16px; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: 0.3s; }
+    .bulk-bar.visible { opacity: 1; pointer-events: auto; bottom: 40px; }
+    
+    /* === DROPDOWN === */
+    .action-menu { position: relative; }
+    .drop-content { display: none; position: absolute; right: 0; background: var(--bg-card); min-width: 160px; box-shadow: var(--shadow-md); border-radius: 6px; border: 1px solid var(--border); z-index: 10; margin-top: 4px; }
+    .drop-content.show { display: block; }
+    .drop-content button { display: block; width: 100%; text-align: left; background: none; color: var(--text-main); border-radius: 0; border-bottom: 1px solid var(--border); }
+
+    /* === POPUP === */
+    .popup-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 50; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.2s; }
+    .popup-backdrop.visible { opacity: 1; pointer-events: auto; }
+    .popup { background: var(--bg-card); width: 95%; max-width: 700px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 24px; box-shadow: var(--shadow-md); transform: scale(0.95); transition: 0.2s; }
+    .popup-backdrop.visible .popup { transform: scale(1); }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="logo-area">
+  <div style="display:flex; gap:12px; align-items:center;">
     <div style="width:32px; height:32px; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">A</div>
     <h1>AMT Procurement</h1>
   </div>
   <div style="display:flex; gap:16px; align-items:center;">
     <div id="userInfo" style="font-size:13px; font-weight:500;"></div>
-    <button class="secondary" id="darkModeBtn" style="padding:6px 12px;" title="Toggle Theme">🌗</button>
+    <button class="secondary" id="darkModeBtn" style="padding:6px 12px;">🌗</button>
   </div>
 </header>
 
-<div class="container">
-  <div class="tabs-wrapper">
-    <div class="tabs">
-      <div class="tab active" data-tab="overview">Dashboard</div>
-      <div class="tab" data-tab="requisitions">Orders</div>
-      <div class="tab" data-tab="landings">Landings</div>
-      <div class="tab" data-tab="directory">Directory</div>
-      <div class="tab" data-tab="delivered">History</div>
-      <div class="tab hidden" data-tab="admin" id="adminTab">Admin</div>
-    </div>
+<div class="tabs-wrapper">
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">Dashboard</div>
+    <div class="tab" data-tab="requisitions">Orders</div>
+    <div class="tab" data-tab="landings">Landings</div>
+    <div class="tab" data-tab="directory">Directory</div>
+    <div class="tab" data-tab="delivered">History</div>
+    <div class="tab hidden" data-tab="admin" id="adminTab">Admin</div>
   </div>
+</div>
 
+<div class="container">
+  
   <div id="bulkActionBar" class="bulk-bar">
-    <span><strong id="bulkCount">0</strong> Selected</span>
+    <span style="border-right:1px solid #ffffff40; padding-right:15px; margin-right:5px;"><strong id="bulkCount">0</strong> Selected</span>
     <button class="success" id="bulkMarkPaidBtn">Paid</button>
-    <button class="warning" id="bulkMarkPartialBtn" title="Point 7: Partial Delivery">Partial</button>
-    <button class="success" id="bulkMarkDeliveredBtn">Full Delivery</button>
+    <button class="warning" id="bulkMarkPartialBtn">Partial</button>
+    <button class="success" id="bulkMarkDeliveredBtn">Full Del</button>
     <button class="secondary" id="bulkMarkUnpaidBtn">Unpaid</button>
-    <button class="danger" id="bulkCancelBtn" style="margin-left:8px;">✕</button>
+    <button class="danger" id="bulkCancelBtn">✕</button>
   </div>
 
   <div id="tab-overview" class="tab-content">
     <div class="card">
-      <h2><span>📊 Performance Overview</span> <button id="openChartBtn" class="secondary">Analytics Studio</button></h2>
+      <h2><span>📊 Operational Overview</span> 
+        <div style="display:flex; gap:8px;">
+           <button id="showAgingBtn" class="warning">🕒 Aging Report</button>
+           <button id="openChartBtn" class="secondary">📈 Analytics</button>
+        </div>
+      </h2>
       <div class="summary-grid">
         <div class="summary-item"><div class="summary-label">Pending Orders</div><div class="summary-value" id="summaryOpenReqNotDel">0</div></div>
         <div class="summary-item"><div class="summary-label">Unpaid Orders</div><div class="summary-value" id="summaryOpenReqUnpaid" style="color:var(--danger)">0</div></div>
@@ -194,12 +152,40 @@
         <div class="summary-item"><div class="summary-label">Unpaid Landings</div><div class="summary-value" id="summaryOpenLandUnpaid" style="color:var(--danger)">0</div></div>
       </div>
     </div>
-    
+
     <div class="card">
-      <h2>Recent Activity</h2>
+      <h2>💰 Financial Analysis</h2>
+      
+      <div class="flex-row" style="background:var(--bg-body); padding:12px; border-radius:8px; align-items:flex-end;">
+        <div class="flex-1"><label>Type</label><select id="ovTypeFilter"><option value="">All</option><option value="req">Orders</option><option value="land">Landings</option></select></div>
+        <div class="flex-1"><label>Vessel</label><select id="ovVesselFilter"><option value="">All</option></select></div>
+        <div class="flex-1"><label>Month</label><select id="ovMonthFilter"><option value="">All</option></select></div>
+        <div class="flex-1"><label>Year</label><select id="ovYearFilter"><option value="">All</option></select></div>
+        <div class="flex-1"><label>Category</label><select id="ovCategoryFilter"><option value="">All</option></select></div>
+        <div><button id="ovApplyTotalsBtn">Apply</button></div>
+      </div>
+
+      <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:20px;">
+        <div style="flex:2; min-width:300px;">
+           <h3 style="font-size:14px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Filtered Totals</h3>
+           <div class="summary-grid">
+              <div class="summary-item"><div class="summary-label">Total Paid</div><div class="summary-value" style="color:var(--success)" id="ovPaidMonthTotal">$0.00</div></div>
+              <div class="summary-item"><div class="summary-label">Total Unpaid</div><div class="summary-value" style="color:var(--danger)" id="ovUnpaidMonthTotal">$0.00</div></div>
+              <div class="summary-item"><div class="summary-label">Grand Total</div><div class="summary-value" id="ovAllTotal">$0.00</div></div>
+           </div>
+        </div>
+        <div style="flex:1; min-width:250px;">
+           <h3 style="font-size:14px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Top 5 Suppliers</h3>
+           <ul id="ovTopSuppliers" class="top-list"><li>No data...</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Recent Orders</h2>
       <div class="table-container">
         <table id="overviewReqTable">
-          <thead><tr><th onclick="sortTable(this,0)">PO #</th><th onclick="sortTable(this,1)">Vessel</th><th onclick="sortTable(this,2)">Description</th><th onclick="sortTable(this,3)">Supplier</th><th onclick="sortTable(this,4)">Date</th><th onclick="sortTable(this,5)">Amount</th><th>Status</th></tr></thead>
+          <thead><tr><th>PO #</th><th>Vessel</th><th>Description</th><th>Supplier</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -210,74 +196,45 @@
     <div class="card" id="reqAddCard">
       <h2 id="reqFormTitle">New Requisition</h2>
       <div class="flex-row">
-        <div class="flex-1"><label>PO Number</label><input type="text" id="reqPONumber" placeholder="Auto or Manual" /></div>
-        <div class="flex-1"><label>Internal Ref</label><input type="text" id="reqNumber" placeholder="Req #" /></div>
+        <div class="flex-1"><label>PO Number</label><input type="text" id="reqPONumber" placeholder="Manual or Auto" /></div>
+        <div class="flex-1"><label>Ref Number</label><input type="text" id="reqNumber" /></div>
         <div class="flex-1"><label>Vessel</label><select id="reqVessel"></select></div>
         <div class="flex-1"><label>Category</label><select id="reqCategory"></select></div>
       </div>
       <div class="flex-row">
-         <div class="flex-1"><label>Description</label><input type="text" id="reqDescription" placeholder="Item details..." /></div>
-         <div class="flex-1">
-           <label>Supplier</label>
-           <div style="display:flex; gap:8px;">
-             <select id="reqSupplierSelect" style="flex:1;"></select>
-             <button id="newSupplierBtn" type="button" class="secondary" title="Add New">+</button>
-           </div>
-         </div>
+         <div class="flex-1"><label>Description</label><input type="text" id="reqDescription" /></div>
+         <div class="flex-1"><label>Supplier</label><div style="display:flex; gap:5px;"><select id="reqSupplierSelect"></select><button id="newSupplierBtn" class="secondary">+</button></div></div>
       </div>
       <div class="flex-row">
-         <div class="flex-1"><label>Ordered Date</label><input type="date" id="reqDateOrdered" /></div>
-         <div class="flex-1"><label>Expected Date</label><input type="date" id="reqExpected" /></div>
+         <div class="flex-1"><label>Date Ordered</label><input type="date" id="reqDateOrdered" /></div>
+         <div class="flex-1"><label>Expected</label><input type="date" id="reqExpected" /></div>
          <div class="flex-1"><label>Amount</label><input type="number" id="reqTotal" step="0.01" /></div>
          <div class="flex-1"><label>Currency</label><select id="reqCurrency"></select></div>
       </div>
       <div class="flex-row">
-        <div class="flex-1"><label>Tracking URL</label><input type="text" id="reqTracking" placeholder="https://..." /></div>
+        <div class="flex-1"><label>Tracking URL</label><input type="text" id="reqTracking" /></div>
         <div class="flex-1"><label>Urgency</label><select id="reqUrgency"><option value="normal">Normal</option><option value="high">High</option></select></div>
-        <div class="flex-1"><label>Remarks / Delivery Note</label><input type="text" id="reqRemarks" placeholder="Notes..." /></div>
+        <div class="flex-1"><label>Remarks (Delivery)</label><input type="text" id="reqRemarks" placeholder="Partial delivery notes..." /></div>
       </div>
-      <div style="display:flex; justify-content: flex-end; gap:12px; margin-top:20px;">
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-          <input type="checkbox" id="reqPaid" style="width:auto; margin:0;"/> Mark as Paid
-        </label>
-        <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel</button>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+        <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="reqPaid" style="width:auto; margin:0;"> Paid</label>
+        <button id="cancelReqEditBtn" class="secondary hidden">Cancel</button>
         <button id="saveReqBtn" class="success">Save Order</button>
       </div>
-      <div id="reqError" class="error"></div>
     </div>
 
     <div class="card">
-      <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-        <h2 style="margin:0;">Orders List</h2>
-        <button id="exportReqBtn" class="secondary">⬇ Export CSV</button>
+      <div style="display:flex; justify-content:space-between; margin-bottom:15px;"><h2>All Orders</h2><button id="exportReqBtn" class="secondary">Export CSV</button></div>
+      <div class="flex-row" style="background:var(--bg-body); padding:10px; border-radius:6px; align-items:flex-end;">
+         <div class="flex-1"><label>Status</label><select id="filterReqStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></div>
+         <div class="flex-1"><label>Paid</label><select id="filterReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></div>
+         <div class="flex-1"><label>Delivered</label><select id="filterReqDelivered"><option value="">All</option><option value="1">Full</option><option value="2">Partial</option><option value="0">None</option></select></div>
+         <div style="flex:2;"><label>Search</label><input id="filterReqSearch" placeholder="Search PO, Vessel, Supplier..."></div>
+         <div><button id="applyReqFilterBtn">Filter</button></div>
       </div>
-      <div class="flex-row" style="background:var(--bg-body); padding:16px; border-radius:8px; align-items:flex-end;">
-        <div style="flex:1;"><label>Status</label><select id="filterReqStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></div>
-        <div style="flex:1;"><label>Payment</label><select id="filterReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></div>
-        <div style="flex:1;"><label>Delivery</label><select id="filterReqDelivered"><option value="">All</option><option value="1">Full</option><option value="2">Partial</option><option value="0">None</option></select></div>
-        <div style="flex:2;"><label>Search</label><input type="text" id="filterReqSearch" placeholder="Search PO, Vessel, Supplier..." /></div>
-        <div style="display:flex; gap:8px;">
-          <button id="applyReqFilterBtn">Filter</button>
-          <button id="clearReqFilterBtn" class="secondary">Clear</button>
-        </div>
-      </div>
-      
       <div class="table-container">
         <table id="reqTable">
-          <thead>
-            <tr>
-              <th style="width:40px;"><input type="checkbox" id="reqSelectAll" /></th>
-              <th onclick="sortTable(this,1)">PO #</th>
-              <th onclick="sortTable(this,2)">Description</th>
-              <th onclick="sortTable(this,3)">Vessel</th>
-              <th onclick="sortTable(this,4)">Supplier</th>
-              <th onclick="sortTable(this,5)">Ordered</th>
-              <th onclick="sortTable(this,6)">Amount ($)</th>
-              <th onclick="sortTable(this,7)">Payment</th>
-              <th onclick="sortTable(this,8)">Delivery</th>
-              <th style="width:80px;">Actions</th>
-            </tr>
-          </thead>
+          <thead><tr><th><input type="checkbox" id="reqSelectAll"></th><th onclick="sortTable(this,1)">PO #</th><th onclick="sortTable(this,2)">Description</th><th onclick="sortTable(this,3)">Vessel</th><th onclick="sortTable(this,4)">Supplier</th><th onclick="sortTable(this,5)">Date</th><th onclick="sortTable(this,6)">Amount</th><th>Paid</th><th>Delivered</th><th>Act</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -286,164 +243,124 @@
 
   <div id="tab-landings" class="tab-content hidden">
     <div class="card" id="landAddCard">
-      <h2 id="landFormTitle">Add Landed Item</h2>
+      <h2>Add Landing</h2>
       <div class="flex-row">
         <div class="flex-1"><label>Vessel</label><select id="landVessel"></select></div>
-        <div class="flex-1"><label>Workshop/Supplier</label><select id="landWorkshopSelect"></select></div>
-        <div class="flex-1"><label>Item Description</label><input type="text" id="landDescription" /></div>
+        <div class="flex-1"><label>Workshop</label><select id="landWorkshopSelect"></select></div>
+        <div class="flex-1"><label>Item</label><input type="text" id="landDescription" /></div>
       </div>
       <div class="flex-row">
-         <div class="flex-1"><label>Expected Date</label><input type="date" id="landExpected" /></div>
-         <div class="flex-1"><label>Landed Date</label><input type="date" id="landLanded" /></div>
+         <div class="flex-1"><label>Expected</label><input type="date" id="landExpected" /></div>
+         <div class="flex-1"><label>Landed</label><input type="date" id="landLanded" /></div>
          <div class="flex-1"><label>Amount</label><input type="number" id="landAmount" step="0.01" /></div>
          <div class="flex-1"><label>Currency</label><select id="landCurrency"></select></div>
       </div>
-      <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
-        <label style="display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" id="landPaid" style="width:auto; margin:0;" /> Paid
-        </label>
-        <button id="cancelLandEditBtn" class="secondary hidden">Cancel</button>
-        <button id="saveLandingBtn" class="success">Save Landing</button>
-      </div>
+      <div style="text-align:right; margin-top:15px;"><button id="cancelLandEditBtn" class="secondary hidden">Cancel</button> <button id="saveLandingBtn" class="success">Save Landing</button></div>
     </div>
-
     <div class="card">
-      <h2>Landed Items</h2>
-      <div class="table-container">
-        <table id="landingTable">
-          <thead>
-            <tr>
-              <th style="width:40px;"><input type="checkbox" id="landSelectAll" /></th>
-              <th onclick="sortTable(this,1)">Vessel</th>
-              <th onclick="sortTable(this,2)">Item</th>
-              <th onclick="sortTable(this,3)">Workshop</th>
-              <th onclick="sortTable(this,4)">Expected</th>
-              <th onclick="sortTable(this,5)">Amount ($)</th>
-              <th onclick="sortTable(this,6)">Payment</th>
-              <th onclick="sortTable(this,7)">Delivery</th>
-              <th style="width:80px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+       <h2>Landed Items</h2>
+       <div class="table-container">
+         <table id="landingTable"><thead><tr><th><input type="checkbox" id="landSelectAll"></th><th>Vessel</th><th>Item</th><th>Workshop</th><th>Date</th><th>Amount</th><th>Paid</th><th>Delivered</th><th>Act</th></tr></thead><tbody></tbody></table>
+       </div>
     </div>
   </div>
 
   <div id="tab-directory" class="tab-content hidden">
     <div class="card">
-      <div style="display:flex; justify-content:space-between;">
-        <h2>Supplier Directory</h2>
-        <div>
-          <button id="dirNewSupplierBtn">Add Supplier</button>
-          <button id="dirNewWorkshopBtn" class="secondary">Add Workshop</button>
-        </div>
-      </div>
-      <div class="table-container" style="margin-top:16px;">
-        <table id="directoryTable"><thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Rating</th><th>Actions</th></tr></thead><tbody></tbody></table>
-      </div>
+       <div style="display:flex; justify-content:space-between;"><h2>Directory</h2><div><button id="dirNewSupplierBtn">Add Supplier</button> <button id="dirNewWorkshopBtn" class="secondary">Add Workshop</button></div></div>
+       <div class="table-container" style="margin-top:15px;">
+         <table id="directoryTable"><thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Rating</th><th>Actions</th></tr></thead><tbody></tbody></table>
+       </div>
     </div>
   </div>
-  
+
   <div id="tab-delivered" class="tab-content hidden">
-    <div class="card">
-      <h2>History Log</h2>
-      <div class="table-container">
-        <table id="deliveredReqTable"><thead><tr><th>Type</th><th>Ref</th><th>Desc</th><th>Entity</th><th>Amount</th><th>Paid</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
+     <div class="card">
+       <h2>History (Delivered)</h2>
+       <div class="table-container"><table id="deliveredReqTable"><thead><tr><th>Type</th><th>PO</th><th>Desc</th><th>Supplier</th><th>Amount</th><th>Paid</th></tr></thead><tbody></tbody></table></div>
+     </div>
   </div>
 
   <div id="tab-admin" class="tab-content hidden">
     <div class="card">
       <h2>Admin Panel</h2>
       <div class="flex-row">
-        <button onclick="document.getElementById('adminCats').classList.toggle('hidden')" class="secondary">Manage Categories</button>
-        <button onclick="document.getElementById('adminVessels').classList.toggle('hidden')" class="secondary">Manage Vessels</button>
-        <button onclick="document.getElementById('adminUsers').classList.toggle('hidden')" class="secondary">Manage Users</button>
-        <button onclick="document.getElementById('backupCard').classList.toggle('hidden')" class="secondary">Backups & Restore</button>
+         <button class="secondary" onclick="document.getElementById('adminCats').classList.toggle('hidden')">Categories</button>
+         <button class="secondary" onclick="document.getElementById('adminVessels').classList.toggle('hidden')">Vessels</button>
+         <button class="secondary" onclick="document.getElementById('adminUsers').classList.toggle('hidden')">Users</button>
       </div>
-      <div id="adminCats" class="hidden" style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-        <h3>Categories</h3>
-        <div class="flex-row"><input id="catName" placeholder="Name"><input id="catAbbr" placeholder="Abbr"><button id="addCatBtn">Add</button></div>
-        <table id="catTable"><thead><tr><th>Name</th><th>Abbr</th><th>Action</th></tr></thead><tbody></tbody></table>
+      
+      <div id="adminCats" class="hidden" style="margin-top:10px; border-top:1px solid #ccc; padding-top:10px;">
+         <h3>Categories</h3><div class="flex-row"><input id="catName" placeholder="Name"><input id="catAbbr" placeholder="Abbr"><button id="addCatBtn">Add</button></div>
+         <table id="catTable"><thead><tr><th>Name</th><th>Abbr</th><th>Act</th></tr></thead><tbody></tbody></table>
       </div>
-      <div id="adminVessels" class="hidden" style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-         <h3>Vessels</h3>
-         <div class="flex-row"><input id="vesselName" placeholder="Name"><button id="addVesselBtn">Add</button></div>
-         <table id="vesselTable"><thead><tr><th>Name</th><th>Action</th></tr></thead><tbody></tbody></table>
+      <div id="adminVessels" class="hidden" style="margin-top:10px; border-top:1px solid #ccc; padding-top:10px;">
+         <h3>Vessels</h3><div class="flex-row"><input id="vesselName" placeholder="Name"><button id="addVesselBtn">Add</button></div>
+         <table id="vesselTable"><thead><tr><th>Name</th><th>Act</th></tr></thead><tbody></tbody></table>
       </div>
-      <div id="adminUsers" class="hidden" style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-         <h3>Users</h3>
-         <div class="flex-row"><input id="adminUsername" placeholder="User"><input type="password" id="adminPassword" placeholder="Pass"><select id="adminRole"><option value="user">User</option><option value="finance">Finance</option><option value="admin">Admin</option></select><button id="saveUserBtn">Add</button></div>
-         <table id="userTable"><thead><tr><th>User</th><th>Role</th><th>Action</th></tr></thead><tbody></tbody></table>
+      <div id="adminUsers" class="hidden" style="margin-top:10px; border-top:1px solid #ccc; padding-top:10px;">
+         <h3>Users</h3><div class="flex-row"><input id="adminUsername" placeholder="User"><input type="password" id="adminPassword" placeholder="Pass"><select id="adminRole"><option value="user">User</option><option value="finance">Finance</option><option value="admin">Admin</option></select><button id="saveUserBtn">Add</button></div>
+         <table id="userTable"><thead><tr><th>User</th><th>Role</th><th>Act</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
-    <div class="card hidden" id="backupCard">
-       <h3>System Backups</h3>
+
+    <div class="card" id="backupCard">
+       <h3>System Backups & Restore</h3>
+       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:15px;">
+          <div style="display:flex; gap:10px;">
+             <button id="createBackupBtn" class="success">Create New Backup</button>
+             <button id="downloadBackupBtn" class="secondary">Download Manual</button>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+             <input type="file" id="uploadBackupInput" accept=".xlsx" style="width:200px;">
+             <button id="uploadBackupBtn" class="warning">Upload & Overwrite DB</button>
+          </div>
+       </div>
+       <table id="backupTable"><thead><tr><th>Filename</th><th>Date</th><th>Size</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card">
+       <h3>Activity Log</h3>
        <div class="flex-row">
-         <button id="createBackupBtn" class="success">Create Backup Now</button>
-         <button id="downloadBackupBtn">Download Manual</button>
+          <div class="flex-1"><select id="auditFYear"><option value="">Year</option></select></div>
+          <div class="flex-1"><select id="auditFMonth"><option value="">Month</option></select></div>
+          <div><button id="auditApplyBtn">Filter</button></div>
        </div>
-       <table id="backupTable" style="margin-top:10px;"><thead><tr><th>Filename</th><th>Date</th><th>Size</th><th>Actions</th></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-
-</div> <div id="loginCard" class="popup-backdrop">
-  <div class="popup" style="max-width:350px;">
-    <h2>Login</h2>
-    <label>Username</label><input type="text" id="loginUsername" />
-    <label style="margin-top:10px;">Password</label><input type="password" id="loginPassword" />
-    <button id="loginBtn" style="width:100%; margin-top:20px;">Login</button>
-    <div id="loginError" class="error"></div>
-  </div>
-</div>
-
-<div id="dirPopupBackdrop" class="popup-backdrop">
-  <div id="dirPopup" class="popup">
-    <h3>Contact Details</h3>
-    <div class="flex-row"><div class="flex-1"><label>Name</label><input type="text" id="dirPopupName" /></div></div>
-    <div class="flex-row">
-      <div class="flex-1"><label>Email</label><input type="email" id="dirPopupEmail" /></div>
-      <div class="flex-1"><label>Phone</label><input type="text" id="dirPopupPhone" /></div>
-    </div>
-    <label>Address</label><input type="text" id="dirPopupAddress" />
-    <div style="margin-top:20px; text-align:right; display:flex; gap:10px; justify-content:flex-end;">
-      <button id="dirPopupCancelBtn" class="secondary">Cancel</button>
-      <button id="dirPopupSaveBtn" class="success">Save</button>
-    </div>
-  </div>
-</div>
-
-<div id="docPopupBackdrop" class="popup-backdrop">
-  <div id="docPopup" class="popup">
-    <h3>Attached Documents</h3>
-    <div style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid var(--border);">
-       <label>Upload File</label>
-       <div style="display:flex; gap:10px;">
-         <input type="file" id="docUploadInput" />
-         <button id="docUploadBtn" class="success">Upload</button>
+       <div class="table-container" style="max-height:400px; overflow-y:auto;">
+          <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
        </div>
     </div>
-    <table id="docTable"><thead><tr><th>File</th><th>By</th><th>Date</th></tr></thead><tbody></tbody></table>
-    <div style="text-align:right; margin-top:15px;"><button onclick="closeDocPopup()" class="secondary">Close</button></div>
   </div>
 </div>
+
+<div id="loginCard" class="popup-backdrop"><div class="popup" style="max-width:350px;"><h2>Login</h2><label>Username</label><input id="loginUsername"><label>Password</label><input type="password" id="loginPassword"><button id="loginBtn" style="width:100%; margin-top:15px;">Login</button><div id="loginError" class="error"></div></div></div>
+
+<div id="agingPopupBackdrop" class="popup-backdrop"><div class="popup" style="max-width:800px;"><h3>Aging Report (Unpaid)</h3><div class="table-container"><table id="agingTable"><thead><tr><th>PO</th><th>Supplier</th><th>Amount</th><th>Days</th><th>Group</th></tr></thead><tbody></tbody></table></div><div style="text-align:right; margin-top:10px;"><button onclick="document.getElementById('agingPopupBackdrop').classList.remove('visible')" class="secondary">Close</button></div></div></div>
+
+<div id="supHistBackdrop" class="popup-backdrop"><div class="popup"><h3>Supplier History</h3><div id="supScoreDisplay" style="color:var(--warning); margin-bottom:10px;"></div><div class="table-container"><table id="supHistTable"><thead><tr><th>Date</th><th>PO</th><th>Desc</th><th>Amount</th></tr></thead><tbody></tbody></table></div><div style="text-align:right; margin-top:10px;"><button onclick="document.getElementById('supHistBackdrop').classList.remove('visible')" class="secondary">Close</button></div></div></div>
+
+<div id="chartBackdrop" class="popup-backdrop"><div class="popup" style="max-width:800px;"><div style="display:flex; justify-content:space-between;"><h3>Analytics</h3><button onclick="document.getElementById('chartBackdrop').classList.remove('visible')" class="secondary">✕</button></div><div class="flex-row"><select id="chartXAxis"><option value="vessel">Vessel</option><option value="supplier">Supplier</option><option value="category">Category</option></select><select id="chartType"><option value="bar">Bar</option><option value="doughnut">Doughnut</option></select><button id="refreshChartBtn">Refresh</button></div><div style="height:400px;"><canvas id="customChart"></canvas></div></div></div>
+
+<div id="docPopupBackdrop" class="popup-backdrop"><div class="popup"><h3>Documents</h3><div style="display:flex; gap:10px; margin-bottom:10px;"><input type="file" id="docUploadInput"><button id="docUploadBtn" class="success">Upload</button></div><table id="docTable"><thead><tr><th>File</th><th>By</th><th>Date</th></tr></thead><tbody></tbody></table><div style="text-align:right; margin-top:10px;"><button onclick="document.getElementById('docPopupBackdrop').classList.remove('visible')" class="secondary">Close</button></div></div></div>
+
+<div id="dirPopupBackdrop" class="popup-backdrop"><div class="popup"><h3>Contact</h3><label>Name</label><input id="dirPopupName"><div class="flex-row"><input id="dirPopupEmail" placeholder="Email"><input id="dirPopupPhone" placeholder="Phone"></div><label>Address</label><input id="dirPopupAddress"><div style="text-align:right; margin-top:15px;"><button id="dirPopupCancelBtn" class="secondary">Cancel</button> <button id="dirPopupSaveBtn" class="success">Save</button></div></div></div>
+
+<div id="ratePopupBackdrop" class="popup-backdrop"><div class="popup" style="max-width:400px;"><h3>Rate Supplier</h3><input type="hidden" id="rateDirId"><select id="rateScore"><option value="5">⭐⭐⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option><option value="3">⭐⭐⭐</option><option value="2">⭐⭐</option><option value="1">⭐</option></select><textarea id="rateComment" rows="3" placeholder="Comments..."></textarea><div style="text-align:right; margin-top:15px;"><button onclick="document.getElementById('ratePopupBackdrop').classList.remove('visible')" class="secondary">Cancel</button> <button id="saveRateBtn" class="success">Save</button></div></div></div>
+
 
 <script>
-/* ================= CONFIG ================= */
+/* CONFIG & STATE */
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
   if (!res.ok) { let err; try { err = await res.json(); } catch { err = { error: "unknown" }; } throw err; }
   return res.json();
 }
-
-/* ================= STATE ================= */
 let currentUser=null, allReqs=[], allLandings=[], vessels=[];
 let editingReqId=null, editingLandId=null, dirPopupType=null, currencyList=["USD"];
 let selectedIds = new Set(); let currentBulkType = null;
+let myChart = null, allAuditLogs = [];
 
-/* ================= THEME ================= */
+/* THEME */
 const darkModeBtn = document.getElementById("darkModeBtn");
 if(localStorage.getItem("theme")==="dark") document.body.classList.add("dark-mode");
 darkModeBtn.onclick = () => {
@@ -451,45 +368,37 @@ darkModeBtn.onclick = () => {
     localStorage.setItem("theme", document.body.classList.contains("dark-mode") ? "dark" : "light");
 };
 
-/* ================= INITIALIZATION ================= */
+/* INITIALIZATION */
 async function afterDataLoad() {
     selectedIds.clear(); toggleBulkBar();
     await loadOptions(); await loadData(); 
     await updateDashboard(); 
+    calculateOverviewTotals(); // RESTORED
     await loadAdminData();
-    
-    // Check roles
-    if(currentUser && currentUser.username==='finance') {
-        if(document.getElementById('reqAddCard')) document.getElementById('reqAddCard').classList.add('hidden');
-    }
+    if(currentUser && currentUser.username==='finance' && document.getElementById('reqAddCard')) document.getElementById('reqAddCard').classList.add('hidden');
 }
 
 async function loadOptions(){
     try { const res = await apiFetch("/api/currencies"); currencyList = res.currencies || ["USD"]; } catch {}
-    const fillSel = (id) => {
-        const el = document.getElementById(id); if(!el)return; el.innerHTML="";
-        currencyList.forEach(c => { const o=document.createElement("option"); o.value=c; o.textContent=c; el.appendChild(o); });
-        el.value="USD";
-    };
+    const fillSel = (id) => { const el = document.getElementById(id); if(!el)return; el.innerHTML=""; currencyList.forEach(c => el.add(new Option(c,c))); el.value="USD"; };
     fillSel("reqCurrency"); fillSel("landCurrency");
-
     try { vessels = await apiFetch("/api/vessels"); } catch { vessels=[]; }
-    const fillVes = (id) => {
-        const el=document.getElementById(id); if(!el)return; const cur=el.value; el.innerHTML='<option value="">Select Vessel</option>';
-        vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; el.appendChild(o); });
-        if(cur) el.value=cur;
-    };
-    fillVes("reqVessel"); fillVes("landVessel"); 
-
+    const fillVes = (id) => { const el=document.getElementById(id); if(!el)return; const cur=el.value; el.innerHTML='<option value="">Select Vessel</option>'; vessels.forEach(v=>el.add(new Option(v.name,v.name))); if(cur) el.value=cur; };
+    fillVes("reqVessel"); fillVes("landVessel"); fillVes("ovVesselFilter"); // Added ovVesselFilter
     try { const cats=await apiFetch("/api/categories"); 
        const cSel=document.getElementById("reqCategory"); if(cSel){ cSel.innerHTML='<option value="">Select</option>'; cats.forEach(c=>cSel.add(new Option(c.abbr, c.abbr))); }
+       const ovCSel=document.getElementById("ovCategoryFilter"); if(ovCSel){ ovCSel.innerHTML='<option value="">All</option>'; cats.forEach(c=>ovCSel.add(new Option(c.abbr, c.abbr))); }
     } catch {}
-
     try { const dirs=await apiFetch("/api/directory"); 
        const sSel=document.getElementById("reqSupplierSelect"); if(sSel){ sSel.innerHTML='<option value="">Select</option>'; dirs.filter(d=>d.type==='supplier').forEach(d=>sSel.add(new Option(d.name, d.name))); }
        const wSel=document.getElementById("landWorkshopSelect"); if(wSel){ wSel.innerHTML='<option value="">Select</option>'; dirs.filter(d=>d.type==='workshop').forEach(d=>wSel.add(new Option(d.name, d.name))); }
        renderDirectory(dirs);
     } catch {}
+    // Date Filters
+    const mSel = document.getElementById("ovMonthFilter"), amSel = document.getElementById("auditFMonth");
+    if(mSel && mSel.options.length <= 1) ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m,i)=> { mSel.add(new Option(m, i+1)); amSel.add(new Option(m, i+1)); });
+    const ySel = document.getElementById("ovYearFilter"), aySel = document.getElementById("auditFYear");
+    if(ySel && ySel.options.length <= 1) { const y = new Date().getFullYear(); for(let i=y; i>=y-3; i--) { ySel.add(new Option(i, i)); aySel.add(new Option(i, i)); } }
 }
 
 async function loadData() {
@@ -498,60 +407,39 @@ async function loadData() {
     renderReqTable(); renderLandTable(); renderDelivered();
 }
 
-/* ================= RENDERING ================= */
+/* RENDERING */
 function formatMoney(amount) { return parseFloat(amount || 0).toLocaleString('en-US', {style:'currency', currency:'USD'}); }
-function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
 
 function renderReqTable() {
     const tbody = document.querySelector("#reqTable tbody"); tbody.innerHTML="";
-    const statusF=document.getElementById("filterReqStatus").value;
-    const paidF=document.getElementById("filterReqPaid").value;
-    const delF=document.getElementById("filterReqDelivered").value;
-    const search=document.getElementById("filterReqSearch").value.toLowerCase();
+    const statusF=document.getElementById("filterReqStatus").value, paidF=document.getElementById("filterReqPaid").value, delF=document.getElementById("filterReqDelivered").value, search=document.getElementById("filterReqSearch").value.toLowerCase();
     
     allReqs.forEach(r => {
         if((r.status||"open")==="cancelled") return; 
         if(statusF && (r.status||"open")!==statusF) return;
         if(paidF !== "" && (r.paid?1:0) != paidF) return;
         if(delF !== "" && r.delivered != delF) return;
-        
-        const content = `${r.po_number} ${r.description} ${r.vessel} ${r.supplier}`.toLowerCase();
-        if(search && !content.includes(search)) return;
+        if(search && !`${r.po_number} ${r.description} ${r.vessel} ${r.supplier}`.toLowerCase().includes(search)) return;
 
         const tr = document.createElement("tr");
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
-        
-        // POINT 7: PARTIAL DELIVERY HANDLING
-        let delBadge = '<span class="tag gray">Open</span>';
-        if(r.delivered == 1) delBadge = '<span class="tag green">Full</span>';
-        else if(r.delivered == 2) delBadge = '<span class="tag yellow" title="Partially Received">Partial</span>';
+        let delBadge = r.delivered == 1 ? '<span class="tag green">Full</span>' : (r.delivered == 2 ? '<span class="tag yellow">Partial</span>' : '<span class="tag gray">Open</span>');
 
-        // Dropdown Menu
         const menu = `
-          <div class="action-menu">
-            <button class="drop-btn" onclick="toggleMenu(this)">•••</button>
+          <div class="action-menu"><button class="secondary" style="padding:4px 8px;" onclick="toggleMenu(this)">•••</button>
             <div class="drop-content">
                <button onclick="openDocPopup(${r.id}, 'req')">📎 Documents</button>
                <button onclick="editReq(${r.id})">✎ Edit / Remarks</button>
+               <button onclick="generatePO(${r.id})">🖨️ Print PO</button>
+               <button onclick="showSupplierHistory('${r.supplier}')">📅 History</button>
                ${!r.paid ? `<button onclick="singleAction(${r.id}, 'req', 'mark_paid')">💲 Mark Paid</button>` : ''}
-               ${r.delivered!=1 ? `<button onclick="singleAction(${r.id}, 'req', 'mark_delivered')">✅ Full Delivery</button>` : ''}
-               ${r.delivered!=2 ? `<button onclick="singleAction(${r.id}, 'req', 'mark_partial')">🚧 Mark Partial</button>` : ''}
-               <button onclick="cancelReq(${r.id})" style="color:var(--danger)">✕ Cancel</button>
+               ${r.delivered!=1 ? `<button onclick="singleAction(${r.id}, 'req', 'mark_delivered')">✅ Full Del</button>` : ''}
+               ${r.delivered!=2 ? `<button onclick="singleAction(${r.id}, 'req', 'mark_partial')">🚧 Partial</button>` : ''}
+               <button onclick="cancelReq(${r.id})" style="color:red">✕ Cancel</button>
             </div>
           </div>`;
 
-        tr.innerHTML = `
-            <td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
-            <td><strong>${r.po_number||r.number}</strong></td>
-            <td>${r.description}</td>
-            <td>${r.vessel}</td>
-            <td>${r.supplier}</td>
-            <td>${r.date_ordered}</td>
-            <td>${formatMoney(r.amount_usd)}</td>
-            <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
-            <td>${delBadge}</td>
-            <td>${menu}</td>
-        `;
+        tr.innerHTML = `<td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td><td><strong>${r.po_number||r.number}</strong></td><td>${r.description}</td><td>${r.vessel}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td><td>${delBadge}</td><td>${menu}</td>`;
         tbody.appendChild(tr);
     });
     attachBulkListeners('req');
@@ -563,283 +451,114 @@ function renderLandTable() {
         if((r.status||"open")==="cancelled") return;
         const tr = document.createElement("tr");
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
-        
-        let delBadge = r.delivered==1 ? '<span class="tag green">Received</span>' : '<span class="tag gray">Pending</span>';
-        if(r.delivered==2) delBadge = '<span class="tag yellow">Partial</span>';
-
-        const menu = `
-          <div class="action-menu">
-            <button class="drop-btn" onclick="toggleMenu(this)">•••</button>
-            <div class="drop-content">
-               <button onclick="openDocPopup(${r.id}, 'land')">Documents</button>
-               <button onclick="editLand(${r.id})">Edit</button>
-               <button onclick="singleAction(${r.id}, 'land', 'mark_paid')">Mark Paid</button>
-               <button onclick="deleteItem(${r.id}, 'land')" style="color:red">Delete</button>
-            </div>
-          </div>`;
-
-        tr.innerHTML = `
-            <td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
-            <td>${r.vessel}</td>
-            <td>${r.item}</td>
-            <td>${r.workshop}</td>
-            <td>${r.expected||""}</td>
-            <td>${formatMoney(r.amount_usd)}</td>
-            <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
-            <td>${delBadge}</td>
-            <td>${menu}</td>
-        `;
+        let delBadge = r.delivered==1 ? '<span class="tag green">Received</span>' : (r.delivered==2 ? '<span class="tag yellow">Partial</span>':'<span class="tag gray">Pending</span>');
+        const menu = `<div class="action-menu"><button class="secondary" style="padding:4px;" onclick="toggleMenu(this)">•••</button><div class="drop-content"><button onclick="openDocPopup(${r.id}, 'land')">Docs</button><button onclick="editLand(${r.id})">Edit</button><button onclick="singleAction(${r.id}, 'land', 'mark_paid')">Paid</button><button onclick="deleteItem(${r.id}, 'land')" style="color:red">Del</button></div></div>`;
+        tr.innerHTML = `<td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td><td>${r.vessel}</td><td>${r.item}</td><td>${r.workshop}</td><td>${r.expected||""}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td><td>${delBadge}</td><td>${menu}</td>`;
         tbody.appendChild(tr);
     });
     attachBulkListeners('land');
 }
 
-function renderDirectory(rows) {
-  const t=document.querySelector("#directoryTable tbody"); t.innerHTML="";
-  rows.forEach(r=>{
-      t.innerHTML+=`<tr><td>${r.type}</td><td>${r.name}</td><td>${r.email||'-'}</td><td>${r.phone||'-'}</td><td>${"⭐".repeat(r.rating||5)}</td><td><button class="secondary" onclick="editDir(${r.id})">Edit</button></td></tr>`;
-  });
-}
-function renderDelivered() {
-  const t=document.querySelector("#deliveredReqTable tbody"); t.innerHTML="";
-  allReqs.filter(r=>r.delivered==1).slice(0,50).forEach(r=>{
-      t.innerHTML+=`<tr><td>Order</td><td>${r.po_number}</td><td>${r.description}</td><td>${r.supplier}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'Yes':'No'}</td></tr>`;
-  });
+/* FINANCIALS & TOP 5 (RESTORED) */
+document.getElementById("ovApplyTotalsBtn").onclick = calculateOverviewTotals;
+function calculateOverviewTotals() {
+    const typeF=document.getElementById("ovTypeFilter").value, vesF=document.getElementById("ovVesselFilter").value, mF=document.getElementById("ovMonthFilter").value, yF=document.getElementById("ovYearFilter").value, cF=document.getElementById("ovCategoryFilter").value;
+    let items = (typeF==='req') ? [...allReqs] : (typeF==='land') ? [...allLandings] : [...allReqs, ...allLandings];
+    items = items.filter(i => {
+        if((i.status||'open') === 'cancelled') return false;
+        if(vesF && i.vessel !== vesF) return false;
+        if(cF && i.category !== cF) return false; 
+        const d = new Date(i.date_ordered || i.landed_date);
+        if(yF && d.getFullYear() != yF) return false;
+        if(mF && (d.getMonth() + 1) != mF) return false;
+        return true;
+    });
+    const total = items.reduce((a,c)=>a+(c.amount_usd||0),0), paid = items.filter(i=>i.paid).reduce((a,c)=>a+(c.amount_usd||0),0), unpaid = items.filter(i=>!i.paid).reduce((a,c)=>a+(c.amount_usd||0),0);
+    document.getElementById("ovAllTotal").textContent = formatMoney(total);
+    document.getElementById("ovPaidMonthTotal").textContent = formatMoney(paid);
+    document.getElementById("ovUnpaidMonthTotal").textContent = formatMoney(unpaid);
+
+    // Top 5
+    const supMap={}; items.forEach(i=>{ const s=i.supplier||i.workshop||"Unknown"; supMap[s]=(supMap[s]||0)+(i.amount_usd||0); });
+    const sorted = Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    document.getElementById("ovTopSuppliers").innerHTML = sorted.map(([k,v])=>`<li><span>${k}</span><strong>${formatMoney(v)}</strong></li>`).join("") || "<li>No data</li>";
 }
 
-/* ================= ACTIONS ================= */
+/* ADMIN LOGS & BACKUPS (RESTORED) */
+async function loadAdminData() {
+    if(currentUser && currentUser.role === "admin") {
+        let cats=[], vs=[], us=[], backs=[];
+        try { cats=await apiFetch("/api/categories"); } catch{} const cT=document.querySelector("#catTable tbody"); cT.innerHTML=""; cats.forEach(c=>cT.innerHTML+=`<tr><td>${c.name}</td><td>${c.abbr}</td><td><button class="danger" onclick="deleteItem(${c.id}, 'cat')">Del</button></td></tr>`);
+        try { vs=await apiFetch("/api/vessels"); } catch{} const vT=document.querySelector("#vesselTable tbody"); vT.innerHTML=""; vs.forEach(v=>vT.innerHTML+=`<tr><td>${v.name}</td><td><button class="danger" onclick="deleteItem(${v.id}, 'ves')">Del</button></td></tr>`);
+        try { us=await apiFetch("/api/users"); } catch{} const uT=document.querySelector("#userTable tbody"); uT.innerHTML=""; us.forEach(u=>uT.innerHTML+=`<tr><td>${u.username}</td><td>${u.role}</td><td><button class="danger" onclick="deleteItem('${u.username}', 'user')">Del</button></td></tr>`);
+        try { backs=await apiFetch("/api/backups"); } catch{} const bT=document.querySelector("#backupTable tbody"); bT.innerHTML=""; backs.forEach(b=>bT.innerHTML+=`<tr><td>${b.name}</td><td>${b.created_at}</td><td>${(b.size/1024).toFixed(1)}KB</td><td><button class="secondary" onclick="window.open('/api/backups/${b.name}/download')">DL</button> <button class="warning" onclick="restoreBackup('${b.name}')">Restore</button> <button class="danger" onclick="deleteItem('${b.name}', 'backup')">Del</button></td></tr>`);
+        try { allAuditLogs = await apiFetch("/api/audit"); renderAuditLog(); } catch{}
+    }
+}
+function renderAuditLog() {
+    const tbody = document.querySelector("#auditTable tbody"); tbody.innerHTML = "";
+    const fY=document.getElementById("auditFYear").value, fM=document.getElementById("auditFMonth").value;
+    const filtered = allAuditLogs.filter(l => { const d=new Date(l.date); return (!fY || d.getFullYear()==fY) && (!fM || (d.getMonth()+1)==fM); });
+    filtered.slice(0,100).forEach(l => tbody.innerHTML += `<tr><td>${l.user}</td><td>${l.action}</td><td>${l.target}</td><td>${l.date.replace("T"," ")}</td></tr>`);
+}
+document.getElementById("auditApplyBtn").onclick = renderAuditLog;
+document.getElementById("uploadBackupBtn").onclick=async()=>{
+  const f=document.getElementById("uploadBackupInput").files[0]; if(!f)return alert("Select file");
+  const fd=new FormData(); fd.append("file", f);
+  try{ await fetch("/api/upload", {method:"POST", body: fd}); alert("Restored!"); await afterDataLoad(); }catch{ alert("Failed"); }
+};
+async function restoreBackup(name) { if(confirm("Restore backup?")) { await apiFetch(`/api/backups/${name}/restore`, {method:"POST"}); await afterDataLoad(); alert("Restored!"); } }
+
+/* AGING REPORT (RESTORED) */
+document.getElementById("showAgingBtn").onclick = async () => {
+    document.getElementById("agingPopupBackdrop").classList.add("visible");
+    const t = document.querySelector("#agingTable tbody"); t.innerHTML = "<tr><td colspan='5'>Loading...</td></tr>";
+    try { const data = await apiFetch("/api/reports/aging"); t.innerHTML = ""; data.forEach(d => t.innerHTML += `<tr><td>${d.po}</td><td>${d.supplier}</td><td>$${d.amount}</td><td>${d.days}</td><td><span class="tag red">${d.group}</span></td></tr>`); } catch { t.innerHTML="<tr><td colspan='5'>Error</td></tr>"; }
+};
+
+/* ACTIONS */
 async function editReq(id) {
     const r = allReqs.find(x=>x.id==id); if(!r) return;
-    editingReqId = id;
-    document.getElementById("reqFormTitle").textContent="Edit Order (" + r.po_number + ")"; 
-    document.getElementById("saveReqBtn").textContent="Update Order";
-    document.getElementById("cancelReqEditBtn").classList.remove("hidden");
-    
-    // Populate
-    document.getElementById("reqPONumber").value=r.po_number||"";
-    document.getElementById("reqNumber").value=r.number;
-    document.getElementById("reqDescription").value=r.description;
-    document.getElementById("reqVessel").value=r.vessel;
-    document.getElementById("reqCategory").value=r.category;
-    document.getElementById("reqSupplierSelect").value=r.supplier;
-    document.getElementById("reqDateOrdered").value=r.date_ordered;
-    document.getElementById("reqExpected").value=r.expected||"";
-    document.getElementById("reqTotal").value=r.amount_original || r.amount_usd; // Fix for original amount
-    document.getElementById("reqCurrency").value=r.currency;
-    document.getElementById("reqTracking").value=r.tracking_url||"";
-    document.getElementById("reqUrgency").value=r.urgency;
-    document.getElementById("reqRemarks").value=r.remarks||""; // Point 7: Delivery remarks
-    document.getElementById("reqPaid").checked=!!r.paid;
-
-    document.querySelector("[data-tab='requisitions']").click();
-    document.getElementById("reqAddCard").scrollIntoView({behavior:"smooth"});
+    editingReqId = id; document.getElementById("reqFormTitle").textContent="Edit Order (" + r.po_number + ")"; 
+    document.getElementById("saveReqBtn").textContent="Update Order"; document.getElementById("cancelReqEditBtn").classList.remove("hidden");
+    document.getElementById("reqPONumber").value=r.po_number||""; document.getElementById("reqNumber").value=r.number;
+    document.getElementById("reqDescription").value=r.description; document.getElementById("reqVessel").value=r.vessel;
+    document.getElementById("reqCategory").value=r.category; document.getElementById("reqSupplierSelect").value=r.supplier;
+    document.getElementById("reqDateOrdered").value=r.date_ordered; document.getElementById("reqExpected").value=r.expected||"";
+    document.getElementById("reqTotal").value=r.amount_original || r.amount_usd; document.getElementById("reqCurrency").value=r.currency;
+    document.getElementById("reqTracking").value=r.tracking_url||""; document.getElementById("reqUrgency").value=r.urgency;
+    document.getElementById("reqRemarks").value=r.remarks||""; document.getElementById("reqPaid").checked=!!r.paid;
+    document.querySelector("[data-tab='requisitions']").click(); document.getElementById("reqAddCard").scrollIntoView({behavior:"smooth"});
 }
-
 document.getElementById("saveReqBtn").onclick = async () => {
     const valAmt = document.getElementById("reqTotal").value;
-    const payload = {
-        po_number: document.getElementById("reqPONumber").value,
-        number: document.getElementById("reqNumber").value,
-        description: document.getElementById("reqDescription").value,
-        vessel: document.getElementById("reqVessel").value,
-        category: document.getElementById("reqCategory").value,
-        supplier: document.getElementById("reqSupplierSelect").value,
-        date_ordered: document.getElementById("reqDateOrdered").value,
-        expected: document.getElementById("reqExpected").value,
-        amount_original: valAmt,
-        amount: valAmt,
-        currency: document.getElementById("reqCurrency").value,
-        tracking_url: document.getElementById("reqTracking").value,
-        urgency: document.getElementById("reqUrgency").value,
-        remarks: document.getElementById("reqRemarks").value,
-        paid: document.getElementById("reqPaid").checked
-    };
-    try {
-        if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`, {method:"PATCH", body:JSON.stringify(payload)});
-        else await apiFetch("/api/requisitions", {method:"POST", body:JSON.stringify(payload)});
-        resetReqForm(); await afterDataLoad();
-    } catch(e) { alert("Error saving"); }
+    const payload = { po_number: document.getElementById("reqPONumber").value, number: document.getElementById("reqNumber").value, description: document.getElementById("reqDescription").value, vessel: document.getElementById("reqVessel").value, category: document.getElementById("reqCategory").value, supplier: document.getElementById("reqSupplierSelect").value, date_ordered: document.getElementById("reqDateOrdered").value, expected: document.getElementById("reqExpected").value, amount_original: valAmt, amount: valAmt, currency: document.getElementById("reqCurrency").value, tracking_url: document.getElementById("reqTracking").value, urgency: document.getElementById("reqUrgency").value, remarks: document.getElementById("reqRemarks").value, paid: document.getElementById("reqPaid").checked };
+    try { if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`, {method:"PATCH", body:JSON.stringify(payload)}); else await apiFetch("/api/requisitions", {method:"POST", body:JSON.stringify(payload)}); resetReqForm(); await afterDataLoad(); } catch(e) { alert("Error saving"); }
 };
-
-function resetReqForm() {
-    editingReqId=null; document.getElementById("reqFormTitle").textContent="New Requisition";
-    document.getElementById("saveReqBtn").textContent="Save Order";
-    document.getElementById("cancelReqEditBtn").classList.add("hidden");
-    document.querySelectorAll("#reqAddCard input").forEach(i=>i.value="");
-}
+function resetReqForm() { editingReqId=null; document.getElementById("reqFormTitle").textContent="New Requisition"; document.getElementById("saveReqBtn").textContent="Save Order"; document.getElementById("cancelReqEditBtn").classList.add("hidden"); document.querySelectorAll("#reqAddCard input").forEach(i=>i.value=""); }
 document.getElementById("cancelReqEditBtn").onclick = resetReqForm;
+async function singleAction(id, type, action) { await apiFetch(type==='req'?'/api/requisitions/bulk':'/api/landings/bulk', { method:"POST", body: JSON.stringify({ ids: [id], action }) }); await afterDataLoad(); }
+async function cancelReq(id) { if(confirm("Cancel?")) { await apiFetch(`/api/requisitions/${id}`, {method:"PATCH", body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); } }
+function generatePO(id) { const r = allReqs.find(x => x.id == id); if(!r) return; const w = window.open("", "_blank"); w.document.write(`<html><head><title>PO ${r.po_number}</title><style>body{font-family:sans-serif;padding:40px;}.h{display:flex;justify-content:space-between;border-bottom:2px solid #000;margin-bottom:20px;}table{width:100%;border-collapse:collapse;margin-top:20px;}th,td{border:1px solid #ccc;padding:8px;}</style></head><body><div class="h"><div><h1>Purchase Order</h1></div><div><h2>${r.po_number||r.number}</h2><p>Date: ${r.date_ordered}</p></div></div><p><strong>Vendor:</strong> ${r.supplier}<br><strong>Ship To:</strong> ${r.vessel}</p><table><thead><tr><th>Description</th><th>Amount (${r.currency})</th></tr></thead><tbody><tr><td>${r.description}</td><td>${r.amount_original}</td></tr></tbody></table><script>window.print();<\/script></body></html>`); w.document.close(); }
+async function showSupplierHistory(name) { const t=document.querySelector("#supHistTable tbody"); t.innerHTML=""; try { const d=(await apiFetch("/api/directory")).find(x=>x.name===name); if(d) document.getElementById("supScoreDisplay").textContent="Rating: "+"⭐".repeat(d.rating||5); } catch {} allReqs.filter(r=>r.supplier===name).slice(0,10).forEach(i=>t.innerHTML+=`<tr><td>${i.date_ordered}</td><td>${i.po_number}</td><td>${i.description}</td><td>$${i.amount_usd.toFixed(2)}</td></tr>`); document.getElementById("supHistBackdrop").classList.add("visible"); }
+document.getElementById("openChartBtn").onclick=()=>{ document.getElementById("chartBackdrop").classList.add("visible"); updateChart(); };
+document.getElementById("refreshChartBtn").onclick=updateChart;
+function updateChart(){ const ctx=document.getElementById('customChart').getContext('2d'); const xK=document.getElementById("chartXAxis").value; const map={}; allReqs.forEach(r=>{const k=r[xK]||"Unk";map[k]=(map[k]||0)+r.amount_usd;}); if(myChart)myChart.destroy(); myChart=new Chart(ctx,{type:document.getElementById("chartType").value,data:{labels:Object.keys(map),datasets:[{label:'Spend $',data:Object.values(map),backgroundColor:'#2563eb'}]}}); }
 
-async function singleAction(id, type, action) {
-    const endpoint = type==='req' ? '/api/requisitions/bulk' : '/api/landings/bulk';
-    await apiFetch(endpoint, { method:"POST", body: JSON.stringify({ ids: [id], action }) });
-    await afterDataLoad();
-}
-async function cancelReq(id) {
-    if(confirm("Cancel this order?")) {
-        await apiFetch(`/api/requisitions/${id}`, {method:"PATCH", body:JSON.stringify({status:"cancelled"})});
-        await afterDataLoad();
-    }
-}
-
-/* ================= BULK ACTIONS ================= */
-function attachBulkListeners(type) {
-    const tableId = type==='req'?'reqTable':'landingTable';
-    document.querySelectorAll(`#${tableId} .row-select`).forEach(chk => {
-        chk.addEventListener('change', (e) => {
-            const id = +e.target.dataset.id;
-            if(e.target.checked) { selectedIds.add(id); currentBulkType=type; }
-            else { selectedIds.delete(id); if(selectedIds.size===0) currentBulkType=null; }
-            toggleBulkBar();
-        });
-    });
-}
-// Fix for Select All Performance (Point 4 in review)
-document.getElementById("reqSelectAll").onclick = (e) => {
-    const checked = e.target.checked;
-    document.querySelectorAll("#reqTable .row-select").forEach(c => {
-        c.checked = checked;
-        if(checked) { selectedIds.add(+c.dataset.id); currentBulkType='req'; }
-        else { selectedIds.delete(+c.dataset.id); }
-    });
-    if(!checked) currentBulkType=null;
-    toggleBulkBar();
-};
-
-function toggleBulkBar() {
-    const bar = document.getElementById("bulkActionBar");
-    document.getElementById("bulkCount").textContent = selectedIds.size;
-    if(selectedIds.size > 0) bar.classList.add("visible");
-    else bar.classList.remove("visible");
-}
-document.getElementById("bulkMarkPartialBtn").onclick = async () => {
-    // Point 7: Partial
-    if(!confirm("Mark selected items as Partially Delivered?")) return;
-    const endpoint = currentBulkType==='req'?'/api/requisitions/bulk':'/api/landings/bulk';
-    await apiFetch(endpoint, { method:"POST", body: JSON.stringify({ ids: Array.from(selectedIds), action: "mark_partial" }) });
-    selectedIds.clear(); toggleBulkBar(); await afterDataLoad();
-};
-document.getElementById("bulkMarkPaidBtn").onclick = () => runBulk("mark_paid");
-document.getElementById("bulkMarkDeliveredBtn").onclick = () => runBulk("mark_delivered");
-document.getElementById("bulkMarkUnpaidBtn").onclick = () => runBulk("mark_unpaid");
-async function runBulk(action) {
-    const endpoint = currentBulkType==='req'?'/api/requisitions/bulk':'/api/landings/bulk';
-    await apiFetch(endpoint, { method:"POST", body: JSON.stringify({ ids: Array.from(selectedIds), action }) });
-    selectedIds.clear(); toggleBulkBar(); await afterDataLoad();
-}
-document.getElementById("bulkCancelBtn").onclick = () => { selectedIds.clear(); toggleBulkBar(); loadData(); };
-
-/* ================= SORTING (POINT 11) ================= */
-function sortTable(th, colIndex) {
-    const table = th.closest("table");
-    const tbody = table.querySelector("tbody");
-    const rows = Array.from(tbody.querySelectorAll("tr"));
-    const isAsc = !th.classList.contains("sort-asc");
-    
-    // Clear arrows
-    table.querySelectorAll("th").forEach(h => h.classList.remove("sort-asc", "sort-desc"));
-    th.classList.add(isAsc ? "sort-asc" : "sort-desc");
-
-    rows.sort((rowA, rowB) => {
-        let cellA = rowA.cells[colIndex].innerText.trim();
-        let cellB = rowB.cells[colIndex].innerText.trim();
-
-        // 1. Check for Currency ($)
-        if(cellA.includes("$") || cellB.includes("$")) {
-            const numA = parseFloat(cellA.replace(/[^0-9.-]+/g,"")) || 0;
-            const numB = parseFloat(cellB.replace(/[^0-9.-]+/g,"")) || 0;
-            return isAsc ? numA - numB : numB - numA;
-        }
-        
-        // 2. Check for Date (YYYY-MM-DD or simple date)
-        const dateA = Date.parse(cellA);
-        const dateB = Date.parse(cellB);
-        if(!isNaN(dateA) && !isNaN(dateB) && cellA.includes("-")) {
-            return isAsc ? dateA - dateB : dateB - dateA;
-        }
-        
-        // 3. Default String
-        return isAsc ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
-    });
-
-    tbody.append(...rows);
-}
-
-/* ================= DROPDOWN UTILS ================= */
-function toggleMenu(btn) {
-    const menu = btn.nextElementSibling;
-    document.querySelectorAll(".drop-content").forEach(d => { if(d !== menu) d.classList.remove("show"); });
-    menu.classList.toggle("show");
-    // Close on click outside
-    window.onclick = (e) => {
-        if (!e.target.matches('.drop-btn')) {
-            document.querySelectorAll(".drop-content").forEach(d => d.classList.remove("show"));
-        }
-    }
-}
-
-/* ================= AUTH & START ================= */
-async function refreshSession() {
-  try { currentUser = await apiFetch("/api/session"); } catch { currentUser = null; }
-  const ui = document.getElementById("userInfo");
-  const loginPop = document.getElementById("loginCard");
-  
-  if (currentUser && currentUser.username) {
-      ui.innerHTML = `Hi, ${currentUser.username} (${currentUser.role}) | <a href="#" id="logoutLnk" style="color:var(--accent)">Logout</a>`;
-      document.getElementById("logoutLnk").onclick = async () => { await apiFetch("/api/logout", {method:"POST"}); window.location.reload(); };
-      loginPop.classList.remove("visible");
-      if(currentUser.role === 'admin') document.getElementById("adminTab").classList.remove("hidden");
-  } else {
-      ui.innerHTML = `<a href="#" onclick="document.getElementById('loginCard').classList.add('visible')">Login</a>`;
-      loginPop.classList.add("visible");
-  }
-}
-document.getElementById("loginBtn").onclick = async () => {
-    try { 
-        await apiFetch("/api/login", { method:"POST", body: JSON.stringify({username:document.getElementById("loginUsername").value, password:document.getElementById("loginPassword").value}) });
-        window.location.reload();
-    } catch { document.getElementById("loginError").textContent = "Invalid credentials"; }
-};
-
-/* ================= DOCS ================= */
-async function openDocPopup(id, type) {
-    document.getElementById("docPopupBackdrop").classList.add("visible");
-    const t = document.querySelector("#docTable tbody"); t.innerHTML = "<tr><td colspan='3'>Loading...</td></tr>";
-    const docs = await apiFetch(`/api/documents/${type}/${id}`);
-    t.innerHTML = "";
-    docs.forEach(d => t.innerHTML += `<tr><td><a href="/static/uploads/${d.filename}" target="_blank">${d.filename}</a></td><td>${d.uploaded_by}</td><td>${d.uploaded_at}</td></tr>`);
-    document.getElementById("docUploadBtn").onclick = async () => {
-        const file = document.getElementById("docUploadInput").files[0];
-        if(!file) return;
-        const fd = new FormData(); fd.append("file", file); fd.append("parent_id", id); fd.append("parent_type", type);
-        await fetch("/api/documents/upload", {method:"POST", body:fd});
-        openDocPopup(id, type);
-    }
-}
-function closeDocPopup() { document.getElementById("docPopupBackdrop").classList.remove("visible"); }
-
-/* ================= CHART ================= */
-function updateDashboard() {
-    document.getElementById("summaryOpenReqNotDel").textContent = allReqs.filter(r=>r.delivered!=1 && (r.status||'open')!=='cancelled').length;
-    document.getElementById("summaryOpenReqUnpaid").textContent = allReqs.filter(r=>!r.paid && (r.status||'open')!=='cancelled').length;
-    // ...
-    // Simple table fill for dashboard
-    const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
-    allReqs.slice(0,5).forEach(r=> {
-        t.innerHTML += `<tr><td>${r.po_number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.status||'open'}</td></tr>`;
-    });
-}
-
-// TABS LOGIC
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    if (tab.classList.contains("hidden")) return;
-    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(div => div.classList.add("hidden"));
-    tab.classList.add("active");
-    document.getElementById(`tab-${tab.dataset.tab}`).classList.remove("hidden");
-  });
-});
-
+/* MISC */
+function toggleMenu(btn) { const m=btn.nextElementSibling; document.querySelectorAll(".drop-content").forEach(d=>{if(d!==m)d.classList.remove("show")}); m.classList.toggle("show"); window.onclick=(e)=>{if(!e.target.matches('.secondary'))document.querySelectorAll(".drop-content").forEach(d=>d.classList.remove("show"))}; }
+async function refreshSession() { try{currentUser=await apiFetch("/api/session");}catch{currentUser=null;} const ui=document.getElementById("userInfo"); if(currentUser&&currentUser.username){ ui.innerHTML=`Hi, ${currentUser.username} | <a href="#" id="logoutLnk">Logout</a>`; document.getElementById("logoutLnk").onclick=async()=>{await apiFetch("/api/logout",{method:"POST"});location.reload();}; document.getElementById("loginCard").classList.remove("visible"); if(currentUser.role==='admin')document.getElementById("adminTab").classList.remove("hidden"); } else { ui.innerHTML=`<a href="#" onclick="document.getElementById('loginCard').classList.add('visible')">Login</a>`; document.getElementById("loginCard").classList.add("visible"); } }
+document.getElementById("loginBtn").onclick=async()=>{try{await apiFetch("/api/login",{method:"POST",body:JSON.stringify({username:document.getElementById("loginUsername").value,password:document.getElementById("loginPassword").value})});location.reload();}catch{document.getElementById("loginError").textContent="Invalid";}};
+function renderDirectory(rows) { const t=document.querySelector("#directoryTable tbody"); t.innerHTML=""; rows.forEach(r=>{ t.innerHTML+=`<tr><td>${r.type}</td><td>${r.name}</td><td>${r.email||'-'}</td><td>${r.phone||'-'}</td><td>${"⭐".repeat(r.rating||5)}</td><td><button class="small-action warning" onclick="openRatePopup(${r.id})">Rate</button> <button class="small-action secondary" onclick="editDir(${r.id})">Edit</button></td></tr>`; }); }
+function renderDelivered() { const t=document.querySelector("#deliveredReqTable tbody"); t.innerHTML=""; allReqs.filter(r=>r.delivered==1).slice(0,50).forEach(r=>{ t.innerHTML+=`<tr><td>Order</td><td>${r.po_number}</td><td>${r.description}</td><td>${r.supplier}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'Yes':'No'}</td></tr>`; }); }
+function updateDashboard() { document.getElementById("summaryOpenReqNotDel").textContent=allReqs.filter(r=>r.delivered!=1 && (r.status||'open')!=='cancelled').length; document.getElementById("summaryOpenReqUnpaid").textContent=allReqs.filter(r=>!r.paid && (r.status||'open')!=='cancelled').length; const t=document.querySelector("#overviewReqTable tbody"); t.innerHTML=""; allReqs.slice(0,5).forEach(r=>{ t.innerHTML+=`<tr><td>${r.po_number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.status||'open'}</td></tr>`; }); }
+function attachBulkListeners(type) { const t=type==='req'?'reqTable':'landingTable'; document.querySelectorAll(`#${t} .row-select`).forEach(c=>{c.addEventListener('change',(e)=>{if(e.target.checked){selectedIds.add(+e.target.dataset.id);currentBulkType=type;}else{selectedIds.delete(+e.target.dataset.id);if(selectedIds.size===0)currentBulkType=null;}toggleBulkBar();});}); }
+function toggleBulkBar() { const b=document.getElementById("bulkActionBar"); document.getElementById("bulkCount").textContent=selectedIds.size; if(selectedIds.size>0)b.classList.add("visible");else b.classList.remove("visible"); }
+document.getElementById("reqSelectAll").onclick=(e)=>{const c=e.target.checked;document.querySelectorAll("#reqTable .row-select").forEach(k=>{k.checked=c;c?selectedIds.add(+k.dataset.id):selectedIds.delete(+k.dataset.id)});currentBulkType=c?'req':null;toggleBulkBar();};
+document.getElementById("bulkMarkPartialBtn").onclick=()=>runBulk("mark_partial"); document.getElementById("bulkMarkPaidBtn").onclick=()=>runBulk("mark_paid"); document.getElementById("bulkMarkDeliveredBtn").onclick=()=>runBulk("mark_delivered"); document.getElementById("bulkMarkUnpaidBtn").onclick=()=>runBulk("mark_unpaid"); document.getElementById("bulkCancelBtn").onclick=()=>{selectedIds.clear();toggleBulkBar();loadData();};
+async function runBulk(a){await apiFetch(currentBulkType==='req'?'/api/requisitions/bulk':'/api/landings/bulk',{method:"POST",body:JSON.stringify({ids:Array.from(selectedIds),action:a})});selectedIds.clear();toggleBulkBar();await afterDataLoad();}
+function sortTable(th,i){const t=th.closest("table").querySelector("tbody"),rows=Array.from(t.querySelectorAll("tr")),asc=!th.classList.contains("sort-asc");th.closest("tr").querySelectorAll("th").forEach(h=>h.classList.remove("sort-asc","sort-desc"));th.classList.add(asc?"sort-asc":"sort-desc");rows.sort((a,b)=>{const vA=a.cells[i].innerText,vB=b.cells[i].innerText;return (parseFloat(vA.replace(/[^0-9.-]+/g,""))||vA).toString().localeCompare((parseFloat(vB.replace(/[^0-9.-]+/g,""))||vB).toString(),undefined,{numeric:true})*(asc?1:-1)});t.append(...rows);}
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{if(!t.classList.contains("hidden")){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-content").forEach(d=>d.classList.add("hidden"));t.classList.add("active");document.getElementById(`tab-${t.dataset.tab}`).classList.remove("hidden");}}));
 (async function(){ await refreshSession(); await afterDataLoad(); })();
 </script>
 </body>
