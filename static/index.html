@@ -2,600 +2,448 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>AMT Procurement</title>
+  <title>AMT Procurement Hub</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <link rel="icon" type="image/png" href="static/ICON.jpg">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* === Base Variables & Light Mode === */
+    /* === PROFESSIONAL DESIGN SYSTEM === */
     :root {
-      --bg-body: #f5f5f5; --text-main: #333; --bg-card: #fff;
-      --border-color: #e5e7eb; --header-bg: #1f2937; --header-text: #fff;
-      --input-bg: #fff; --input-border: #d1d5db;
-      --highlight-row: #fff; --th-bg: #f9fafb; --th-text: #374151;
+      /* Palette */
+      --primary: #0f172a;       /* Slate 900 */
+      --primary-light: #334155; /* Slate 700 */
+      --accent: #2563eb;        /* Royal Blue */
+      --accent-hover: #1d4ed8;
+      --success: #10b981;       /* Emerald */
+      --warning: #f59e0b;       /* Amber */
+      --danger: #ef4444;        /* Red */
+      
+      /* Backgrounds */
+      --bg-body: #f1f5f9;       /* Slate 100 */
+      --bg-card: #ffffff;
+      --bg-header: #ffffff;
+      
+      /* Text */
+      --text-main: #334155;     /* Slate 700 */
+      --text-muted: #64748b;    /* Slate 500 */
+      --text-header: #0f172a;
+      
+      /* Borders & Shadows */
+      --border: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --radius: 8px;
     }
-    /* === Dark Mode Variables === */
+
+    /* Dark Mode Overrides */
     body.dark-mode {
-      --bg-body: #111827; --text-main: #f3f4f6; --bg-card: #1f2937;
-      --border-color: #374151; --header-bg: #000; --header-text: #f3f4f6;
-      --input-bg: #374151; --input-border: #4b5563;
-      --highlight-row: #1f2937; --th-bg: #111827; --th-text: #9ca3af;
+      --primary: #f8fafc; 
+      --bg-body: #0f172a;
+      --bg-card: #1e293b;
+      --bg-header: #1e293b;
+      --text-main: #cbd5e1;
+      --text-muted: #94a3b8;
+      --text-header: #f1f5f9;
+      --border: #334155;
+      --shadow-sm: none;
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
     }
 
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin:0; background: var(--bg-body); color: var(--text-main); padding-bottom: 60px; transition: background 0.3s, color 0.3s; }
+    /* === RESET & BASE === */
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin:0; background: var(--bg-body); color: var(--text-main); padding-bottom: 80px; transition: background 0.3s, color 0.3s; font-size: 14px; line-height: 1.5; }
+    * { box-sizing: border-box; }
     
-    /* Header */
-    header { background: var(--header-bg); color: var(--header-text); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:18px; font-weight: 600; }
-    header .header-right { display:flex; align-items:center; gap:12px; }
-    header .user-info { font-size:14px; display:flex; align-items:center; gap:8px;}
+    /* === LAYOUT === */
+    header { background: var(--bg-header); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow-sm); }
+    header h1 { margin:0; font-size: 20px; font-weight: 700; color: var(--text-header); letter-spacing: -0.5px; }
+    .logo-area { display: flex; align-items: center; gap: 12px; }
     
-    /* Tabs */
-    .tabs { display:flex; background:#000; overflow-x: auto; white-space: nowrap; }
-    .tabs::-webkit-scrollbar { height: 0px; background: transparent; }
-    .tab { padding:12px 16px; color:#9ca3af; cursor:pointer; font-size:14px; user-select:none; border-bottom: 3px solid transparent; }
-    .tab.active { background: var(--header-bg); color:#fff; border-bottom-color: #2563eb; }
+    .container { max-width: 1400px; margin: 24px auto; padding: 0 20px; }
+    
+    /* === NAVIGATION TABS === */
+    .tabs-wrapper { background: var(--primary); padding: 0 20px; box-shadow: var(--shadow-md); margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; }
+    .tabs { display:flex; overflow-x: auto; white-space: nowrap; }
+    .tabs::-webkit-scrollbar { height: 0px; }
+    .tab { padding: 16px 20px; color: #94a3b8; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s; border-bottom: 3px solid transparent; }
+    .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .tab.active { color: #fff; border-bottom-color: var(--accent); background: rgba(255,255,255,0.1); }
 
-    /* Containers */
-    .container { padding:16px; max-width:1200px; margin:0 auto; }
-    .card { background: var(--bg-card); padding:16px; margin-bottom:16px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.2); border: 1px solid var(--border-color); }
-    .card h2 { margin-top:0; font-size:18px; margin-bottom: 12px; color: var(--text-main); }
-    
-    /* Forms */
-    .flex-row { display:flex; gap:12px; flex-wrap:wrap; }
-    .flex-1 { flex:1 1 0; min-width:240px; }
-    label { display:block; font-size:13px; font-weight: 500; margin-bottom:4px; color: var(--text-main); opacity: 0.8; }
-    
-    input, select, textarea { width:100%; padding:8px 10px; margin-top:2px; box-sizing:border-box; font-size:16px; 
-      border: 1px solid var(--input-border); border-radius: 4px; background-color: var(--input-bg); color: var(--text-main); }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #2563eb; }
-    
-    /* Buttons */
-    button { padding:8px 14px; font-size:14px; font-weight: 500; border-radius:6px; border:none; cursor:pointer; background:#2563eb; color:#fff; transition: opacity 0.2s; }
-    button:hover { opacity: 0.9; }
-    button.secondary { background:#6b7280; }
-    button.danger { background:#dc2626; }
-    button.success { background:#059669; }
-    button.warning { background:#d97706; }
-    button.dark-toggle { background: transparent; border: 1px solid #666; padding: 4px 8px; font-size: 16px; }
+    /* === CARDS === */
+    .card { background: var(--bg-card); padding: 24px; margin-bottom: 24px; border-radius: var(--radius); box-shadow: var(--shadow-sm); border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
+    .card h2 { margin-top:0; font-size: 18px; font-weight: 600; color: var(--text-header); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* Tables */
-    table { width:100%; border-collapse:collapse; font-size:13px; min-width: 800px; }
-    /* UPDATED: White-space nowrap to keep everything on one line */
-    th, td { border:1px solid var(--border-color); padding:8px 10px; text-align:left; vertical-align: middle; white-space: nowrap; }
-    th { background: var(--th-bg); font-weight: 600; color: var(--th-text); }
-    tr { background: var(--highlight-row); }
-    .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; }
-
-    /* Status & Tags */
-    .tag { padding:2px 8px; border-radius:999px; font-size:11px; font-weight: 500; }
-    .tag.green { background:#dcfce7; color:#166534; }
-    .tag.red { background:#fee2e2; color:#991b1b; }
-    .tag.yellow { background:#fef9c3; color:#854d0e; }
-    .tag.gray { background:#f3f4f6; color:#374151; }
+    /* === FORMS & INPUTS === */
+    label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+    input, select, textarea { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-body); color: var(--text-header); transition: border 0.2s, box-shadow 0.2s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
     
-    /* Utilities */
-    .error { color:#dc2626; font-size:13px; margin-top:6px; }
-    .hidden { display:none !important; }
-    .chk-col { width: 30px; text-align: center; }
+    /* === BUTTONS === */
+    button { padding: 8px 16px; font-size: 14px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--accent); color: white; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+    button:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
     
-    /* Smart Visuals */
-    .row-overdue td { border-left: 3px solid #f59e0b; background-color: rgba(245, 158, 11, 0.1) !important; }
-    .row-urgent td { color: #b91c1c; font-weight: 600; background-color: rgba(254, 226, 226, 0.3); }
-    .money-tip { cursor: help; border-bottom: 1px dotted #999; }
-    .clickable-supplier { color: #2563eb; cursor: pointer; text-decoration: underline; }
-    .clickable-supplier:hover { color: #1d4ed8; }
-
-    /* Bulk Bar */
-    .bulk-bar { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; padding:10px 20px; border-radius:8px; box-shadow:0 10px 15px rgba(0,0,0,0.3); display:flex; gap:12px; z-index:100; align-items: center;}
-    .bulk-bar.hidden { display:none; }
+    button.secondary { background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border); }
+    button.secondary:hover { background: #e2e8f0; color: #0f172a; }
     
-    /* Login & Popups */
-    #loginCard { max-width:320px; margin:40px auto; position:relative; z-index:10; }
-    .popup-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:40; backdrop-filter: blur(2px); }
-    .popup { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--bg-card); color:var(--text-main); border-radius:8px; padding:20px; width:90%; max-width:600px; z-index:50; max-height:90vh; overflow-y:auto; box-shadow: 0 20px 25px rgba(0,0,0,0.5); border: 1px solid var(--border-color); }
+    button.danger { background: var(--danger); color: white; }
+    button.danger:hover { background: #dc2626; }
     
-    /* Summary Grid */
-    .summary-grid { display:flex; flex-wrap:wrap; gap:12px; }
-    .summary-item { flex:1 1 180px; background:var(--bg-body); padding:12px; border-radius:8px; border:1px solid var(--border-color); font-size:13px; }
-    .summary-label { opacity: 0.7; font-size:12px; font-weight: 500; text-transform: uppercase; }
-    .summary-value { font-size:20px; font-weight:700; margin-top:4px; }
-
-    /* Quick Action Buttons */
-    button.small-action { padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #059669; }
-    button.small-action:hover { opacity: 0.9; }
-    button.small-action.danger { background: #dc2626; }
-    button.small-action.warning { background: #d97706; }
-    button.small-action.secondary { background: #6b7280; }
-    button.small-action.info { background: #3b82f6; }
+    button.success { background: var(--success); color: white; }
+    button.success:hover { background: #059669; }
     
-    /* Tracking Button Style */
-    a.track-btn { display:inline-block; padding: 4px 8px; font-size: 11px; margin-right: 4px; background: #8b5cf6; color:white; border-radius:6px; text-decoration:none; font-weight:500; text-align: center; vertical-align: middle; }
-    a.track-btn:hover { background: #7c3aed; }
+    button.warning { background: var(--warning); color: #fff; }
+    button.warning:hover { background: #d97706; }
 
-    /* === NEW: Action Dropdown Styles === */
-    .action-container { position: relative; display: inline-block; }
-    .dropdown-btn { background-color: #3b82f6; padding: 4px 10px; font-size: 11px; }
-    .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--bg-card); min-width: 140px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 5; border: 1px solid var(--border-color); border-radius: 4px; }
-    .dropdown-content button, .dropdown-content a { color: var(--text-main); padding: 8px 12px; text-decoration: none; display: block; background: none; border: none; width: 100%; text-align: left; font-size: 12px; border-bottom: 1px solid var(--border-color); }
-    .dropdown-content button:hover { background-color: var(--bg-body); }
-    .dropdown-content button:last-child { border-bottom: none; }
-    .show-drop { display: block; }
+    /* === TABLES (Point 11: Sorting UI) === */
+    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+    
+    th { background: var(--bg-body); font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--border); cursor: pointer; user-select: none; position: relative; }
+    th:hover { background: #e2e8f0; color: var(--text-header); }
+    th::after { content: '↕'; position: absolute; right: 8px; opacity: 0.3; font-size: 10px; }
+    th.sort-asc::after { content: '↑'; opacity: 1; color: var(--accent); }
+    th.sort-desc::after { content: '↓'; opacity: 1; color: var(--accent); }
+    
+    td { border-bottom: 1px solid var(--border); padding: 12px 16px; color: var(--text-main); vertical-align: middle; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(37, 99, 235, 0.02); }
 
-    /* Mobile */
-    @media (max-width: 768px) {
-      header { flex-direction: column; align-items: flex-start; gap: 8px; }
-      .header-right { width: 100%; justify-content: space-between; }
-      .filter-row > div { min-width: 100%; flex: 1 1 100%; }
-      .bulk-bar { width: 90%; flex-wrap: wrap; justify-content: center; bottom: 10px; }
-      input[type="checkbox"] { transform: scale(1.2); }
-    }
+    /* === STATUS BADGES === */
+    .tag { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tag.green { background: #d1fae5; color: #065f46; } /* Paid/Delivered */
+    .tag.red { background: #fee2e2; color: #991b1b; }   /* Unpaid/Cancelled */
+    .tag.yellow { background: #fef3c7; color: #92400e; } /* Partial */
+    .tag.gray { background: #f1f5f9; color: #475569; }  /* Open */
+
+    /* === DASHBOARD SUMMARY === */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .summary-item { background: var(--bg-body); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); display: flex; flex-direction: column; }
+    .summary-label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .summary-value { font-size: 28px; font-weight: 700; color: var(--text-header); letter-spacing: -1px; }
+
+    /* === BULK BAR === */
+    .bulk-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 12px 24px; border-radius: 50px; box-shadow: var(--shadow-md); display: flex; gap: 16px; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .bulk-bar.visible { opacity: 1; pointer-events: auto; bottom: 40px; }
+    .bulk-bar span { font-weight: 600; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 16px; }
+
+    /* === DROPDOWN ACTIONS === */
+    .action-menu { position: relative; }
+    .drop-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 4px 8px; font-size: 16px; }
+    .drop-btn:hover { background: var(--bg-body); color: var(--accent); }
+    .drop-content { display: none; position: absolute; right: 0; top: 100%; background: var(--bg-card); min-width: 160px; box-shadow: var(--shadow-md); border-radius: 6px; border: 1px solid var(--border); z-index: 10; overflow: hidden; margin-top: 4px; }
+    .drop-content.show { display: block; animation: fadeIn 0.1s ease-out; }
+    .drop-content button, .drop-content a { display: block; width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-main); font-weight: 500; }
+    .drop-content button:hover, .drop-content a:hover { background: var(--bg-body); color: var(--accent); }
+    .drop-content button:last-child { border-bottom: none; }
+
+    /* === POPUPS === */
+    .popup-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 40; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .popup-backdrop.visible { opacity: 1; pointer-events: auto; }
+    .popup { background: var(--bg-card); width: 95%; max-width: 650px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 32px; box-shadow: var(--shadow-md); transform: scale(0.95); transition: transform 0.2s; }
+    .popup-backdrop.visible .popup { transform: scale(1); }
+
+    /* Helpers */
+    .hidden { display: none !important; }
+    .flex-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .flex-1 { flex: 1 1 200px; }
+    .error { color: var(--danger); font-size: 13px; margin-top: 8px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
 
 <header>
-  <div style="display:flex; align-items:center; gap:12px;">
-    <img src="static/logo.png" alt="AMT" style="height:36px; width:auto; border-radius:4px;">
+  <div class="logo-area">
+    <div style="width:32px; height:32px; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">A</div>
     <h1>AMT Procurement</h1>
   </div>
-  <div class="header-right">
-    <div class="user-info" id="userInfo"></div>
-    <button class="dark-toggle" id="darkModeBtn" title="Toggle Dark Mode">🌙</button>
+  <div style="display:flex; gap:16px; align-items:center;">
+    <div id="userInfo" style="font-size:13px; font-weight:500;"></div>
+    <button class="secondary" id="darkModeBtn" style="padding:6px 12px;" title="Toggle Theme">🌗</button>
   </div>
 </header>
 
-<div id="loginCard" class="card hidden">
-  <h2>Login</h2>
-  <label>Username <input type="text" id="loginUsername" /></label>
-  <label>Password <input type="password" id="loginPassword" /></label>
-  <div style="margin-top: 16px;"><button id="loginBtn" style="width:100%">Login</button></div>
-  <div id="loginError" class="error"></div>
-</div>
-
-<div id="dirPopupBackdrop" class="popup-backdrop hidden"></div>
-<div id="dirPopup" class="popup hidden">
-  <h3 id="dirPopupTitle">New entry</h3>
-  <label>Name <input type="text" id="dirPopupName" /></label>
-  <label>Email <input type="email" id="dirPopupEmail" /></label>
-  <label>Phone <input type="text" id="dirPopupPhone" /></label>
-  <label>Address <input type="text" id="dirPopupAddress" /></label>
-  <div id="dirPopupError" class="error"></div>
-  <div style="margin-top:16px; display:flex; gap: 10px; justify-content: flex-end;">
-    <button id="dirPopupCancelBtn" class="secondary" style="flex:1;">Cancel</button>
-    <button id="dirPopupSaveBtn" style="flex:1;">Save</button>
-  </div>
-</div>
-
-<div id="ratePopupBackdrop" class="popup-backdrop hidden"></div>
-<div id="ratePopup" class="popup hidden">
-  <h3>Rate Supplier/Workshop</h3>
-  <input type="hidden" id="rateDirId">
-  <label>Rating (1-5)</label>
-  <select id="rateScore">
-      <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
-      <option value="4">⭐⭐⭐⭐ (4 - Good)</option>
-      <option value="3">⭐⭐⭐ (3 - Average)</option>
-      <option value="2">⭐⭐ (2 - Poor)</option>
-      <option value="1">⭐ (1 - Terrible)</option>
-  </select>
-  <label>Comments / Remarks</label>
-  <textarea id="rateComment" rows="4" placeholder="Enter feedback here..."></textarea>
-  <div style="margin-top:16px; text-align:right;">
-    <button onclick="closeRatePopup()" class="secondary">Cancel</button>
-    <button id="saveRateBtn" class="success">Save Rating</button>
-  </div>
-</div>
-
-<div id="docPopupBackdrop" class="popup-backdrop hidden"></div>
-<div id="docPopup" class="popup hidden">
-  <h3>Documents</h3>
-  <div style="margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
-      <label>Upload File
-      <input type="file" id="docUploadInput" />
-      </label>
-      <button id="docUploadBtn" class="success" style="margin-top:8px;">Upload</button>
-  </div>
-  <div class="table-responsive">
-      <table id="docTable"><thead><tr><th>Name</th><th>Uploaded By</th><th>Date</th></tr></thead><tbody></tbody></table>
-  </div>
-  <div style="text-align:right; margin-top:10px;">
-    <button onclick="closeDocPopup()" class="secondary">Close</button>
-  </div>
-</div>
-
-<div id="supHistBackdrop" class="popup-backdrop hidden"></div>
-<div id="supHistPopup" class="popup hidden">
-  <div style="display:flex; justify-content:space-between;">
-      <h3 id="supHistTitle">Supplier History</h3>
-      <div id="supScoreDisplay" style="font-weight:bold; color:#d97706;"></div>
-  </div>
-  <div class="table-responsive">
-    <table id="supHistTable">
-      <thead><tr><th>Date</th><th>PO #</th><th>Item</th><th>Amount</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div style="text-align:right; margin-top:10px;">
-    <button onclick="document.getElementById('supHistBackdrop').classList.add('hidden'); document.getElementById('supHistPopup').classList.add('hidden');" class="secondary">Close</button>
-  </div>
-</div>
-
-<div id="agingPopupBackdrop" class="popup-backdrop hidden"></div>
-<div id="agingPopup" class="popup hidden" style="max-width:800px;">
-  <h3>Aging Report (Unpaid Invoices)</h3>
-  <div class="table-responsive">
-    <table id="agingTable">
-      <thead><tr><th>PO #</th><th>Supplier</th><th>Amount</th><th>Days Unpaid</th><th>Group</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div style="text-align:right; margin-top:10px;">
-    <button onclick="document.getElementById('agingPopupBackdrop').classList.add('hidden'); document.getElementById('agingPopup').classList.add('hidden');" class="secondary">Close</button>
-  </div>
-</div>
-
-<div id="chartBackdrop" class="popup-backdrop hidden"></div>
-<div id="chartPopup" class="popup hidden" style="max-width: 800px;">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <h3>Analytics Studio</h3>
-    <button onclick="closeChartPopup()" class="secondary" style="padding:4px 8px;">✕</button>
-  </div>
-  <div class="flex-row" style="margin-bottom:12px; background:var(--bg-body); padding:10px; border-radius:6px;">
-    <div style="flex:1;">
-      <label>X-Axis (Group By)</label>
-      <select id="chartXAxis">
-        <option value="vessel">Vessel</option>
-        <option value="category">Category</option>
-        <option value="supplier">Supplier</option>
-        <option value="month">Month</option>
-        <option value="year">Year</option>
-      </select>
-    </div>
-    <div style="flex:1;">
-      <label>Y-Axis (Metric)</label>
-      <select id="chartYAxis">
-        <option value="sum_usd">Total Amount (USD)</option>
-        <option value="count">Count (Volume)</option>
-        <option value="avg_usd">Average Amount (USD)</option>
-      </select>
-    </div>
-    <div style="flex:1;">
-      <label>Chart Type</label>
-      <select id="chartType">
-        <option value="bar">Bar Chart</option>
-        <option value="doughnut">Doughnut</option>
-        <option value="line">Line Chart</option>
-      </select>
-    </div>
-    <div style="flex:1;">
-        <label>Filter Month</label>
-        <select id="chartFilterMonth">
-            <option value="">All Months</option>
-            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
-            <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
-            <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
-            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-        </select>
-    </div>
-    <div style="flex:1;">
-        <label>Filter Year</label>
-        <select id="chartFilterYear"><option value="">All Years</option></select>
-    </div>
-    <div style="display:flex; align-items:flex-end;">
-      <button id="refreshChartBtn">Refresh Chart</button>
+<div class="container">
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <div class="tab active" data-tab="overview">Dashboard</div>
+      <div class="tab" data-tab="requisitions">Orders</div>
+      <div class="tab" data-tab="landings">Landings</div>
+      <div class="tab" data-tab="directory">Directory</div>
+      <div class="tab" data-tab="delivered">History</div>
+      <div class="tab hidden" data-tab="admin" id="adminTab">Admin</div>
     </div>
   </div>
-  <div style="position: relative; height:400px; width:100%;">
-    <canvas id="customChart"></canvas>
-  </div>
-</div>
 
-<div id="bulkActionBar" class="bulk-bar hidden">
-  <span style="font-weight:600;"><span id="bulkCount">0</span> Selected</span>
-  <button class="success" id="bulkMarkPaidBtn">Paid</button>
-  <button class="secondary" id="bulkMarkUnpaidBtn">Unpaid</button>
-  <button class="success" id="bulkMarkDeliveredBtn">Delivered</button>
-  <button class="warning" id="bulkMarkPartialBtn">Mark Partial</button>
-  <button class="secondary" id="bulkCancelBtn">Cancel</button>
-</div>
-
-<div id="app">
-  <div class="tabs">
-    <div class="tab active" data-tab="overview">Overview</div>
-    <div class="tab" data-tab="requisitions">Requisitions</div>
-    <div class="tab" data-tab="landings">Landings</div>
-    <div class="tab" data-tab="directory">Directory</div>
-    <div class="tab" data-tab="delivered">Delivered</div>
-    <div class="tab hidden" data-tab="admin" id="adminTab">Admin</div>
+  <div id="bulkActionBar" class="bulk-bar">
+    <span><strong id="bulkCount">0</strong> Selected</span>
+    <button class="success" id="bulkMarkPaidBtn">Paid</button>
+    <button class="warning" id="bulkMarkPartialBtn" title="Point 7: Partial Delivery">Partial</button>
+    <button class="success" id="bulkMarkDeliveredBtn">Full Delivery</button>
+    <button class="secondary" id="bulkMarkUnpaidBtn">Unpaid</button>
+    <button class="danger" id="bulkCancelBtn" style="margin-left:8px;">✕</button>
   </div>
 
-  <div class="container tab-content">
+  <div id="tab-overview" class="tab-content">
+    <div class="card">
+      <h2><span>📊 Performance Overview</span> <button id="openChartBtn" class="secondary">Analytics Studio</button></h2>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="summary-label">Pending Orders</div><div class="summary-value" id="summaryOpenReqNotDel">0</div></div>
+        <div class="summary-item"><div class="summary-label">Unpaid Orders</div><div class="summary-value" id="summaryOpenReqUnpaid" style="color:var(--danger)">0</div></div>
+        <div class="summary-item"><div class="summary-label">Pending Landings</div><div class="summary-value" id="summaryOpenLandNotDel">0</div></div>
+        <div class="summary-item"><div class="summary-label">Unpaid Landings</div><div class="summary-value" id="summaryOpenLandUnpaid" style="color:var(--danger)">0</div></div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Recent Activity</h2>
+      <div class="table-container">
+        <table id="overviewReqTable">
+          <thead><tr><th onclick="sortTable(this,0)">PO #</th><th onclick="sortTable(this,1)">Vessel</th><th onclick="sortTable(this,2)">Description</th><th onclick="sortTable(this,3)">Supplier</th><th onclick="sortTable(this,4)">Date</th><th onclick="sortTable(this,5)">Amount</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-    <div id="tab-overview">
-      <div class="card">
-        <h2>Dashboard</h2>
-        <div class="summary-grid">
-          <div class="summary-item"><div class="summary-label">Open POs (Not Del)</div><div class="summary-value" id="summaryOpenReqNotDel">0</div></div>
-          <div class="summary-item"><div class="summary-label">Open POs (Unpaid)</div><div class="summary-value" id="summaryOpenReqUnpaid">0</div></div>
-          <div class="summary-item"><div class="summary-label">Landed (Not Del)</div><div class="summary-value" id="summaryOpenLandNotDel">0</div></div>
-          <div class="summary-item"><div class="summary-label">Landed (Unpaid)</div><div class="summary-value" id="summaryOpenLandUnpaid">0</div></div>
+  <div id="tab-requisitions" class="tab-content hidden">
+    <div class="card" id="reqAddCard">
+      <h2 id="reqFormTitle">New Requisition</h2>
+      <div class="flex-row">
+        <div class="flex-1"><label>PO Number</label><input type="text" id="reqPONumber" placeholder="Auto or Manual" /></div>
+        <div class="flex-1"><label>Internal Ref</label><input type="text" id="reqNumber" placeholder="Req #" /></div>
+        <div class="flex-1"><label>Vessel</label><select id="reqVessel"></select></div>
+        <div class="flex-1"><label>Category</label><select id="reqCategory"></select></div>
+      </div>
+      <div class="flex-row">
+         <div class="flex-1"><label>Description</label><input type="text" id="reqDescription" placeholder="Item details..." /></div>
+         <div class="flex-1">
+           <label>Supplier</label>
+           <div style="display:flex; gap:8px;">
+             <select id="reqSupplierSelect" style="flex:1;"></select>
+             <button id="newSupplierBtn" type="button" class="secondary" title="Add New">+</button>
+           </div>
+         </div>
+      </div>
+      <div class="flex-row">
+         <div class="flex-1"><label>Ordered Date</label><input type="date" id="reqDateOrdered" /></div>
+         <div class="flex-1"><label>Expected Date</label><input type="date" id="reqExpected" /></div>
+         <div class="flex-1"><label>Amount</label><input type="number" id="reqTotal" step="0.01" /></div>
+         <div class="flex-1"><label>Currency</label><select id="reqCurrency"></select></div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-1"><label>Tracking URL</label><input type="text" id="reqTracking" placeholder="https://..." /></div>
+        <div class="flex-1"><label>Urgency</label><select id="reqUrgency"><option value="normal">Normal</option><option value="high">High</option></select></div>
+        <div class="flex-1"><label>Remarks / Delivery Note</label><input type="text" id="reqRemarks" placeholder="Notes..." /></div>
+      </div>
+      <div style="display:flex; justify-content: flex-end; gap:12px; margin-top:20px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" id="reqPaid" style="width:auto; margin:0;"/> Mark as Paid
+        </label>
+        <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel</button>
+        <button id="saveReqBtn" class="success">Save Order</button>
+      </div>
+      <div id="reqError" class="error"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+        <h2 style="margin:0;">Orders List</h2>
+        <button id="exportReqBtn" class="secondary">⬇ Export CSV</button>
+      </div>
+      <div class="flex-row" style="background:var(--bg-body); padding:16px; border-radius:8px; align-items:flex-end;">
+        <div style="flex:1;"><label>Status</label><select id="filterReqStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></div>
+        <div style="flex:1;"><label>Payment</label><select id="filterReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></div>
+        <div style="flex:1;"><label>Delivery</label><select id="filterReqDelivered"><option value="">All</option><option value="1">Full</option><option value="2">Partial</option><option value="0">None</option></select></div>
+        <div style="flex:2;"><label>Search</label><input type="text" id="filterReqSearch" placeholder="Search PO, Vessel, Supplier..." /></div>
+        <div style="display:flex; gap:8px;">
+          <button id="applyReqFilterBtn">Filter</button>
+          <button id="clearReqFilterBtn" class="secondary">Clear</button>
         </div>
       </div>
       
-      <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2>Paid Totals</h2>
-          <div style="display:flex; gap:10px;">
-             <button id="showAgingBtn" class="warning" style="font-size:13px;">🕒 Aging Report</button>
-             <button id="openChartBtn" class="success" style="font-size:13px;">📊 Analytics Charts</button>
-          </div>
-        </div>
-        
-        <div class="filter-row">
-          <div><label>Type<select id="ovTypeFilter"><option value="">All</option><option value="req">Orders</option><option value="land">Landed</option></select></label></div>
-          <div><label>Vessel<select id="ovVesselFilter"><option value="">All</option></select></label></div>
-          <div><label>Paid<select id="ovPaidFilter"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
-          <div><label>Month<select id="ovMonthFilter"><option value="">All</option></select></label></div>
-          <div><label>Year<select id="ovYearFilter"><option value="">All</option></select></label></div>
-          <div><label>Category<select id="ovCategoryFilter"><option value="">All</option></select></label></div>
-          <div style="flex-grow:1;"><label>&nbsp;</label><div style="display:flex; gap:8px;"><button id="ovApplyTotalsBtn" style="flex:1;">Apply</button><button id="ovClearTotalsBtn" class="secondary" style="flex:1;">Clear</button></div></div>
-        </div>
-
-        <div class="summary-grid" style="margin-top:10px;">
-          <div class="summary-item"><div class="summary-label">Total Paid (Period)</div><div class="summary-value" id="ovPaidMonthTotal">0</div></div>
-          <div class="summary-item"><div class="summary-label">Total Paid (Year)</div><div class="summary-value" id="ovPaidYearTotal">0</div></div>
-          <div class="summary-item"><div class="summary-label" style="color:#b91c1c;">Total Unpaid (Period)</div><div class="summary-value" id="ovUnpaidMonthTotal">0</div></div>
-          <div class="summary-item"><div class="summary-label">Total Amount</div><div class="summary-value" id="ovAllTotal">0</div></div>
-        </div>
-        <h3 style="margin-top:16px;">Top 5 Suppliers</h3>
-        <ul id="ovTopSuppliers" style="padding-left:18px; margin-top:6px;"><li>—</li></ul>
+      <div class="table-container">
+        <table id="reqTable">
+          <thead>
+            <tr>
+              <th style="width:40px;"><input type="checkbox" id="reqSelectAll" /></th>
+              <th onclick="sortTable(this,1)">PO #</th>
+              <th onclick="sortTable(this,2)">Description</th>
+              <th onclick="sortTable(this,3)">Vessel</th>
+              <th onclick="sortTable(this,4)">Supplier</th>
+              <th onclick="sortTable(this,5)">Ordered</th>
+              <th onclick="sortTable(this,6)">Amount ($)</th>
+              <th onclick="sortTable(this,7)">Payment</th>
+              <th onclick="sortTable(this,8)">Delivery</th>
+              <th style="width:80px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
+    </div>
+  </div>
 
-      <div class="card">
-        <h2>Recent Orders</h2>
-        <div class="table-responsive">
-          <table id="overviewReqTable">
-            <thead><tr><th>PO #</th><th>Vessel</th><th>Description</th><th>Supplier</th><th>Ordered</th><th>Amount</th><th>Status</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
+  <div id="tab-landings" class="tab-content hidden">
+    <div class="card" id="landAddCard">
+      <h2 id="landFormTitle">Add Landed Item</h2>
+      <div class="flex-row">
+        <div class="flex-1"><label>Vessel</label><select id="landVessel"></select></div>
+        <div class="flex-1"><label>Workshop/Supplier</label><select id="landWorkshopSelect"></select></div>
+        <div class="flex-1"><label>Item Description</label><input type="text" id="landDescription" /></div>
+      </div>
+      <div class="flex-row">
+         <div class="flex-1"><label>Expected Date</label><input type="date" id="landExpected" /></div>
+         <div class="flex-1"><label>Landed Date</label><input type="date" id="landLanded" /></div>
+         <div class="flex-1"><label>Amount</label><input type="number" id="landAmount" step="0.01" /></div>
+         <div class="flex-1"><label>Currency</label><select id="landCurrency"></select></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
+        <label style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="landPaid" style="width:auto; margin:0;" /> Paid
+        </label>
+        <button id="cancelLandEditBtn" class="secondary hidden">Cancel</button>
+        <button id="saveLandingBtn" class="success">Save Landing</button>
       </div>
     </div>
 
-    <div id="tab-requisitions" class="hidden">
-      <div class="card" id="reqAddCard">
-        <h2 id="reqFormTitle">Add Ordered Requisition</h2>
-        <div class="flex-row">
-          <div class="flex-1"><label>PO Number<input type="text" id="reqPONumber" placeholder="PO-XXXX" /></label></div>
-          <div class="flex-1"><label>Req Number<input type="text" id="reqNumber" /></label></div>
-          <div class="flex-1"><label>Description<input type="text" id="reqDescription" /></label></div>
-          <div class="flex-1"><label>Vessel<select id="reqVessel"></select></label></div>
-        </div>
-        <div class="flex-row" style="margin-top:10px;">
-           <div class="flex-1"><label>Category<select id="reqCategory"></select></label></div>
-           <div class="flex-1"><label>Supplier <div style="display:flex; gap:8px;"><select id="reqSupplierSelect" style="flex:1;"></select><button id="newSupplierBtn" type="button" class="secondary">+</button></div></label></div>
-           <div class="flex-1"><label>Ordered Date<input type="date" id="reqDateOrdered" /></label></div>
-           <div class="flex-1"><label>Expected Date<input type="date" id="reqExpected" /></label></div>
-        </div>
-        <div class="flex-row" style="margin-top:10px;">
-          <div class="flex-1"><label>Amount<input type="number" id="reqTotal" step="0.01" /></label></div>
-          <div class="flex-1"><label>Currency<select id="reqCurrency"></select></label></div>
-          <div class="flex-1"><label>Tracking URL<input type="text" id="reqTracking" placeholder="https://dhl..." /></label></div>
-          <div class="flex-1"><label>Urgency<select id="reqUrgency"><option value="normal">Normal</option><option value="high">High</option></select></label></div>
-          <div class="flex-1" style="padding-top:24px;">
-              <label><input type="checkbox" id="reqPaid" style="width:auto; margin-right:8px;"/> Paid</label>
-              <label style="margin-top:4px; font-size:11px; color:#666;">(Documents upload available after saving)</label>
-          </div>
-        </div>
-        <div style="margin-top:16px;">
-          <button id="saveReqBtn">Save Order</button>
-          <button id="cancelReqEditBtn" class="secondary hidden" type="button">Cancel Edit</button>
-        </div>
-        <div id="reqError" class="error"></div>
-      </div>
-
-      <div class="card">
-        <div style="display:flex; justify-content:space-between;">
-          <h2>Filter Orders</h2>
-          <button id="exportReqBtn" class="secondary" style="padding:6px 10px; font-size:13px;">Export CSV</button>
-        </div>
-        <div class="filter-row">
-          <div><label>Status<select id="filterReqStatus"><option value="">All</option><option value="open">Open</option><option value="cancelled">Cancelled</option></select></label></div>
-          <div><label>Paid<select id="filterReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
-          <div><label>Delivered<select id="filterReqDelivered"><option value="">All</option><option value="1">Delivered</option><option value="0">Not Del</option></select></label></div>
-          <div><label>Search<input type="text" id="filterReqSearch" placeholder="Search..." /></label></div>
-          <div style="flex-grow:1;"><label>&nbsp;</label><div style="display:flex; gap:8px;"><button id="applyReqFilterBtn" style="flex:1;">Apply</button><button id="clearReqFilterBtn" class="secondary" style="flex:1;">Clear</button></div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>All Orders</h2>
-        <div class="table-responsive">
-          <table id="reqTable">
-            <thead>
-              <tr>
-                <th class="chk-col"><input type="checkbox" id="reqSelectAll" /></th>
-                <th>PO #</th><th>Description</th><th>Vessel</th><th>Supplier</th>
-                <th>Ordered</th><th>Expected</th><th>Amount (USD)</th>
-                <th>Paid</th><th>Delivered</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-      
-      <div class="card">
-        <h2>Cancelled</h2>
-        <div class="table-responsive">
-            <table id="reqCancelledTable"><thead><tr><th>PO</th><th>Desc</th><th>Vessel</th><th>Supplier</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table>
-        </div>
+    <div class="card">
+      <h2>Landed Items</h2>
+      <div class="table-container">
+        <table id="landingTable">
+          <thead>
+            <tr>
+              <th style="width:40px;"><input type="checkbox" id="landSelectAll" /></th>
+              <th onclick="sortTable(this,1)">Vessel</th>
+              <th onclick="sortTable(this,2)">Item</th>
+              <th onclick="sortTable(this,3)">Workshop</th>
+              <th onclick="sortTable(this,4)">Expected</th>
+              <th onclick="sortTable(this,5)">Amount ($)</th>
+              <th onclick="sortTable(this,6)">Payment</th>
+              <th onclick="sortTable(this,7)">Delivery</th>
+              <th style="width:80px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
+  </div>
 
-    <div id="tab-landings" class="hidden">
-      <div class="card" id="landAddCard">
-        <h2 id="landFormTitle">Add Landed Item</h2>
-        <div class="flex-row">
-          <div class="flex-1"><label>Vessel<select id="landVessel"></select></label></div>
-          <div class="flex-1"><label>Description<input type="text" id="landDescription" /></label></div>
-          <div class="flex-1"><label>Workshop<select id="landWorkshopSelect"></select></label></div>
-        </div>
-        <div class="flex-row" style="margin-top:10px;">
-          <div class="flex-1"><label>Expected<input type="date" id="landExpected" /></label></div>
-          <div class="flex-1"><label>Landed<input type="date" id="landLanded" /></label></div>
-          <div class="flex-1"><label>Amount<input type="number" id="landAmount" step="0.01" /></label></div>
-          <div class="flex-1"><label>Currency<select id="landCurrency"></select></label></div>
-          <div class="flex-1" style="padding-top:24px;"><label><input type="checkbox" id="landPaid" style="width:auto;"/> Paid</label></div>
-        </div>
-        <div style="margin-top:16px;">
-          <button id="saveLandingBtn">Save</button>
-          <button id="cancelLandEditBtn" class="secondary hidden">Cancel</button>
-        </div>
-        <div id="landError" class="error"></div>
-      </div>
-
-      <div class="card">
-        <div style="display:flex; justify-content:space-between;">
-           <h2>Filter Landings</h2>
-           <button id="exportLandBtn" class="secondary" style="padding:6px;">Export CSV</button>
-        </div>
-        <div class="filter-row">
-          <div><label>Paid<select id="filterLandingPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
-          <div><label>Delivered<select id="filterLandingDelivered"><option value="">All</option><option value="1">Delivered</option><option value="0">Not Del</option></select></label></div>
-          <div><label>Search<input type="text" id="filterLandingSearch" /></label></div>
-          <div style="flex-grow:1;"><label>&nbsp;</label><button id="applyLandingFilterBtn" style="width:100%;">Apply</button></div>
+  <div id="tab-directory" class="tab-content hidden">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between;">
+        <h2>Supplier Directory</h2>
+        <div>
+          <button id="dirNewSupplierBtn">Add Supplier</button>
+          <button id="dirNewWorkshopBtn" class="secondary">Add Workshop</button>
         </div>
       </div>
-
-      <div class="card">
-        <h2>All Landed Items</h2>
-        <div class="table-responsive">
-            <table id="landingTable">
-            <thead>
-                <tr>
-                <th class="chk-col"><input type="checkbox" id="landSelectAll" /></th>
-                <th>Vessel</th><th>Item</th><th>Workshop</th>
-                <th>Expected</th><th>Landed</th><th>Amount (USD)</th>
-                <th>Paid</th><th>Delivered</th><th>Actions</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-            </table>
-        </div>
+      <div class="table-container" style="margin-top:16px;">
+        <table id="directoryTable"><thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Rating</th><th>Actions</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
-
-    <div id="tab-directory" class="hidden">
-      <div class="card">
-        <h2>Suppliers & Workshops</h2>
-        <div style="margin-bottom:12px;">
-           <button id="dirNewSupplierBtn">Add Supplier</button>
-           <button id="dirNewWorkshopBtn" class="secondary">Add Workshop</button>
-        </div>
-        <div class="table-responsive">
-            <table id="directoryTable"><thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Phone</th><th>Rating</th><th>Remarks</th><th>Actions</th></tr></thead><tbody></tbody></table>
-        </div>
+  </div>
+  
+  <div id="tab-delivered" class="tab-content hidden">
+    <div class="card">
+      <h2>History Log</h2>
+      <div class="table-container">
+        <table id="deliveredReqTable"><thead><tr><th>Type</th><th>Ref</th><th>Desc</th><th>Entity</th><th>Amount</th><th>Paid</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
+  </div>
 
-    <div id="tab-delivered" class="hidden">
-      <div class="card">
-        <h2>Delivered History</h2>
-        <div class="filter-row">
-          <div><label>Paid<select id="filterDeliveredReqPaid"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></label></div>
-          <div><label>Search<input type="text" id="filterDeliveredReqSearch" /></label></div>
-          <div style="flex-grow: 1;"><label>&nbsp;</label><button id="applyDeliveredReqFilterBtn">Apply</button></div>
-        </div>
-        <div class="table-responsive">
-            <table id="deliveredReqTable"><thead><tr><th>Type</th><th>Ref</th><th>Desc</th><th>Entity</th><th>Amount</th><th>Paid</th></tr></thead><tbody></tbody></table>
-        </div>
+  <div id="tab-admin" class="tab-content hidden">
+    <div class="card">
+      <h2>Admin Panel</h2>
+      <div class="flex-row">
+        <button onclick="document.getElementById('adminCats').classList.toggle('hidden')" class="secondary">Manage Categories</button>
+        <button onclick="document.getElementById('adminVessels').classList.toggle('hidden')" class="secondary">Manage Vessels</button>
+        <button onclick="document.getElementById('adminUsers').classList.toggle('hidden')" class="secondary">Manage Users</button>
+        <button onclick="document.getElementById('backupCard').classList.toggle('hidden')" class="secondary">Backups & Restore</button>
+      </div>
+      <div id="adminCats" class="hidden" style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+        <h3>Categories</h3>
+        <div class="flex-row"><input id="catName" placeholder="Name"><input id="catAbbr" placeholder="Abbr"><button id="addCatBtn">Add</button></div>
+        <table id="catTable"><thead><tr><th>Name</th><th>Abbr</th><th>Action</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div id="adminVessels" class="hidden" style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+         <h3>Vessels</h3>
+         <div class="flex-row"><input id="vesselName" placeholder="Name"><button id="addVesselBtn">Add</button></div>
+         <table id="vesselTable"><thead><tr><th>Name</th><th>Action</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div id="adminUsers" class="hidden" style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+         <h3>Users</h3>
+         <div class="flex-row"><input id="adminUsername" placeholder="User"><input type="password" id="adminPassword" placeholder="Pass"><select id="adminRole"><option value="user">User</option><option value="finance">Finance</option><option value="admin">Admin</option></select><button id="saveUserBtn">Add</button></div>
+         <table id="userTable"><thead><tr><th>User</th><th>Role</th><th>Action</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
-
-    <div id="tab-admin" class="hidden">
-      <div class="card">
-        <h2>Admin Panel</h2>
-        <p>Manage Categories, Vessels, Users, and Backups here.</p>
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-           <button onclick="document.getElementById('adminCats').classList.toggle('hidden')" class="secondary">Categories</button>
-           <button onclick="document.getElementById('adminVessels').classList.toggle('hidden')" class="secondary">Vessels</button>
-           <button onclick="document.getElementById('adminUsers').classList.toggle('hidden')" class="secondary">Users</button>
-        </div>
-        
-        <div id="adminCats" class="hidden" style="margin-bottom:20px; border-top:1px solid #ccc; padding-top:10px;">
-           <h3>Categories</h3>
-           <div class="flex-row"><input id="catName" placeholder="Name"><input id="catAbbr" placeholder="Abbr"><button id="addCatBtn">Add</button></div>
-           <table id="catTable" style="margin-top:5px;"><thead><tr><th>Name</th><th>Abbr</th><th>Act</th></tr></thead><tbody></tbody></table>
-        </div>
-
-        <div id="adminVessels" class="hidden" style="margin-bottom:20px; border-top:1px solid #ccc; padding-top:10px;">
-           <h3>Vessels</h3>
-           <div class="flex-row"><input id="vesselName" placeholder="Name"><button id="addVesselBtn">Add</button></div>
-           <table id="vesselTable" style="margin-top:5px;"><thead><tr><th>Name</th><th>Act</th></tr></thead><tbody></tbody></table>
-        </div>
-        
-        <div id="adminUsers" class="hidden" style="margin-bottom:20px; border-top:1px solid #ccc; padding-top:10px;">
-           <h3>Users</h3>
-           <div class="flex-row"><input id="adminUsername" placeholder="User"><input type="password" id="adminPassword" placeholder="Pass"><select id="adminRole"><option value="user">User</option><option value="admin">Admin</option></select><button id="saveUserBtn">Add</button></div>
-           <table id="userTable" style="margin-top:5px;"><thead><tr><th>User</th><th>Role</th><th>Act</th></tr></thead><tbody></tbody></table>
-        </div>
-        
-        <div class="card">
-           <h3>Activity Log</h3>
-           <div class="flex-row" style="margin-bottom:8px;">
-               <div style="flex:1;"><select id="auditFYear"><option value="">Year</option></select></div>
-               <div style="flex:1;"><select id="auditFMonth"><option value="">Month</option></select></div>
-               <div style="flex:1;"><input type="number" id="auditFDay" placeholder="Day (1-31)" min="1" max="31"></div>
-               <div style="flex:0;"><button id="auditApplyBtn">Filter</button></div>
-           </div>
-           <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-              <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
-           </div>
-        </div>
-
-        <div class="card" id="backupCard">
-            <h3>Backups</h3>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button id="downloadBackupBtn">Download Local</button>
-                <button id="createBackupBtn" class="success">Create Server Backup</button>
-                <button id="refreshBackupsBtn" class="secondary">Refresh List</button>
-            </div>
-            
-            <div style="margin-bottom:12px; border-top: 1px solid var(--border-color); padding-top:12px;">
-               <label style="display:flex; align-items:center; gap:8px;">
-                  <input type="file" id="uploadBackupInput" accept=".xlsx" style="width:auto;" />
-                  <button id="uploadBackupBtn" class="secondary" type="button">Upload (Overwrite)</button>
-               </label>
-            </div>
-            
-            <div id="backupError" class="error"></div>
-            <table id="backupTable"><thead><tr><th>Name</th><th>Date</th><th>Size</th><th>Act</th></tr></thead><tbody></tbody></table>
-        </div>
-      </div>
+    <div class="card hidden" id="backupCard">
+       <h3>System Backups</h3>
+       <div class="flex-row">
+         <button id="createBackupBtn" class="success">Create Backup Now</button>
+         <button id="downloadBackupBtn">Download Manual</button>
+       </div>
+       <table id="backupTable" style="margin-top:10px;"><thead><tr><th>Filename</th><th>Date</th><th>Size</th><th>Actions</th></tr></thead><tbody></tbody></table>
     </div>
+  </div>
 
+</div> <div id="loginCard" class="popup-backdrop">
+  <div class="popup" style="max-width:350px;">
+    <h2>Login</h2>
+    <label>Username</label><input type="text" id="loginUsername" />
+    <label style="margin-top:10px;">Password</label><input type="password" id="loginPassword" />
+    <button id="loginBtn" style="width:100%; margin-top:20px;">Login</button>
+    <div id="loginError" class="error"></div>
+  </div>
+</div>
+
+<div id="dirPopupBackdrop" class="popup-backdrop">
+  <div id="dirPopup" class="popup">
+    <h3>Contact Details</h3>
+    <div class="flex-row"><div class="flex-1"><label>Name</label><input type="text" id="dirPopupName" /></div></div>
+    <div class="flex-row">
+      <div class="flex-1"><label>Email</label><input type="email" id="dirPopupEmail" /></div>
+      <div class="flex-1"><label>Phone</label><input type="text" id="dirPopupPhone" /></div>
+    </div>
+    <label>Address</label><input type="text" id="dirPopupAddress" />
+    <div style="margin-top:20px; text-align:right; display:flex; gap:10px; justify-content:flex-end;">
+      <button id="dirPopupCancelBtn" class="secondary">Cancel</button>
+      <button id="dirPopupSaveBtn" class="success">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="docPopupBackdrop" class="popup-backdrop">
+  <div id="docPopup" class="popup">
+    <h3>Attached Documents</h3>
+    <div style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid var(--border);">
+       <label>Upload File</label>
+       <div style="display:flex; gap:10px;">
+         <input type="file" id="docUploadInput" />
+         <button id="docUploadBtn" class="success">Upload</button>
+       </div>
+    </div>
+    <table id="docTable"><thead><tr><th>File</th><th>By</th><th>Date</th></tr></thead><tbody></tbody></table>
+    <div style="text-align:right; margin-top:15px;"><button onclick="closeDocPopup()" class="secondary">Close</button></div>
   </div>
 </div>
 
 <script>
-/* ================== CONFIG & STATE ================== */
+/* ================= CONFIG ================= */
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, credentials: "same-origin", ...options });
+  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
   if (!res.ok) { let err; try { err = await res.json(); } catch { err = { error: "unknown" }; } throw err; }
   return res.json();
 }
+
+/* ================= STATE ================= */
 let currentUser=null, allReqs=[], allLandings=[], vessels=[];
 let editingReqId=null, editingLandId=null, dirPopupType=null, currencyList=["USD"];
 let selectedIds = new Set(); let currentBulkType = null;
-let myChart = null; 
-// Audit Log Cache
-let allAuditLogs = [];
-// Document Context
-let docContext = { type: null, id: null };
 
-/* ================== DARK MODE ================== */
+/* ================= THEME ================= */
 const darkModeBtn = document.getElementById("darkModeBtn");
 if(localStorage.getItem("theme")==="dark") document.body.classList.add("dark-mode");
 darkModeBtn.onclick = () => {
@@ -603,50 +451,17 @@ darkModeBtn.onclick = () => {
     localStorage.setItem("theme", document.body.classList.contains("dark-mode") ? "dark" : "light");
 };
 
-// GLOBAL CLICK TO CLOSE DROPDOWNS
-window.onclick = function(event) {
-  if (!event.target.matches('.dropdown-btn')) {
-    var dropdowns = document.getElementsByClassName("dropdown-content");
-    for (var i = 0; i < dropdowns.length; i++) {
-      var openDropdown = dropdowns[i];
-      if (openDropdown.classList.contains('show-drop')) {
-        openDropdown.classList.remove('show-drop');
-      }
-    }
-  }
-}
-
-/* ================== HELPER FUNCTIONS ================== */
-function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
-function formatMoney(amount) { return parseFloat(amount || 0).toLocaleString('en-US', {style:'currency', currency:'USD'}); }
-function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => { alert("Copied: " + text); }); }
-// Fix boolean truthiness issues
-const getBoolVal = (val) => (val === 1 || val === '1' || val === true || val === 'true') ? '1' : '0';
-function toggleMenu(btn) {
-    // Close others
-    var dropdowns = document.getElementsByClassName("dropdown-content");
-    for (var i = 0; i < dropdowns.length; i++) {
-         if (dropdowns[i] !== btn.nextElementSibling) dropdowns[i].classList.remove('show-drop');
-    }
-    btn.nextElementSibling.classList.toggle("show-drop");
-}
-
-/* ================== DATA LOADING ================== */
+/* ================= INITIALIZATION ================= */
 async function afterDataLoad() {
-  selectedIds.clear(); toggleBulkBar();
-  await loadOptions(); await loadData(); 
-  await updateDashboard(); 
-  calculateOverviewTotals();
-  await loadAdminData();
-  
-  // Finance User Logic: Hide Add/Edit forms
-  const isFinance = currentUser && currentUser.username === 'finance';
-  if (isFinance) {
-     if(document.getElementById('reqAddCard')) document.getElementById('reqAddCard').classList.add('hidden');
-     if(document.getElementById('landAddCard')) document.getElementById('landAddCard').classList.add('hidden');
-     if(document.getElementById('dirNewSupplierBtn')) document.getElementById('dirNewSupplierBtn').classList.add('hidden');
-     if(document.getElementById('dirNewWorkshopBtn')) document.getElementById('dirNewWorkshopBtn').classList.add('hidden');
-  }
+    selectedIds.clear(); toggleBulkBar();
+    await loadOptions(); await loadData(); 
+    await updateDashboard(); 
+    await loadAdminData();
+    
+    // Check roles
+    if(currentUser && currentUser.username==='finance') {
+        if(document.getElementById('reqAddCard')) document.getElementById('reqAddCard').classList.add('hidden');
+    }
 }
 
 async function loadOptions(){
@@ -664,32 +479,10 @@ async function loadOptions(){
         vessels.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=v.name; el.appendChild(o); });
         if(cur) el.value=cur;
     };
-    fillVes("reqVessel"); fillVes("landVessel"); fillVes("ovVesselFilter");
-
-    const mSel = document.getElementById("ovMonthFilter");
-    const aMSel = document.getElementById("auditFMonth");
-    if(mSel && mSel.options.length <= 1) {
-        ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m,i)=> {
-            const val = i+1;
-            mSel.add(new Option(m, val));
-            if(aMSel) aMSel.add(new Option(m, val));
-        });
-    }
-    const ySel = document.getElementById("ovYearFilter");
-    const chartYSel = document.getElementById("chartFilterYear");
-    const auditYSel = document.getElementById("auditFYear");
-    if(ySel && ySel.options.length <= 1) {
-        const y = new Date().getFullYear();
-        for(let i=y; i>=y-3; i--) {
-             ySel.add(new Option(i, i));
-             if(chartYSel) chartYSel.add(new Option(i, i));
-             if(auditYSel) auditYSel.add(new Option(i, i));
-        }
-    }
+    fillVes("reqVessel"); fillVes("landVessel"); 
 
     try { const cats=await apiFetch("/api/categories"); 
        const cSel=document.getElementById("reqCategory"); if(cSel){ cSel.innerHTML='<option value="">Select</option>'; cats.forEach(c=>cSel.add(new Option(c.abbr, c.abbr))); }
-       const ovCSel=document.getElementById("ovCategoryFilter"); if(ovCSel){ ovCSel.innerHTML='<option value="">All</option>'; cats.forEach(c=>ovCSel.add(new Option(c.abbr, c.abbr))); }
     } catch {}
 
     try { const dirs=await apiFetch("/api/directory"); 
@@ -702,815 +495,346 @@ async function loadOptions(){
 async function loadData() {
     try { allReqs = await apiFetch("/api/requisitions"); } catch { allReqs=[]; }
     try { allLandings = await apiFetch("/api/landings"); } catch { allLandings=[]; }
-    renderReqTable(); renderLandTable(); renderCancelled(); renderDelivered();
+    renderReqTable(); renderLandTable(); renderDelivered();
 }
 
-/* ================== TABLE RENDERING ================== */
+/* ================= RENDERING ================= */
+function formatMoney(amount) { return parseFloat(amount || 0).toLocaleString('en-US', {style:'currency', currency:'USD'}); }
+function parseDateSafe(d) { if(!d)return null; const dt=new Date(d); return isNaN(dt.getTime())?null:dt; }
+
 function renderReqTable() {
     const tbody = document.querySelector("#reqTable tbody"); tbody.innerHTML="";
-    const statusF=document.getElementById("filterReqStatus").value, paidF=document.getElementById("filterReqPaid").value, delF=document.getElementById("filterReqDelivered").value, search=document.getElementById("filterReqSearch").value.toLowerCase();
-    
-    // Check if user is finance
-    const isFinance = currentUser && currentUser.username === 'finance';
-
-    allReqs.forEach(r => {
-        if((r.status||"open")==="cancelled") return; 
-        if(statusF && (r.status||"open")!==statusF) return;
-        
-        // FIXED FILTERING LOGIC
-        if(paidF !== "" && getBoolVal(r.paid) !== paidF) return;
-        if(delF !== "" && getBoolVal(r.delivered) !== delF) return;
-        
-        if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
-
-        const isOverdue = !r.delivered && r.expected && new Date(r.expected) < new Date();
-        const tr = document.createElement("tr");
-        if(isOverdue) tr.classList.add("row-overdue");
-        if(r.urgency==="high") tr.classList.add("row-urgent");
-        
-        // FIXED: Check for existence before display
-        const cur = r.currency || 'USD';
-        const amtOrg = r.amount_original || r.amount_usd || 0;
-        const moneyTooltip = `Original: ${cur} ${amtOrg}`;
-        const moneyDisplay = `<span class="money-tip" title="${moneyTooltip}">${formatMoney(r.amount_usd)}</span>`;
-        
-        const supDisplay = `<span class="clickable-supplier" onclick="showSupplierHistory('${r.supplier}')">${r.supplier}</span>`;
-        
-        const paidStatus = r.paid ? "Paid" : "Unpaid";
-        const copyText = `PO: ${r.po_number||r.number}\nDesc: ${r.description}\nSupplier: ${r.supplier}\nExpected: ${r.expected||"N/A"}\nAmount: ${formatMoney(r.amount_usd)}\nPayment: ${paidStatus}`;
-        const copyBtn = `<button onclick="copyToClipboard(\`${copyText}\`)" class="secondary" style="padding:2px 6px; font-size:10px;" title="Copy">📋</button>`;
-        const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
-        
-        // Logic for delivery Status
-        let delBadge = '<span class="tag gray">Open</span>';
-        let delVal = r.delivered; // 0, 1, 2
-        if(delVal == 1) delBadge = '<span class="tag green">Delivered</span>';
-        else if(delVal == 2) delBadge = '<span class="tag yellow">Partial</span>';
-
-        // === ACTION DROPDOWN LOGIC ===
-        let actionMenu = '';
-        if (r.tracking_url && r.tracking_url.length > 5) {
-             actionMenu += `<a href="${r.tracking_url}" target="_blank">✈️ Track Shipment</a>`;
-        }
-        actionMenu += `<button class="doc-btn" data-id="${r.id}" data-type="req">📎 Documents</button>`;
-        actionMenu += `<button onclick="generatePO(${r.id})">🖨️ Print PO</button>`;
-
-        // Hide modification actions for Finance user
-        if (!isFinance) {
-            if(!r.paid) actionMenu += `<button class="toggle-paid" data-id="${r.id}">$ Mark Paid</button>`;
-            if(delVal != 1) actionMenu += `<button class="toggle-del" data-id="${r.id}">✓ Mark Delivered</button>`;
-            actionMenu += `<button class="toggle-part" data-id="${r.id}">½ Mark Partial</button>`;
-            actionMenu += `<button class="toggle-cancel" data-id="${r.id}">⊘ Cancel Order</button>`;
-            actionMenu += `<button class="edit-req" data-id="${r.id}">✎ Edit</button>`;
-            actionMenu += `<button class="delete-req" style="color:red;" data-id="${r.id}">X Delete</button>`;
-        } else {
-             actionMenu += `<button style="color:#999; cursor:not-allowed;">(Read Only)</button>`;
-        }
-
-        const actionDropdown = `
-          <div class="action-container">
-             <button class="dropdown-btn" onclick="toggleMenu(this)">Actions ▼</button>
-             <div class="dropdown-content">
-                ${actionMenu}
-             </div>
-          </div>
-        `;
-
-        tr.innerHTML = `
-            <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
-            <td>${r.po_number||""} ${copyBtn}</td>
-            <td>${r.description||""}</td>
-            <td>${r.vessel}</td>
-            <td>${supDisplay}</td>
-            <td>${r.date_ordered||""}</td>
-            <td>${r.expected||""} ${isOverdue?'⚠️':''}</td>
-            <td>${moneyDisplay}</td>
-            <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
-            <td>${delBadge}</td>
-            <td>${actionDropdown}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    // Attach Listeners
-    document.querySelectorAll(".edit-req").forEach(b=>b.onclick=()=>editReq(b.dataset.id));
-    document.querySelectorAll(".delete-req").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'req'));
-    document.querySelectorAll(".doc-btn").forEach(b=>b.onclick=()=>openDocPopup(b.dataset.id, b.dataset.type));
-    document.querySelectorAll(".toggle-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
-    document.querySelectorAll(".toggle-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
-    document.querySelectorAll(".toggle-part").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/requisitions/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_partial" }) }); await afterDataLoad(); });
-    document.querySelectorAll(".toggle-cancel").forEach(b=>b.onclick=async()=>{ if(confirm("Move to Cancelled?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"cancelled"})}); await afterDataLoad(); }});
-    attachBulkListeners('req');
-}
-
-function renderLandTable() {
-    const tbody = document.querySelector("#landingTable tbody"); tbody.innerHTML="";
-    const paidF=document.getElementById("filterLandingPaid").value, delF=document.getElementById("filterLandingDelivered").value, search=document.getElementById("filterLandingSearch").value.toLowerCase();
-    const isFinance = currentUser && currentUser.username === 'finance';
-
-    allLandings.forEach(r => {
-        if((r.status||"open")==="cancelled") return;
-        if(paidF !== "" && getBoolVal(r.paid) !== paidF) return;
-        if(delF !== "" && getBoolVal(r.delivered) !== delF) return;
-        if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
-
-        const tr = document.createElement("tr");
-        const moneyDisplay = `<span class="money-tip" title="Original: ${r.currency} ${r.amount_original}">${r.amount_usd.toFixed(2)}</span>`;
-        const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
-        
-        let delBadge = '<span class="tag gray">Open</span>';
-        let delVal = r.delivered;
-        if(delVal == 1) delBadge = '<span class="tag green">Delivered</span>';
-        else if(delVal == 2) delBadge = '<span class="tag yellow">Partial</span>';
-
-        let actionBtns = '';
-        actionBtns += `<button class="small-action info doc-btn" data-id="${r.id}" data-type="land" title="Documents">📎</button>`;
-        if(!isFinance) {
-            if(!r.paid) actionBtns += `<button class="small-action toggle-land-paid" data-id="${r.id}">$</button>`;
-            if(delVal != 1) actionBtns += `<button class="small-action toggle-land-del" data-id="${r.id}">✓</button>`;
-            actionBtns += `<button class="small-action warning toggle-land-part" data-id="${r.id}" title="Mark Partial">½</button>`;
-        }
-
-        tr.innerHTML = `
-            <td class="chk-col"><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
-            <td>${r.vessel}</td>
-            <td>${r.item}</td>
-            <td>${r.workshop}</td>
-            <td>${r.expected||""}</td>
-            <td>${r.landed_date||""}</td>
-            <td>${moneyDisplay}</td>
-            <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
-            <td>${delBadge}</td>
-            <td style="white-space:nowrap;">
-                ${actionBtns}
-                ${!isFinance ? `<button class="edit-land secondary" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">Edit</button>
-                <button class="danger delete-land" style="padding:4px 8px; font-size:11px;" data-id="${r.id}">X</button>` : ''}
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-    document.querySelectorAll(".edit-land").forEach(b=>b.onclick=()=>editLand(b.dataset.id));
-    document.querySelectorAll(".delete-land").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'land'));
-    document.querySelectorAll(".doc-btn").forEach(b=>b.onclick=()=>openDocPopup(b.dataset.id, b.dataset.type));
-    
-    document.querySelectorAll(".toggle-land-paid").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_paid" }) }); await afterDataLoad(); });
-    document.querySelectorAll(".toggle-land-del").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_delivered" }) }); await afterDataLoad(); });
-    document.querySelectorAll(".toggle-land-part").forEach(b=>b.onclick=async()=>{ await apiFetch("/api/landings/bulk", { method:"POST", body: JSON.stringify({ ids: [parseInt(b.dataset.id)], action: "mark_partial" }) }); await afterDataLoad(); });
-    attachBulkListeners('land');
-}
-
-/* ================== DOCUMENTS ================== */
-async function openDocPopup(id, type) {
-    docContext = { id, type };
-    document.getElementById("docPopupBackdrop").classList.remove("hidden");
-    document.getElementById("docPopup").classList.remove("hidden");
-    await loadDocuments();
-}
-function closeDocPopup() {
-    document.getElementById("docPopupBackdrop").classList.add("hidden");
-    document.getElementById("docPopup").classList.add("hidden");
-}
-async function loadDocuments() {
-    const t = document.querySelector("#docTable tbody"); t.innerHTML = "<tr><td colspan='3'>Loading...</td></tr>";
-    try {
-        const docs = await apiFetch(`/api/documents/${docContext.type}/${docContext.id}`);
-        t.innerHTML = "";
-        if(docs.length === 0) t.innerHTML = "<tr><td colspan='3'>No documents found.</td></tr>";
-        docs.forEach(d => {
-            t.innerHTML += `<tr><td><a href="/static/uploads/${d.filename}" target="_blank">${d.filename}</a></td><td>${d.uploaded_by}</td><td>${d.uploaded_at}</td></tr>`;
-        });
-    } catch(e) { t.innerHTML = "<tr><td colspan='3'>Error loading docs.</td></tr>"; }
-}
-document.getElementById("docUploadBtn").onclick = async () => {
-    const input = document.getElementById("docUploadInput");
-    if(!input.files.length) return alert("Select a file first");
-    const fd = new FormData();
-    fd.append("file", input.files[0]);
-    fd.append("parent_id", docContext.id);
-    fd.append("parent_type", docContext.type);
-    
-    try {
-        const res = await fetch("/api/documents/upload", {method:"POST", body:fd, credentials:"same-origin"});
-        if(res.ok) { alert("Uploaded!"); input.value=""; await loadDocuments(); }
-        else alert("Upload failed");
-    } catch(e) { alert("Error uploading"); }
-};
-
-/* ================== RATE POPUP (Directory) ================== */
-function openRatePopup(id) {
-    document.getElementById("rateDirId").value = id;
-    document.getElementById("ratePopupBackdrop").classList.remove("hidden");
-    document.getElementById("ratePopup").classList.remove("hidden");
-}
-function closeRatePopup() {
-    document.getElementById("ratePopupBackdrop").classList.add("hidden");
-    document.getElementById("ratePopup").classList.add("hidden");
-    document.getElementById("rateComment").value = "";
-    document.getElementById("rateScore").value = "5";
-}
-document.getElementById("saveRateBtn").onclick = async () => {
-    const id = document.getElementById("rateDirId").value;
-    const rating = document.getElementById("rateScore").value;
-    const comment = document.getElementById("rateComment").value;
-    
-    try {
-        await apiFetch(`/api/directory/${id}`, {
-            method: "PATCH", 
-            body: JSON.stringify({ rating: rating, rating_comment: comment })
-        });
-        closeRatePopup();
-        await loadAdminData(); // Refresh directory is actually in main load
-        await afterDataLoad(); // Refresh everything
-    } catch(e) { alert("Error saving rating"); }
-};
-
-/* ================== EXPORT CSV LOGIC (FIXED) ================== */
-document.getElementById("exportReqBtn").onclick = () => {
-    // Collect filters currently applied
     const statusF=document.getElementById("filterReqStatus").value;
     const paidF=document.getElementById("filterReqPaid").value;
     const delF=document.getElementById("filterReqDelivered").value;
     const search=document.getElementById("filterReqSearch").value.toLowerCase();
     
-    // Filter data
-    const filtered = allReqs.filter(r => {
-        if((r.status||"open")==="cancelled") return false; 
-        if(statusF && (r.status||"open")!==statusF) return false;
-        if(paidF !== "" && getBoolVal(r.paid) !== paidF) return false;
-        if(delF !== "" && getBoolVal(r.delivered) !== delF) return false;
-        if(search && !JSON.stringify(r).toLowerCase().includes(search)) return false;
-        return true;
+    allReqs.forEach(r => {
+        if((r.status||"open")==="cancelled") return; 
+        if(statusF && (r.status||"open")!==statusF) return;
+        if(paidF !== "" && (r.paid?1:0) != paidF) return;
+        if(delF !== "" && r.delivered != delF) return;
+        
+        const content = `${r.po_number} ${r.description} ${r.vessel} ${r.supplier}`.toLowerCase();
+        if(search && !content.includes(search)) return;
+
+        const tr = document.createElement("tr");
+        const isChecked = selectedIds.has(r.id) && currentBulkType === 'req';
+        
+        // POINT 7: PARTIAL DELIVERY HANDLING
+        let delBadge = '<span class="tag gray">Open</span>';
+        if(r.delivered == 1) delBadge = '<span class="tag green">Full</span>';
+        else if(r.delivered == 2) delBadge = '<span class="tag yellow" title="Partially Received">Partial</span>';
+
+        // Dropdown Menu
+        const menu = `
+          <div class="action-menu">
+            <button class="drop-btn" onclick="toggleMenu(this)">•••</button>
+            <div class="drop-content">
+               <button onclick="openDocPopup(${r.id}, 'req')">📎 Documents</button>
+               <button onclick="editReq(${r.id})">✎ Edit / Remarks</button>
+               ${!r.paid ? `<button onclick="singleAction(${r.id}, 'req', 'mark_paid')">💲 Mark Paid</button>` : ''}
+               ${r.delivered!=1 ? `<button onclick="singleAction(${r.id}, 'req', 'mark_delivered')">✅ Full Delivery</button>` : ''}
+               ${r.delivered!=2 ? `<button onclick="singleAction(${r.id}, 'req', 'mark_partial')">🚧 Mark Partial</button>` : ''}
+               <button onclick="cancelReq(${r.id})" style="color:var(--danger)">✕ Cancel</button>
+            </div>
+          </div>`;
+
+        tr.innerHTML = `
+            <td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
+            <td><strong>${r.po_number||r.number}</strong></td>
+            <td>${r.description}</td>
+            <td>${r.vessel}</td>
+            <td>${r.supplier}</td>
+            <td>${r.date_ordered}</td>
+            <td>${formatMoney(r.amount_usd)}</td>
+            <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
+            <td>${delBadge}</td>
+            <td>${menu}</td>
+        `;
+        tbody.appendChild(tr);
     });
-
-    if (filtered.length === 0) return alert("No data to export");
-
-    // CSV Headers
-    let csv = "PO,Description,Vessel,Supplier,Ordered,Expected,Amount_USD,Paid,Delivered,Tracking\n";
-    
-    // CSV Rows
-    filtered.forEach(r => {
-        const desc = (r.description || "").replace(/,/g, " "); // Basic sanitization
-        const sup = (r.supplier || "").replace(/,/g, " ");
-        csv += `${r.po_number||r.number},${desc},${r.vessel},${sup},${r.date_ordered},${r.expected},${r.amount_usd},${r.paid?1:0},${r.delivered},${r.tracking_url||""}\n`;
-    });
-
-    // Download
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Requisitions_Export_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-};
-
-
-/* ================== GENERATE PO ================== */
-function generatePO(id) {
-    const r = allReqs.find(x => x.id == id);
-    if(!r) return;
-    const w = window.open("", "_blank");
-    w.document.write(`
-      <html><head><title>Purchase Order ${r.po_number || r.number}</title>
-      <style>
-        body{font-family:sans-serif; padding:40px;}
-        .header{display:flex;justify-content:space-between;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px;}
-        h1{margin:0;}
-        .details{display:flex;justify-content:space-between;margin-bottom:40px;}
-        table{width:100%;border-collapse:collapse;margin-top:20px;}
-        th,td{border:1px solid #ccc;padding:10px;text-align:left;}
-        th{background:#f3f4f6;}
-      </style>
-      </head><body>
-      <div class="header">
-        <div><h1>Purchase Order</h1><p>AMT Procurement</p></div>
-        <div style="text-align:right;"><h2>${r.po_number || r.number}</h2><p>Date: ${r.date_ordered}</p></div>
-      </div>
-      <div class="details">
-        <div><strong>Vendor:</strong><br>${r.supplier}</div>
-        <div><strong>Ship To:</strong><br>Vessel: ${r.vessel}<br>Attn: Captain</div>
-      </div>
-      <table>
-        <thead><tr><th>Description</th><th>Category</th><th>Amount (${r.currency})</th></tr></thead>
-        <tbody><tr><td>${r.description}</td><td>${r.category}</td><td>${r.amount_original}</td></tr></tbody>
-      </table>
-      <div style="margin-top:40px; text-align:right;">
-         <p><strong>Total (USD Est): $${r.amount_usd}</strong></p>
-      </div>
-      <div style="margin-top:60px; border-top:1px solid #333; padding-top:10px;">Authorized Signature</div>
-      <script>window.print();<\/script>
-      </body></html>
-    `);
-    w.document.close();
+    attachBulkListeners('req');
 }
 
-/* ================== AGING REPORT ================== */
-document.getElementById("showAgingBtn").onclick = async () => {
-    document.getElementById("agingPopupBackdrop").classList.remove("hidden");
-    document.getElementById("agingPopup").classList.remove("hidden");
-    const t = document.querySelector("#agingTable tbody"); t.innerHTML = "<tr><td colspan='5'>Loading...</td></tr>";
-    try {
-        const data = await apiFetch("/api/reports/aging");
-        t.innerHTML = "";
-        if(data.length === 0) t.innerHTML = "<tr><td colspan='5'>No unpaid invoices found. Good job!</td></tr>";
-        data.forEach(d => {
-            t.innerHTML += `<tr><td>${d.po}</td><td>${d.supplier}</td><td>$${d.amount}</td><td>${d.days}</td><td><span class="tag red">${d.group}</span></td></tr>`;
-        });
-    } catch { t.innerHTML = "<tr><td colspan='5'>Error loading report.</td></tr>"; }
-};
+function renderLandTable() {
+    const tbody = document.querySelector("#landingTable tbody"); tbody.innerHTML="";
+    allLandings.forEach(r => {
+        if((r.status||"open")==="cancelled") return;
+        const tr = document.createElement("tr");
+        const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
+        
+        let delBadge = r.delivered==1 ? '<span class="tag green">Received</span>' : '<span class="tag gray">Pending</span>';
+        if(r.delivered==2) delBadge = '<span class="tag yellow">Partial</span>';
 
-/* ================== SHARED (Cancelled, Delivered, etc) ================== */
-function renderCancelled() {
-  const reqBody=document.querySelector("#reqCancelledTable tbody"); reqBody.innerHTML="";
-  allReqs.filter(r=>(r.status||"open")==="cancelled").forEach(r=>{ 
-      const tr=document.createElement("tr"); 
-      tr.innerHTML=`<td>${r.po_number||r.number}</td><td>${r.description}</td><td>${r.vessel}</td><td>${r.supplier}</td><td>${r.amount_usd}</td><td><span class="tag red">Cancelled</span></td><td><button class="small-action warning recover-req" data-id="${r.id}" title="Recover">↺</button><button class="small-action danger perm-delete-req" data-id="${r.id}" title="Delete Forever">X</button></td>`; 
-      reqBody.appendChild(tr); 
-  });
-  document.querySelectorAll(".recover-req").forEach(b=>b.onclick=async()=>{ if(confirm("Recover this order?")) { await apiFetch("/api/requisitions/"+b.dataset.id, {method:"PATCH", body:JSON.stringify({status:"open"})}); await afterDataLoad(); }});
-  document.querySelectorAll(".perm-delete-req").forEach(b=>b.onclick=async()=>{ deleteItem(b.dataset.id, 'req'); });
-}
+        const menu = `
+          <div class="action-menu">
+            <button class="drop-btn" onclick="toggleMenu(this)">•••</button>
+            <div class="drop-content">
+               <button onclick="openDocPopup(${r.id}, 'land')">Documents</button>
+               <button onclick="editLand(${r.id})">Edit</button>
+               <button onclick="singleAction(${r.id}, 'land', 'mark_paid')">Mark Paid</button>
+               <button onclick="deleteItem(${r.id}, 'land')" style="color:red">Delete</button>
+            </div>
+          </div>`;
 
-function renderDelivered() {
-  const tbody=document.querySelector("#deliveredReqTable tbody"); tbody.innerHTML="";
-  const paidF=document.getElementById("filterDeliveredReqPaid").value;
-  const search=document.getElementById("filterDeliveredReqSearch").value.toLowerCase();
-  
-  allReqs.filter(r=>r.delivered == 1).forEach(r=>{
-      if(paidF!=="" && getBoolVal(r.paid)!=paidF) return;
-      if(search && !JSON.stringify(r).toLowerCase().includes(search)) return;
-      const tr=document.createElement("tr");
-      tr.innerHTML=`<td>PO</td><td>${r.po_number||r.number}</td><td>${r.description}</td><td>${r.supplier}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'Yes':'No'}</td>`;
-      tbody.appendChild(tr);
-  });
+        tr.innerHTML = `
+            <td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
+            <td>${r.vessel}</td>
+            <td>${r.item}</td>
+            <td>${r.workshop}</td>
+            <td>${r.expected||""}</td>
+            <td>${formatMoney(r.amount_usd)}</td>
+            <td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td>
+            <td>${delBadge}</td>
+            <td>${menu}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    attachBulkListeners('land');
 }
 
 function renderDirectory(rows) {
-  const tbody=document.querySelector("#directoryTable tbody"); tbody.innerHTML="";
-  const isFinance = currentUser && currentUser.username === 'finance';
+  const t=document.querySelector("#directoryTable tbody"); t.innerHTML="";
   rows.forEach(r=>{
-    const tr=document.createElement("tr");
-    // Show rating stars
-    let stars = "";
-    if(r.rating) stars = "⭐".repeat(parseInt(r.rating));
-    
-    // Show comment icon if exists
-    let remark = "";
-    if(r.rating_comment) remark = `<span title="${r.rating_comment}" style="cursor:help;">💬</span>`;
-
-    tr.innerHTML=`
-      <td>${r.type}</td>
-      <td>${r.name}</td>
-      <td>${r.email||""}</td>
-      <td>${r.phone||""}</td>
-      <td>${stars}</td>
-      <td>${remark}</td>
-      <td style="white-space:nowrap;">
-        <button class="small-action info rate-btn" data-id="${r.id}" title="Rate Supplier">⭐ Rate</button>
-        ${!isFinance ? `
-        <button class="secondary edit-dir" data-id="${r.id}" data-obj='${JSON.stringify(r).replace(/'/g, "&#39;")}'>Edit</button>
-        <button class="danger delete-dir" data-id="${r.id}">Del</button>` : ''}
-      </td>`;
-    tbody.appendChild(tr);
+      t.innerHTML+=`<tr><td>${r.type}</td><td>${r.name}</td><td>${r.email||'-'}</td><td>${r.phone||'-'}</td><td>${"⭐".repeat(r.rating||5)}</td><td><button class="secondary" onclick="editDir(${r.id})">Edit</button></td></tr>`;
   });
-  document.querySelectorAll(".delete-dir").forEach(b=>b.onclick=()=>deleteItem(b.dataset.id, 'dir'));
-  document.querySelectorAll(".edit-dir").forEach(b=>b.onclick=()=>{
-      const r=JSON.parse(b.dataset.obj); openDirPopup(r.type);
-      document.getElementById("dirPopupName").value=r.name; document.getElementById("dirPopupEmail").value=r.email||"";
-      document.getElementById("dirPopupPhone").value=r.phone||""; document.getElementById("dirPopupAddress").value=r.address||"";
-      document.getElementById("dirPopup").dataset.editId=r.id;
+}
+function renderDelivered() {
+  const t=document.querySelector("#deliveredReqTable tbody"); t.innerHTML="";
+  allReqs.filter(r=>r.delivered==1).slice(0,50).forEach(r=>{
+      t.innerHTML+=`<tr><td>Order</td><td>${r.po_number}</td><td>${r.description}</td><td>${r.supplier}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'Yes':'No'}</td></tr>`;
   });
-  document.querySelectorAll(".rate-btn").forEach(b=>b.onclick=()=>openRatePopup(b.dataset.id));
 }
 
-/* ================== CRUD ACTIONS ================== */
+/* ================= ACTIONS ================= */
 async function editReq(id) {
     const r = allReqs.find(x=>x.id==id); if(!r) return;
     editingReqId = id;
-    document.getElementById("reqFormTitle").textContent="Edit Order"; document.getElementById("saveReqBtn").textContent="Update"; document.getElementById("cancelReqEditBtn").classList.remove("hidden");
-    document.getElementById("reqNumber").value=r.number; document.getElementById("reqPONumber").value=r.po_number||"";
-    document.getElementById("reqDescription").value=r.description; document.getElementById("reqVessel").value=r.vessel;
-    document.getElementById("reqCategory").value=r.category; document.getElementById("reqSupplierSelect").value=r.supplier;
-    document.getElementById("reqDateOrdered").value=r.date_ordered; document.getElementById("reqExpected").value=r.expected||"";
-    document.getElementById("reqTotal").value=r.amount_original; document.getElementById("reqCurrency").value=r.currency;
-    document.getElementById("reqTracking").value=r.tracking_url||"";
-    document.getElementById("reqUrgency").value=r.urgency; document.getElementById("reqPaid").checked=!!r.paid;
-    document.getElementById("reqFormTitle").scrollIntoView({behavior:"smooth"});
-    document.querySelector("[data-tab='requisitions']").click();
-}
-
-async function editLand(id) {
-    const r = allLandings.find(x=>x.id==id); if(!r) return;
-    editingLandId = id;
-    document.getElementById("landFormTitle").textContent="Edit Landed"; document.getElementById("saveLandingBtn").textContent="Update"; document.getElementById("cancelLandEditBtn").classList.remove("hidden");
-    document.getElementById("landVessel").value=r.vessel; document.getElementById("landDescription").value=r.item;
-    document.getElementById("landWorkshopSelect").value=r.workshop; document.getElementById("landExpected").value=r.expected||"";
-    document.getElementById("landLanded").value=r.landed_date||""; document.getElementById("landAmount").value=r.amount_original;
-    document.getElementById("landCurrency").value=r.currency; document.getElementById("landPaid").checked=!!r.paid;
-    document.getElementById("landFormTitle").scrollIntoView({behavior:"smooth"});
-    document.querySelector("[data-tab='landings']").click();
-}
-
-async function deleteItem(id, type) {
-    if(!confirm("Permanently delete?")) return;
-    let endpoint = "";
-    if(type==='req') endpoint = `/api/requisitions/${id}`;
-    if(type==='land') endpoint = `/api/landings/${id}`;
-    if(type==='dir') endpoint = `/api/directory/${id}`;
-    if(type==='cat') endpoint = `/api/categories/${id}`;
-    if(type==='ves') endpoint = `/api/vessels/${id}`;
-    if(type==='user') endpoint = `/api/users/${id}`;
-    if(type==='backup') endpoint = `/api/backups/${encodeURIComponent(id)}`;
+    document.getElementById("reqFormTitle").textContent="Edit Order (" + r.po_number + ")"; 
+    document.getElementById("saveReqBtn").textContent="Update Order";
+    document.getElementById("cancelReqEditBtn").classList.remove("hidden");
     
-    try { await apiFetch(endpoint, {method:"DELETE"}); 
-          if(type==='backup') await loadAdminData(); 
-          else await afterDataLoad(); 
-    } 
-    catch(e) { alert(e.error === "admin_required" ? "Admin only" : "Error deleting"); }
-}
+    // Populate
+    document.getElementById("reqPONumber").value=r.po_number||"";
+    document.getElementById("reqNumber").value=r.number;
+    document.getElementById("reqDescription").value=r.description;
+    document.getElementById("reqVessel").value=r.vessel;
+    document.getElementById("reqCategory").value=r.category;
+    document.getElementById("reqSupplierSelect").value=r.supplier;
+    document.getElementById("reqDateOrdered").value=r.date_ordered;
+    document.getElementById("reqExpected").value=r.expected||"";
+    document.getElementById("reqTotal").value=r.amount_original || r.amount_usd; // Fix for original amount
+    document.getElementById("reqCurrency").value=r.currency;
+    document.getElementById("reqTracking").value=r.tracking_url||"";
+    document.getElementById("reqUrgency").value=r.urgency;
+    document.getElementById("reqRemarks").value=r.remarks||""; // Point 7: Delivery remarks
+    document.getElementById("reqPaid").checked=!!r.paid;
 
-async function restoreBackup(name) {
-    if(!confirm("Restore this backup? Current data will be replaced.")) return;
-    try {
-        await apiFetch(`/api/backups/${encodeURIComponent(name)}/restore`, {method:"POST"});
-        alert("Restored successfully. Refreshing...");
-        await afterDataLoad();
-    } catch(e) { alert("Error restoring backup."); }
+    document.querySelector("[data-tab='requisitions']").click();
+    document.getElementById("reqAddCard").scrollIntoView({behavior:"smooth"});
 }
 
 document.getElementById("saveReqBtn").onclick = async () => {
-    // FIX: ADD amount_original explicitely to payload
-    const valAmount = document.getElementById("reqTotal").value;
+    const valAmt = document.getElementById("reqTotal").value;
     const payload = {
-        number: document.getElementById("reqNumber").value, po_number: document.getElementById("reqPONumber").value,
-        description: document.getElementById("reqDescription").value, vessel: document.getElementById("reqVessel").value,
-        category: document.getElementById("reqCategory").value, supplier: document.getElementById("reqSupplierSelect").value,
-        date_ordered: document.getElementById("reqDateOrdered").value, expected: document.getElementById("reqExpected").value,
-        amount: valAmount,
-        amount_original: valAmount, // Ensure this is sent
+        po_number: document.getElementById("reqPONumber").value,
+        number: document.getElementById("reqNumber").value,
+        description: document.getElementById("reqDescription").value,
+        vessel: document.getElementById("reqVessel").value,
+        category: document.getElementById("reqCategory").value,
+        supplier: document.getElementById("reqSupplierSelect").value,
+        date_ordered: document.getElementById("reqDateOrdered").value,
+        expected: document.getElementById("reqExpected").value,
+        amount_original: valAmt,
+        amount: valAmt,
         currency: document.getElementById("reqCurrency").value,
         tracking_url: document.getElementById("reqTracking").value,
-        urgency: document.getElementById("reqUrgency").value, paid: document.getElementById("reqPaid").checked
+        urgency: document.getElementById("reqUrgency").value,
+        remarks: document.getElementById("reqRemarks").value,
+        paid: document.getElementById("reqPaid").checked
     };
-    if(!payload.number || !payload.vessel || !payload.amount) { alert("Missing fields"); return; }
     try {
         if(editingReqId) await apiFetch(`/api/requisitions/${editingReqId}`, {method:"PATCH", body:JSON.stringify(payload)});
         else await apiFetch("/api/requisitions", {method:"POST", body:JSON.stringify(payload)});
-        
-        // Handle file upload if present in Add Mode
-        const fileInput = document.getElementById("docUploadInput"); // Reusing document popup input is tricky, normally separate.
-        // Simplified: Documents are added AFTER saving via the list.
-        
-        document.getElementById("cancelReqEditBtn").click(); await afterDataLoad();
+        resetReqForm(); await afterDataLoad();
     } catch(e) { alert("Error saving"); }
 };
-document.getElementById("cancelReqEditBtn").onclick = () => {
-    editingReqId=null; document.getElementById("reqFormTitle").textContent="Add Ordered Requisition"; document.getElementById("saveReqBtn").textContent="Save Order";
+
+function resetReqForm() {
+    editingReqId=null; document.getElementById("reqFormTitle").textContent="New Requisition";
+    document.getElementById("saveReqBtn").textContent="Save Order";
     document.getElementById("cancelReqEditBtn").classList.add("hidden");
-    document.querySelectorAll("#tab-requisitions input").forEach(i=>i.value="");
-};
+    document.querySelectorAll("#reqAddCard input").forEach(i=>i.value="");
+}
+document.getElementById("cancelReqEditBtn").onclick = resetReqForm;
 
-document.getElementById("saveLandingBtn").onclick = async () => {
-    const valAmount = document.getElementById("landAmount").value;
-    const payload = {
-        vessel: document.getElementById("landVessel").value, item: document.getElementById("landDescription").value,
-        workshop: document.getElementById("landWorkshopSelect").value, expected: document.getElementById("landExpected").value,
-        landed_date: document.getElementById("landLanded").value, amount: valAmount,
-        amount_original: valAmount, // Ensure sent
-        currency: document.getElementById("landCurrency").value, paid: document.getElementById("landPaid").checked
-    };
-    if(!payload.vessel || !payload.item || !payload.amount) { alert("Missing fields"); return; }
-    try {
-        if(editingLandId) await apiFetch(`/api/landings/${editingLandId}`, {method:"PATCH", body:JSON.stringify(payload)});
-        else await apiFetch("/api/landings", {method:"POST", body:JSON.stringify(payload)});
-        document.getElementById("cancelLandEditBtn").click(); await afterDataLoad();
-    } catch(e) { alert("Error saving"); }
-};
-document.getElementById("cancelLandEditBtn").onclick = () => {
-    editingLandId=null; document.getElementById("landFormTitle").textContent="Add Landed Item"; document.getElementById("saveLandingBtn").textContent="Save";
-    document.getElementById("cancelLandEditBtn").classList.add("hidden");
-    document.querySelectorAll("#tab-landings input").forEach(i=>i.value="");
-};
-
-/* ================== FILTERS & DASHBOARD ================== */
-document.getElementById("applyReqFilterBtn").onclick=renderReqTable;
-document.getElementById("clearReqFilterBtn").onclick=()=>{ document.querySelectorAll("#tab-requisitions .filter-row select, #tab-requisitions .filter-row input").forEach(i=>i.value=""); renderReqTable(); };
-document.getElementById("applyLandingFilterBtn").onclick=renderLandTable;
-document.getElementById("applyDeliveredReqFilterBtn").onclick=renderDelivered;
-
-async function updateDashboard() {
-  document.getElementById("summaryOpenReqNotDel").textContent = allReqs.filter(r=>!r.delivered && (r.status||'open')==='open').length;
-  document.getElementById("summaryOpenReqUnpaid").textContent = allReqs.filter(r=>!r.paid && (r.status||'open')==='open').length;
-  document.getElementById("summaryOpenLandNotDel").textContent = allLandings.filter(r=>!r.delivered).length;
-  document.getElementById("summaryOpenLandUnpaid").textContent = allLandings.filter(r=>!r.paid).length;
-  
-  const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
-  allReqs.slice(-5).reverse().forEach(r=>t.innerHTML+=`<tr><td>${r.po_number||r.number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>$${r.amount_usd.toFixed(2)}</td><td>${r.status||'open'}</td></tr>`);
-
-  const supMap = {};
-  allReqs.forEach(r => {
-      const s = r.supplier || "Unknown";
-      supMap[s] = (supMap[s] || 0) + (r.amount_usd || 0);
-  });
-  const sorted = Object.entries(supMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-  const ul = document.getElementById("ovTopSuppliers"); ul.innerHTML = "";
-  if(sorted.length === 0) ul.innerHTML = "<li>No data</li>";
-  sorted.forEach(([k,v]) => {
-      ul.innerHTML += `<li style="margin-bottom:4px; display:flex; justify-content:space-between; font-size:13px;"><span>${k}</span> <strong>$${v.toLocaleString()}</strong></li>`;
-  });
+async function singleAction(id, type, action) {
+    const endpoint = type==='req' ? '/api/requisitions/bulk' : '/api/landings/bulk';
+    await apiFetch(endpoint, { method:"POST", body: JSON.stringify({ ids: [id], action }) });
+    await afterDataLoad();
+}
+async function cancelReq(id) {
+    if(confirm("Cancel this order?")) {
+        await apiFetch(`/api/requisitions/${id}`, {method:"PATCH", body:JSON.stringify({status:"cancelled"})});
+        await afterDataLoad();
+    }
 }
 
-document.getElementById("ovApplyTotalsBtn").onclick = calculateOverviewTotals;
-document.getElementById("ovClearTotalsBtn").onclick = () => {
-    ["ovTypeFilter","ovVesselFilter","ovPaidFilter","ovMonthFilter","ovYearFilter","ovCategoryFilter"].forEach(id => document.getElementById(id).value = "");
-    calculateOverviewTotals();
-};
-
-function calculateOverviewTotals() {
-    const typeF = document.getElementById("ovTypeFilter").value;
-    const vesF = document.getElementById("ovVesselFilter").value;
-    const paidF = document.getElementById("ovPaidFilter").value;
-    const monthF = document.getElementById("ovMonthFilter").value;
-    const yearF = document.getElementById("ovYearFilter").value;
-    const catF = document.getElementById("ovCategoryFilter").value;
-
-    let items = [];
-    if(typeF === 'req') items = [...allReqs];
-    else if(typeF === 'land') items = [...allLandings];
-    else items = [...allReqs, ...allLandings];
-
-    items = items.filter(i => {
-        if((i.status||'open') === 'cancelled') return false;
-        if(vesF && i.vessel !== vesF) return false;
-        if(paidF !== "" && getBoolVal(i.paid) !== paidF) return false;
-        if(catF && i.category !== catF) return false; 
-        
-        const d = parseDateSafe(i.date_ordered || i.landed_date);
-        if(yearF && (!d || d.getFullYear() != yearF)) return false;
-        if(monthF && (!d || (d.getMonth() + 1) != monthF)) return false;
-        return true;
-    });
-
-    const total = items.reduce((acc, c) => acc + (c.amount_usd || 0), 0);
-    const paid = items.filter(i => i.paid).reduce((acc, c) => acc + (c.amount_usd || 0), 0);
-    const unpaid = items.filter(i => !i.paid).reduce((acc, c) => acc + (c.amount_usd || 0), 0);
-
-    document.getElementById("ovAllTotal").textContent = formatMoney(total);
-    document.getElementById("ovPaidMonthTotal").textContent = formatMoney(paid);
-    document.getElementById("ovUnpaidMonthTotal").textContent = formatMoney(unpaid);
-    
-    let yearItems = (typeF==='land'?allLandings:allReqs).filter(i=>(i.status||'open')!=='cancelled' && i.paid);
-    if(yearF) yearItems = yearItems.filter(i=>{ const d=parseDateSafe(i.date_ordered||i.landed_date); return d && d.getFullYear()==yearF; });
-    document.getElementById("ovPaidYearTotal").textContent = formatMoney(yearItems.reduce((acc,c)=>acc+c.amount_usd,0));
-}
-
-/* ================== BULK ACTIONS ================== */
+/* ================= BULK ACTIONS ================= */
 function attachBulkListeners(type) {
-  const tableId = type === 'req' ? 'reqTable' : 'landingTable';
-  document.querySelectorAll(`#${tableId} .row-select`).forEach(chk => {
-    chk.addEventListener('change', (e) => {
-       if(e.target.checked) { selectedIds.add(+e.target.dataset.id); currentBulkType=type; }
-       else { selectedIds.delete(+e.target.dataset.id); if(selectedIds.size===0) currentBulkType=null; }
-       toggleBulkBar();
+    const tableId = type==='req'?'reqTable':'landingTable';
+    document.querySelectorAll(`#${tableId} .row-select`).forEach(chk => {
+        chk.addEventListener('change', (e) => {
+            const id = +e.target.dataset.id;
+            if(e.target.checked) { selectedIds.add(id); currentBulkType=type; }
+            else { selectedIds.delete(id); if(selectedIds.size===0) currentBulkType=null; }
+            toggleBulkBar();
+        });
     });
-  });
 }
+// Fix for Select All Performance (Point 4 in review)
+document.getElementById("reqSelectAll").onclick = (e) => {
+    const checked = e.target.checked;
+    document.querySelectorAll("#reqTable .row-select").forEach(c => {
+        c.checked = checked;
+        if(checked) { selectedIds.add(+c.dataset.id); currentBulkType='req'; }
+        else { selectedIds.delete(+c.dataset.id); }
+    });
+    if(!checked) currentBulkType=null;
+    toggleBulkBar();
+};
+
 function toggleBulkBar() {
     const bar = document.getElementById("bulkActionBar");
     document.getElementById("bulkCount").textContent = selectedIds.size;
-    if(selectedIds.size > 0) bar.classList.remove("hidden"); else bar.classList.add("hidden");
+    if(selectedIds.size > 0) bar.classList.add("visible");
+    else bar.classList.remove("visible");
 }
+document.getElementById("bulkMarkPartialBtn").onclick = async () => {
+    // Point 7: Partial
+    if(!confirm("Mark selected items as Partially Delivered?")) return;
+    const endpoint = currentBulkType==='req'?'/api/requisitions/bulk':'/api/landings/bulk';
+    await apiFetch(endpoint, { method:"POST", body: JSON.stringify({ ids: Array.from(selectedIds), action: "mark_partial" }) });
+    selectedIds.clear(); toggleBulkBar(); await afterDataLoad();
+};
+document.getElementById("bulkMarkPaidBtn").onclick = () => runBulk("mark_paid");
+document.getElementById("bulkMarkDeliveredBtn").onclick = () => runBulk("mark_delivered");
+document.getElementById("bulkMarkUnpaidBtn").onclick = () => runBulk("mark_unpaid");
 async function runBulk(action) {
-    if(!confirm("Confirm bulk action?")) return;
-    const endpoint = currentBulkType==='req' ? '/api/requisitions/bulk' : '/api/landings/bulk';
+    const endpoint = currentBulkType==='req'?'/api/requisitions/bulk':'/api/landings/bulk';
     await apiFetch(endpoint, { method:"POST", body: JSON.stringify({ ids: Array.from(selectedIds), action }) });
     selectedIds.clear(); toggleBulkBar(); await afterDataLoad();
 }
-document.getElementById("bulkMarkPaidBtn").onclick=()=>runBulk("mark_paid");
-document.getElementById("bulkMarkUnpaidBtn").onclick=()=>runBulk("mark_unpaid");
-document.getElementById("bulkMarkDeliveredBtn").onclick=()=>runBulk("mark_delivered");
-document.getElementById("bulkMarkPartialBtn").onclick=()=>runBulk("mark_partial");
-document.getElementById("bulkCancelBtn").onclick=()=>{ selectedIds.clear(); toggleBulkBar(); document.querySelectorAll(".row-select").forEach(c=>c.checked=false); };
-document.getElementById("reqSelectAll").onclick=(e)=>{ document.querySelectorAll("#reqTable .row-select").forEach(c=>{c.checked=e.target.checked; c.dispatchEvent(new Event('change'));}); };
-document.getElementById("landSelectAll").onclick=(e)=>{ document.querySelectorAll("#landingTable .row-select").forEach(c=>{c.checked=e.target.checked; c.dispatchEvent(new Event('change'));}); };
+document.getElementById("bulkCancelBtn").onclick = () => { selectedIds.clear(); toggleBulkBar(); loadData(); };
 
-/* ================== CHART ================== */
-document.getElementById("openChartBtn").onclick = () => {
-    document.getElementById("chartBackdrop").classList.remove("hidden");
-    document.getElementById("chartPopup").classList.remove("hidden");
-    updateChart();
-};
-function closeChartPopup() {
-    document.getElementById("chartBackdrop").classList.add("hidden");
-    document.getElementById("chartPopup").classList.add("hidden");
-}
-document.getElementById("refreshChartBtn").onclick = updateChart;
-function updateChart() {
-    const ctx = document.getElementById('customChart').getContext('2d');
-    const xAxisKey = document.getElementById("chartXAxis").value;
-    const yAxisKey = document.getElementById("chartYAxis").value;
-    const chartType = document.getElementById("chartType").value;
-    // New Filters
-    const fMonth = document.getElementById("chartFilterMonth").value;
-    const fYear = document.getElementById("chartFilterYear").value;
+/* ================= SORTING (POINT 11) ================= */
+function sortTable(th, colIndex) {
+    const table = th.closest("table");
+    const tbody = table.querySelector("tbody");
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    const isAsc = !th.classList.contains("sort-asc");
+    
+    // Clear arrows
+    table.querySelectorAll("th").forEach(h => h.classList.remove("sort-asc", "sort-desc"));
+    th.classList.add(isAsc ? "sort-asc" : "sort-desc");
 
-    let dataMap = {};
-    const process = (item) => {
-        // FILTERING LOGIC
-        const d = parseDateSafe(item.date_ordered || item.landed_date);
-        if(!d) return; 
-        if(fYear && d.getFullYear() != fYear) return;
-        if(fMonth && (d.getMonth() + 1) != fMonth) return;
+    rows.sort((rowA, rowB) => {
+        let cellA = rowA.cells[colIndex].innerText.trim();
+        let cellB = rowB.cells[colIndex].innerText.trim();
 
-        let key = "Unknown";
-        if(xAxisKey === 'vessel') key = item.vessel;
-        else if(xAxisKey === 'category') key = item.category || "Other";
-        else if(xAxisKey === 'supplier') key = item.supplier || item.workshop || "Unknown";
-        else if(xAxisKey === 'month' || xAxisKey === 'year') {
-            key = xAxisKey==='month' ? (d.getMonth()+1) : d.getFullYear();
+        // 1. Check for Currency ($)
+        if(cellA.includes("$") || cellB.includes("$")) {
+            const numA = parseFloat(cellA.replace(/[^0-9.-]+/g,"")) || 0;
+            const numB = parseFloat(cellB.replace(/[^0-9.-]+/g,"")) || 0;
+            return isAsc ? numA - numB : numB - numA;
         }
-        if(!dataMap[key]) dataMap[key] = { sum: 0, count: 0 };
-        dataMap[key].sum += item.amount_usd || 0;
-        dataMap[key].count += 1;
-    };
-    allReqs.forEach(process);
-    
-    const labels = Object.keys(dataMap).sort();
-    const dataPoints = labels.map(l => {
-        if(yAxisKey === 'sum_usd') return dataMap[l].sum;
-        if(yAxisKey === 'count') return dataMap[l].count;
-        return dataMap[l].sum / dataMap[l].count; 
+        
+        // 2. Check for Date (YYYY-MM-DD or simple date)
+        const dateA = Date.parse(cellA);
+        const dateB = Date.parse(cellB);
+        if(!isNaN(dateA) && !isNaN(dateB) && cellA.includes("-")) {
+            return isAsc ? dateA - dateB : dateB - dateA;
+        }
+        
+        // 3. Default String
+        return isAsc ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
     });
 
-    if(myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
-        type: chartType,
-        data: {
-            labels: labels,
-            datasets: [{
-                label: yAxisKey === 'sum_usd' ? 'Amount ($)' : 'Count',
-                data: dataPoints,
-                backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#6366f1'], borderWidth: 1
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    tbody.append(...rows);
 }
 
-/* ================== OPTION 16: SUPPLIER HISTORY ================== */
-async function showSupplierHistory(supplierName) {
-    if(!supplierName) return;
-    const tbody = document.querySelector("#supHistTable tbody"); tbody.innerHTML="";
-    document.getElementById("supHistTitle").textContent = "History: " + supplierName;
-    document.getElementById("supScoreDisplay").textContent = "Loading Score...";
-    
-    // Fetch Score
-    try {
-        const res = await apiFetch(`/api/vendors/${supplierName}/score`);
-        let stars = "⭐".repeat(Math.round(res.score));
-        document.getElementById("supScoreDisplay").textContent = `Rating: ${res.score} / 5 ${stars}`;
-    } catch { document.getElementById("supScoreDisplay").textContent = ""; }
-
-    const items = allReqs.filter(r => r.supplier === supplierName).sort((a,b)=>b.id-a.id).slice(0, 10);
-    items.forEach(i => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${i.date_ordered}</td><td>${i.po_number||i.number}</td><td>${i.description}</td><td>$${i.amount_usd.toFixed(2)}</td>`;
-        tbody.appendChild(tr);
-    });
-    document.getElementById("supHistBackdrop").classList.remove("hidden");
-    document.getElementById("supHistPopup").classList.remove("hidden");
+/* ================= DROPDOWN UTILS ================= */
+function toggleMenu(btn) {
+    const menu = btn.nextElementSibling;
+    document.querySelectorAll(".drop-content").forEach(d => { if(d !== menu) d.classList.remove("show"); });
+    menu.classList.toggle("show");
+    // Close on click outside
+    window.onclick = (e) => {
+        if (!e.target.matches('.drop-btn')) {
+            document.querySelectorAll(".drop-content").forEach(d => d.classList.remove("show"));
+        }
+    }
 }
 
-/* ================== ADMIN, AUTH, INIT ================== */
+/* ================= AUTH & START ================= */
 async function refreshSession() {
   try { currentUser = await apiFetch("/api/session"); } catch { currentUser = null; }
-  const userInfo = document.getElementById("userInfo"); const loginCard = document.getElementById("loginCard");
+  const ui = document.getElementById("userInfo");
+  const loginPop = document.getElementById("loginCard");
+  
   if (currentUser && currentUser.username) {
-    userInfo.innerHTML = `<span><strong>${currentUser.username}</strong></span><button id="logoutBtn" class="secondary" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Logout</button>`;
-    document.getElementById("logoutBtn").onclick = async () => { await apiFetch("/api/logout", { method:"POST" }); currentUser = null; loginCard.classList.add("hidden"); await refreshSession(); await afterDataLoad(); };
-    loginCard.classList.add("hidden");
+      ui.innerHTML = `Hi, ${currentUser.username} (${currentUser.role}) | <a href="#" id="logoutLnk" style="color:var(--accent)">Logout</a>`;
+      document.getElementById("logoutLnk").onclick = async () => { await apiFetch("/api/logout", {method:"POST"}); window.location.reload(); };
+      loginPop.classList.remove("visible");
+      if(currentUser.role === 'admin') document.getElementById("adminTab").classList.remove("hidden");
   } else {
-    userInfo.innerHTML = `Not logged in<button id="showLoginBtn" style="margin-left:8px; padding: 4px 8px; font-size: 12px;">Login</button>`;
-    document.getElementById("showLoginBtn").onclick = () => { loginCard.classList.toggle("hidden"); };
+      ui.innerHTML = `<a href="#" onclick="document.getElementById('loginCard').classList.add('visible')">Login</a>`;
+      loginPop.classList.add("visible");
   }
-  const isAdmin = currentUser && currentUser.role === "admin";
-  const adminTab = document.getElementById("adminTab");
-  if (adminTab) { if (isAdmin) adminTab.classList.remove("hidden"); else adminTab.classList.add("hidden"); }
 }
-
 document.getElementById("loginBtn").onclick = async () => {
-    const u=document.getElementById("loginUsername").value, p=document.getElementById("loginPassword").value;
-    try { await apiFetch("/api/login", { method:"POST", body: JSON.stringify({username:u, password:p}) }); document.getElementById("loginCard").classList.add("hidden"); await refreshSession(); await afterDataLoad(); } 
-    catch(e) { document.getElementById("loginError").textContent = "Login Failed"; }
+    try { 
+        await apiFetch("/api/login", { method:"POST", body: JSON.stringify({username:document.getElementById("loginUsername").value, password:document.getElementById("loginPassword").value}) });
+        window.location.reload();
+    } catch { document.getElementById("loginError").textContent = "Invalid credentials"; }
 };
 
-async function loadAdminData() {
-    if(currentUser && currentUser.role === "admin") {
-        let cats=[], vs=[], us=[], backs=[];
-        try { cats=await apiFetch("/api/categories"); } catch{}
-        try { vs=await apiFetch("/api/vessels"); } catch{}
-        try { us=await apiFetch("/api/users"); } catch{}
-        try { backs=await apiFetch("/api/backups"); } catch{}
-
-        const cT=document.querySelector("#catTable tbody"); cT.innerHTML="";
-        cats.forEach(c=>cT.innerHTML+=`<tr><td>${c.name}</td><td>${c.abbr}</td><td><button onclick="deleteItem(${c.id}, 'cat')">Del</button></td></tr>`);
-        
-        const vT=document.querySelector("#vesselTable tbody"); vT.innerHTML="";
-        vs.forEach(v=>vT.innerHTML+=`<tr><td>${v.name}</td><td><button onclick="deleteItem(${v.id}, 'ves')">Del</button></td></tr>`);
-        
-        const uT=document.querySelector("#userTable tbody"); uT.innerHTML="";
-        us.forEach(u=>uT.innerHTML+=`<tr><td>${u.username}</td><td>${u.role}</td><td><button onclick="deleteItem('${u.username}', 'user')">Del</button></td></tr>`);
-
-        const bT=document.querySelector("#backupTable tbody"); bT.innerHTML="";
-        backs.forEach(b=>{
-            bT.innerHTML+=`
-            <tr>
-              <td>${b.name}</td>
-              <td>${b.created_at}</td>
-              <td>${(b.size/1024).toFixed(1)}KB</td>
-              <td>
-                <button class="secondary" style="padding:2px 6px;" onclick="window.open('/api/backups/${b.name}/download')">DL</button>
-                <button class="secondary" style="padding:2px 6px;" onclick="restoreBackup('${b.name}')">Rest</button>
-                <button class="danger" style="padding:2px 6px;" onclick="deleteItem('${b.name}', 'backup')">Del</button>
-              </td>
-            </tr>`;
-        });
-        
-        // Audit Log Fetch
-        try {
-            const logs = await apiFetch("/api/audit");
-            if(Array.isArray(logs)) {
-                allAuditLogs = logs;
-                renderAuditLog();
-            }
-        } catch(e) { console.error(e); }
+/* ================= DOCS ================= */
+async function openDocPopup(id, type) {
+    document.getElementById("docPopupBackdrop").classList.add("visible");
+    const t = document.querySelector("#docTable tbody"); t.innerHTML = "<tr><td colspan='3'>Loading...</td></tr>";
+    const docs = await apiFetch(`/api/documents/${type}/${id}`);
+    t.innerHTML = "";
+    docs.forEach(d => t.innerHTML += `<tr><td><a href="/static/uploads/${d.filename}" target="_blank">${d.filename}</a></td><td>${d.uploaded_by}</td><td>${d.uploaded_at}</td></tr>`);
+    document.getElementById("docUploadBtn").onclick = async () => {
+        const file = document.getElementById("docUploadInput").files[0];
+        if(!file) return;
+        const fd = new FormData(); fd.append("file", file); fd.append("parent_id", id); fd.append("parent_type", type);
+        await fetch("/api/documents/upload", {method:"POST", body:fd});
+        openDocPopup(id, type);
     }
 }
+function closeDocPopup() { document.getElementById("docPopupBackdrop").classList.remove("visible"); }
 
-// AUDIT LOG FILTER RENDER
-function renderAuditLog() {
-    const tbody = document.querySelector("#auditTable tbody");
-    tbody.innerHTML = "";
-    
-    const fY = document.getElementById("auditFYear").value;
-    const fM = document.getElementById("auditFMonth").value;
-    const fD = document.getElementById("auditFDay").value;
-
-    const filtered = allAuditLogs.filter(log => {
-        if(!log.date) return false;
-        const d = new Date(log.date);
-        if(fY && d.getFullYear() != fY) return false;
-        if(fM && (d.getMonth()+1) != fM) return false;
-        if(fD && d.getDate() != fD) return false;
-        return true;
-    });
-
-    if(filtered.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; color:#777;'>No logs found</td></tr>";
-        return;
-    }
-
-    filtered.forEach(log => {
-        tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${log.date.replace("T"," ")}</td></tr>`;
+/* ================= CHART ================= */
+function updateDashboard() {
+    document.getElementById("summaryOpenReqNotDel").textContent = allReqs.filter(r=>r.delivered!=1 && (r.status||'open')!=='cancelled').length;
+    document.getElementById("summaryOpenReqUnpaid").textContent = allReqs.filter(r=>!r.paid && (r.status||'open')!=='cancelled').length;
+    // ...
+    // Simple table fill for dashboard
+    const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
+    allReqs.slice(0,5).forEach(r=> {
+        t.innerHTML += `<tr><td>${r.po_number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.status||'open'}</td></tr>`;
     });
 }
-document.getElementById("auditApplyBtn").onclick = renderAuditLog;
 
-document.getElementById("addCatBtn").onclick=async()=>{ await apiFetch("/api/categories",{method:"POST",body:JSON.stringify({name:document.getElementById("catName").value, abbr:document.getElementById("catAbbr").value})}); await loadAdminData(); };
-document.getElementById("addVesselBtn").onclick=async()=>{ await apiFetch("/api/vessels",{method:"POST",body:JSON.stringify({name:document.getElementById("vesselName").value})}); await loadAdminData(); };
-document.getElementById("saveUserBtn").onclick=async()=>{ await apiFetch("/api/users",{method:"POST",body:JSON.stringify({username:document.getElementById("adminUsername").value, password:document.getElementById("adminPassword").value, role:document.getElementById("adminRole").value})}); await loadAdminData(); };
-document.getElementById("createBackupBtn").onclick=async()=>{ await apiFetch("/api/backup/create",{method:"POST"}); await loadAdminData(); };
-document.getElementById("downloadBackupBtn").onclick=()=>{ window.open("/api/backup/download", "_blank"); }; 
-document.getElementById("refreshBackupsBtn").onclick=loadAdminData;
-
-document.getElementById("uploadBackupBtn").onclick=async()=>{
-  const input=document.getElementById("uploadBackupInput"); const err=document.getElementById("backupError"); err.textContent="";
-  if(!input || !input.files || !input.files.length){ err.textContent="Please choose .xlsx file."; return; }
-  const file=input.files[0]; if(!file.name.toLowerCase().endsWith(".xlsx")){ err.textContent="Only .xlsx allowed."; return; }
-  const fd=new FormData(); fd.append("file", file);
-  try{ const res=await fetch("/api/upload", {method:"POST", body: fd, credentials:"same-origin"}); if(!res.ok){ let j={}; try{ j=await res.json(); }catch{} throw j; } input.value=""; await afterDataLoad(); await loadAdminData(); alert("Uploaded."); }catch(e){ err.textContent="Upload failed."; }
-};
-
-function openDirPopup(type){ dirPopupType=type; document.getElementById("dirPopupBackdrop").classList.remove("hidden"); document.getElementById("dirPopup").classList.remove("hidden"); }
-function closeDirPopup(){ document.getElementById("dirPopupBackdrop").classList.add("hidden"); document.getElementById("dirPopup").classList.add("hidden"); }
-
-document.getElementById("newSupplierBtn").onclick=()=>openDirPopup("supplier");
-
-document.getElementById("dirNewSupplierBtn").onclick=()=>openDirPopup("supplier");
-document.getElementById("dirNewWorkshopBtn").onclick=()=>openDirPopup("workshop");
-document.getElementById("dirPopupCancelBtn").onclick=closeDirPopup;
-document.getElementById("dirPopupSaveBtn").onclick=async()=>{
-    const body={type:dirPopupType, name:document.getElementById("dirPopupName").value, email:document.getElementById("dirPopupEmail").value, phone:document.getElementById("dirPopupPhone").value, address:document.getElementById("dirPopupAddress").value};
-    if(document.getElementById("dirPopup").dataset.editId) await apiFetch(`/api/directory/${document.getElementById("dirPopup").dataset.editId}`, {method:"PATCH", body:JSON.stringify(body)});
-    else await apiFetch("/api/directory/quick", {method:"POST", body:JSON.stringify(body)});
-    closeDirPopup(); await loadOptions();
-};
-
+// TABS LOGIC
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     if (tab.classList.contains("hidden")) return;
     document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-    document.querySelectorAll("[id^='tab-']").forEach(div => div.classList.add("hidden"));
+    document.querySelectorAll(".tab-content").forEach(div => div.classList.add("hidden"));
     tab.classList.add("active");
     document.getElementById(`tab-${tab.dataset.tab}`).classList.remove("hidden");
   });
@@ -1518,6 +842,5 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 (async function(){ await refreshSession(); await afterDataLoad(); })();
 </script>
-
 </body>
 </html>
