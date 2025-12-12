@@ -126,18 +126,20 @@
     
     #globalActionMenu {
         display: none;
-        position: fixed; /* Fixed to viewport to escape table overflow */
+        position: fixed; 
         background: var(--bg-card);
-        min-width: 170px;
+        min-width: 180px;
         box-shadow: var(--shadow-md);
         border-radius: 6px;
         border: 1px solid var(--border);
         z-index: 9999;
-        overflow: hidden;
+        /* SCROLL FIX */
+        max-height: 300px;
+        overflow-y: auto;
     }
     #globalActionMenu.show { display: block; animation: fadeIn 0.1s ease-out; }
     #globalActionMenu button { 
-        display: block; width: 100%; text-align: left; padding: 10px 16px; 
+        display: block; width: 100%; text-align: left; padding: 12px 16px; 
         background: none; border: none; border-bottom: 1px solid var(--border); 
         font-size: 13px; color: var(--text-main); font-weight: 500; 
     }
@@ -158,7 +160,7 @@
 </head>
 <body>
 
-<div id="globalActionMenu"></div>
+<div id="globalActionMenu" onclick="event.stopPropagation()"></div>
 
 <header>
   <div class="logo-area">
@@ -601,15 +603,25 @@ async function loadOptions(){
         document.getElementById("auditFYear").add(new Option(i, i));
     }
 
-    // Chart Month Select (Last 24 Months)
+    // Chart Month Select (Last 24 Months) - Local Time Fix
     const chartM = document.getElementById("chartSpecificMonth");
     if(chartM) {
         chartM.innerHTML = '<option value="">Select Month</option>';
-        const d = new Date();
+        const d = new Date(); // Local time
         for(let i=0; i<24; i++) {
-            const temp = new Date(d.getFullYear(), d.getMonth() - i, 1);
-            const val = temp.toISOString().slice(0, 7); // YYYY-MM
-            const txt = temp.toLocaleString('default', { month: 'long', year: 'numeric' });
+            // Manually construct year/month to avoid UTC shift
+            let year = d.getFullYear();
+            let month = d.getMonth() - i;
+            // Adjust for month rollover
+            while(month < 0) { month += 12; year -= 1; }
+            
+            // Format YYYY-MM
+            const val = `${year}-${String(month+1).padStart(2, '0')}`;
+            
+            // Label
+            const tempDate = new Date(year, month, 1);
+            const txt = tempDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            
             chartM.add(new Option(txt, val));
         }
     }
@@ -702,7 +714,7 @@ function renderReqTable() {
         let poDisplay = r.po_number||r.number;
         if(r.urgency === 'high') poDisplay = `<span class="high-icon">🚩</span>` + poDisplay;
 
-        // UPDATED: Added event.stopPropagation() so menu opens correctly
+        // STOP PROPAGATION ADDED
         const btnHtml = `<button class="drop-btn" onclick="event.stopPropagation(); toggleMenu(this, ${r.id}, 'req')">•••</button>`;
 
         tr.innerHTML = `
@@ -736,7 +748,7 @@ function renderDeliveredHistory() {
         if(search && !`${r.po_number} ${r.description} ${r.supplier}`.toLowerCase().includes(search)) return;
 
         const tr = document.createElement("tr");
-        // UPDATED: Added event.stopPropagation()
+        // STOP PROPAGATION ADDED
         const btnHtml = `<button class="drop-btn" onclick="event.stopPropagation(); toggleMenu(this, ${r.id}, 'req_del')">•••</button>`;
         
         tr.innerHTML = `
@@ -760,7 +772,7 @@ function renderLandTable() {
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
         let delBadge = r.delivered==1 ? '<span class="tag green">Received</span>' : (r.delivered==2 ? '<span class="tag yellow">Partial</span>':'<span class="tag gray">Pending</span>');
         
-        // UPDATED: Added event.stopPropagation()
+        // STOP PROPAGATION ADDED
         const btnHtml = `<button class="drop-btn" onclick="event.stopPropagation(); toggleMenu(this, ${r.id}, 'land')">•••</button>`;
         
         tr.innerHTML = `<td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td><td>${r.vessel}</td><td>${r.item}</td><td>${r.workshop}</td><td>${r.expected||""}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td><td>${delBadge}</td><td>${btnHtml}</td>`;
@@ -847,14 +859,24 @@ function toggleMenu(btn, id, type) {
     menu.innerHTML = html;
     menu.dataset.triggerId = `${type}-${id}`;
     
-    // Position
+    // Calculate Position
     const rect = btn.getBoundingClientRect();
+    const menuHeight = 300; // Estimated max height for safety calculation or we can measure invisible
+    // Simple logic:
     menu.style.display = 'block';
-    menu.style.top = (rect.bottom + window.scrollY + 2) + "px";
+    
+    // Check if it fits below
+    if(rect.bottom + menu.offsetHeight > window.innerHeight) {
+        // Open upwards
+        menu.style.top = (rect.top - menu.offsetHeight - 2) + "px";
+    } else {
+        // Open downwards
+        menu.style.top = (rect.bottom + window.scrollY + 2) + "px";
+    }
     
     // Check right edge
-    if(rect.left + 170 > window.innerWidth) {
-        menu.style.left = (rect.right - 170) + "px";
+    if(rect.left + 180 > window.innerWidth) {
+        menu.style.left = (rect.right - 180) + "px";
     } else {
         menu.style.left = rect.left + "px";
     }
