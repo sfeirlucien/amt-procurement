@@ -1,6 +1,6 @@
 """
 AMT Procurement - Robust Flask Backend
-UPDATED: Fixes for Add buttons, Directory types, Urgency, and Excel Compatibility.
+UPDATED: Fixed Audit Logs (Timestamp mapping), Duplicate Order support, and Excel robustness.
 """
 
 import os
@@ -33,7 +33,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "office_ops.xlsx")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
-FX_CACHE_FILE = os.path.join(BASE_DIR, "fx_cache.json")
 
 # Default Users
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
@@ -87,7 +86,6 @@ def get_wb() -> Workbook:
     """Load workbook or create if missing."""
     if not os.path.exists(DB_FILE):
         wb = Workbook()
-        # Remove default sheet
         if "Sheet" in wb.sheetnames:
             wb.remove(wb["Sheet"])
         wb.save(DB_FILE)
@@ -96,8 +94,7 @@ def get_wb() -> Workbook:
 def ensure_db() -> None:
     """
     Ensures DB file exists, has all required sheets,
-    and has all required columns in those sheets.
-    Auto-migrates old files by appending missing columns.
+    and has all required columns. Auto-migrates old files.
     """
     if not os.path.exists(DB_FILE):
         wb = Workbook()
@@ -118,28 +115,23 @@ def ensure_db() -> None:
             modified = True
         else:
             ws = wb[sname]
-            # Read existing headers from Row 1
             existing_headers = []
             if ws.max_row >= 1:
                 existing_headers = [str(cell.value).strip() for cell in ws[1] if cell.value]
             
-            # Find missing
             for h in expected_headers:
                 if h not in existing_headers:
-                    # Append new column
                     ws.cell(row=1, column=ws.max_column + 1).value = h
                     modified = True
 
     # Ensure Admin Exists
     ws_users = wb["users"]
-    users = read_rows("users", wb=wb) # Pass wb to avoid reload
+    users = read_rows("users", wb=wb)
     
-    # Check Admin
     if not any(u.get("username") == "admin" for u in users):
         ws_users.append(["admin", hash_pw(DEFAULT_ADMIN["password"]), "admin", now_iso()])
         modified = True
     
-    # Check Finance
     if not any(u.get("username") == "finance" for u in users):
         ws_users.append(["finance", hash_pw(DEFAULT_FINANCE["password"]), "finance", now_iso()])
         modified = True
@@ -147,15 +139,11 @@ def ensure_db() -> None:
     if modified:
         wb.save(DB_FILE)
     
-    # Ensure dirs
     os.makedirs(BACKUP_DIR, exist_ok=True)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def read_rows(sheet: str, wb: Workbook = None) -> List[Dict[str, Any]]:
-    """
-    Reads rows into list of dicts.
-    Uses ACTUAL file headers to map values, not assumed schema order.
-    """
+    """Reads rows into list of dicts using ACTUAL file headers."""
     if not wb:
         wb = get_wb()
     if sheet not in wb.sheetnames:
@@ -165,21 +153,14 @@ def read_rows(sheet: str, wb: Workbook = None) -> List[Dict[str, Any]]:
     if ws.max_row < 2:
         return []
 
-    # Get headers from first row
     headers = [str(c.value).strip() for c in ws[1]]
     
     out = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        # Skip completely empty rows
         if not any(row): continue
-        
-        # Map header -> value
         item = {}
         for i, h in enumerate(headers):
-            if i < len(row):
-                item[h] = row[i]
-            else:
-                item[h] = None
+            item[h] = row[i] if i < len(row) else None
         out.append(item)
     return out
 
@@ -188,21 +169,16 @@ def append_row(sheet: str, data: Dict[str, Any]) -> None:
     wb = get_wb()
     ws = wb[sheet]
     
-    # Get headers map: { "header_name": column_index_1_based }
     headers_map = {}
     for idx, cell in enumerate(ws[1], 1):
         if cell.value:
             headers_map[str(cell.value).strip()] = idx
             
-    # Determine max column to know range
     max_col = ws.max_column
-    
-    # Create a list for the new row
     new_row_vals = [None] * max_col
     
     for key, val in data.items():
         if key in headers_map:
-            # list is 0-indexed, column index is 1-indexed
             new_row_vals[headers_map[key] - 1] = val
             
     ws.append(new_row_vals)
@@ -212,22 +188,17 @@ def update_row_by_id(sheet: str, row_id: int, updates: Dict[str, Any]) -> bool:
     wb = get_wb()
     ws = wb[sheet]
     
-    # Map headers
     headers_map = {}
     id_col_idx = -1
-    
     for idx, cell in enumerate(ws[1], 1):
         val = str(cell.value).strip() if cell.value else ""
         headers_map[val] = idx
-        if val == "id":
-            id_col_idx = idx
+        if val == "id": id_col_idx = idx
 
-    if id_col_idx == -1: return False # No ID column
+    if id_col_idx == -1: return False
 
     target_row_idx = -1
-    # Find row
     for r in range(2, ws.max_row + 1):
-        # ID is usually int, but handle string conversion safety
         cell_val = ws.cell(r, id_col_idx).value
         if str(cell_val) == str(row_id):
             target_row_idx = r
@@ -235,7 +206,6 @@ def update_row_by_id(sheet: str, row_id: int, updates: Dict[str, Any]) -> bool:
             
     if target_row_idx == -1: return False
 
-    # Update
     for k, v in updates.items():
         if k in headers_map:
             ws.cell(target_row_idx, headers_map[k]).value = v
@@ -265,16 +235,14 @@ def delete_row_by_id(sheet: str, row_id: int) -> bool:
 def next_id(sheet: str) -> int:
     rows = read_rows(sheet)
     if not rows: return 1
-    # filter out None or non-int IDs safely
     ids = []
     for r in rows:
-        try:
-            ids.append(int(r.get("id", 0)))
+        try: ids.append(int(r.get("id", 0)))
         except: pass
     return (max(ids) + 1) if ids else 1
 
 # -------------------------------------------------
-# Auth Helpers
+# Auth & Logging
 # -------------------------------------------------
 def current_user() -> Optional[Dict[str, str]]:
     if "username" not in session: return None
@@ -310,23 +278,16 @@ def require_write():
 # FX / Currency
 # -------------------------------------------------
 def fetch_fx_rates(base="USD"):
-    # Simple hardcoded fallback if API fails
-    # Real app would use cache logic (omitted for brevity but kept stable)
     return {"USD": 1.0, "EUR": 0.95, "AED": 3.673, "GBP": 0.79, "SGD": 1.35}
 
 def to_usd(amount, currency):
-    try:
-        val = float(amount)
-    except:
-        return 0.0
-    
+    try: val = float(amount)
+    except: return 0.0
     currency = (currency or "USD").upper()
     if currency == "USD": return val
-    
     rates = fetch_fx_rates()
     rate = rates.get(currency, 1.0)
-    if rate == 0: return val
-    return val / rate
+    return val / rate if rate != 0 else val
 
 # -------------------------------------------------
 # Routes
@@ -334,7 +295,6 @@ def to_usd(amount, currency):
 
 @app.before_request
 def init_on_first_req():
-    # Helper to ensure DB exists on startup/first request
     if not getattr(app, '_db_checked', False):
         ensure_db()
         app._db_checked = True
@@ -353,16 +313,10 @@ def login():
     data = request.json or {}
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
-    
     users = read_rows("users")
     user = next((u for u in users if u.get("username") == username), None)
-    
-    if not user:
+    if not user or user.get("password_hash") != hash_pw(password):
         return jsonify({"error": "invalid_credentials"}), 401
-        
-    if user.get("password_hash") != hash_pw(password):
-        return jsonify({"error": "invalid_credentials"}), 401
-        
     session["username"] = username
     session["role"] = user.get("role", "user")
     log_action("Login")
@@ -379,7 +333,7 @@ def get_session():
     if not u: return jsonify({"logged_in": False}), 401
     return jsonify({"logged_in": True, **u})
 
-# --- Dashboard & Core Data ---
+# --- Dashboard Core ---
 @app.get("/api/currencies")
 def get_currencies():
     rates = fetch_fx_rates()
@@ -389,7 +343,6 @@ def get_currencies():
 @app.get("/api/requisitions")
 def list_reqs():
     rows = read_rows("requisitions")
-    # Clean data types for frontend
     for r in rows:
         try: r["amount_usd"] = float(r.get("amount_usd") or 0)
         except: r["amount_usd"] = 0.0
@@ -400,10 +353,8 @@ def add_req():
     if require_write(): return require_write()
     d = request.json or {}
     
-    # Calculate Amount
     amt_origin = d.get("amount_original")
     if amt_origin in [None, ""]: amt_origin = d.get("amount", 0)
-    
     curr = d.get("currency", "USD")
     amt_usd = to_usd(amt_origin, curr)
     
@@ -415,6 +366,7 @@ def add_req():
         "paid": 1 if d.get("paid") else 0,
         "delivered": int(d.get("delivered", 0)),
         "status": "open",
+        "po_number": d.get("po_number", ""),
         "created_at": now_iso(),
         "created_by": current_user()["username"]
     }
@@ -426,14 +378,9 @@ def add_req():
 def edit_req(rid):
     if require_write(): return require_write()
     d = request.json or {}
+    updates = {**d, "updated_at": now_iso()}
     
-    updates = {**d}
-    updates["updated_at"] = now_iso()
-    
-    # Recalc amount if changed
     if "amount_original" in d or "amount" in d or "currency" in d:
-        # We need existing row to know currency if not provided, 
-        # but for simplicity assume frontend sends all relevant financial fields on edit
         amt = d.get("amount_original") or d.get("amount") or 0
         curr = d.get("currency", "USD")
         updates["amount_usd"] = round(to_usd(amt, curr), 2)
@@ -469,24 +416,20 @@ def bulk_req():
     
     count = 0
     for i in ids:
-        if update_row_by_id("requisitions", int(i), updates):
-            count += 1
+        if update_row_by_id("requisitions", int(i), updates): count += 1
     log_action("Bulk Req", details=f"{action} on {count} items")
     return jsonify({"ok": True, "updated": count})
 
 # --- Landings ---
 @app.get("/api/landings")
-def list_landings():
-    return jsonify(read_rows("landings"))
+def list_landings(): return jsonify(read_rows("landings"))
 
 @app.post("/api/landings")
 def add_landing():
     if require_write(): return require_write()
     d = request.json or {}
-    
     amt = d.get("amount_original") or d.get("amount") or 0
     curr = d.get("currency", "USD")
-    
     row = {
         **d,
         "id": next_id("landings"),
@@ -506,15 +449,12 @@ def edit_landing(lid):
     if require_write(): return require_write()
     d = request.json or {}
     updates = {**d, "updated_at": now_iso()}
-    
     if "amount_original" in d or "amount" in d:
         amt = d.get("amount_original") or d.get("amount") or 0
         curr = d.get("currency", "USD")
         updates["amount_usd"] = round(to_usd(amt, curr), 2)
         updates["amount_original"] = amt
-        
     if "paid" in d: updates["paid"] = 1 if d["paid"] else 0
-    
     update_row_by_id("landings", lid, updates)
     return jsonify({"ok": True})
 
@@ -530,14 +470,12 @@ def bulk_land():
     d = request.json or {}
     ids = d.get("ids", [])
     action = d.get("action")
-    
     updates = {"updated_at": now_iso()}
     if action == "mark_paid": updates["paid"] = 1
     elif action == "mark_unpaid": updates["paid"] = 0
     elif action == "mark_delivered": updates["delivered"] = 1
     elif action == "mark_partial": updates["delivered"] = 2
     else: return jsonify({"error": "invalid_action"}), 400
-    
     for i in ids: update_row_by_id("landings", int(i), updates)
     return jsonify({"ok": True})
 
@@ -545,7 +483,6 @@ def bulk_land():
 @app.get("/api/directory")
 def list_dir():
     rows = read_rows("directory")
-    # Sort: Suppliers first, then Workshops
     rows.sort(key=lambda x: x.get("type", ""))
     return jsonify(rows)
 
@@ -554,10 +491,8 @@ def add_dir():
     if require_write(): return require_write()
     d = request.json or {}
     if not d.get("name"): return jsonify({"error": "name_required"}), 400
-    
     row = {
-        **d,
-        "id": next_id("directory"),
+        **d, "id": next_id("directory"),
         "rating": d.get("rating", 5),
         "created_at": now_iso(),
         "created_by": current_user()["username"]
@@ -579,7 +514,7 @@ def del_dir(did):
     delete_row_by_id("directory", did)
     return jsonify({"ok": True})
 
-# --- Admin Resources (Vessels, Categories, Users) ---
+# --- Admin Resources ---
 @app.get("/api/categories")
 def get_cats(): return jsonify(read_rows("categories"))
 
@@ -626,18 +561,9 @@ def add_user():
     if require_admin(): return require_admin()
     d = request.json or {}
     if not d.get("username") or not d.get("password"): return jsonify({"error": "fields_required"}), 400
-    
-    # Check duplicate
     existing = read_rows("users")
-    if any(u["username"] == d["username"] for u in existing):
-        return jsonify({"error": "duplicate_user"}), 409
-        
-    row = {
-        "username": d["username"],
-        "password_hash": hash_pw(d["password"]),
-        "role": d.get("role", "user"),
-        "created_at": now_iso()
-    }
+    if any(u["username"] == d["username"] for u in existing): return jsonify({"error": "duplicate_user"}), 409
+    row = {"username": d["username"], "password_hash": hash_pw(d["password"]), "role": d.get("role", "user"), "created_at": now_iso()}
     append_row("users", row)
     return jsonify({"ok": True})
 
@@ -645,36 +571,37 @@ def add_user():
 def del_user(username):
     if require_admin(): return require_admin()
     if username == "admin": return jsonify({"error": "cannot_delete_root"}), 400
-    
-    wb = get_wb()
-    ws = wb["users"]
+    wb = get_wb(); ws = wb["users"]
     deleted = False
-    
-    # Find col index for username
     u_idx = -1
     for idx, c in enumerate(ws[1], 1):
         if str(c.value).strip() == "username":
             u_idx = idx
             break
-            
     if u_idx != -1:
         for r in range(2, ws.max_row + 1):
             if ws.cell(r, u_idx).value == username:
-                ws.delete_rows(r, 1)
-                deleted = True
-                break
+                ws.delete_rows(r, 1); deleted = True; break
         if deleted: wb.save(DB_FILE)
-    
-    if deleted: return jsonify({"ok": True})
-    return jsonify({"error": "not_found"}), 404
+    return jsonify({"ok": True}) if deleted else (jsonify({"error": "not_found"}), 404)
 
-# --- Reports & Logs ---
+# --- Logs & Reports ---
 @app.get("/api/audit")
 def get_logs():
     if require_admin(): return require_admin()
-    logs = read_rows("logs")
-    logs.reverse() # Newest first
-    return jsonify(logs[:500])
+    raw = read_rows("logs")
+    # FIX: Map 'timestamp' to 'date' for frontend
+    clean = []
+    for r in raw:
+        clean.append({
+            "user": r.get("user"),
+            "action": r.get("action"),
+            "target": r.get("target"),
+            "details": r.get("details"),
+            "date": r.get("timestamp")
+        })
+    clean.reverse()
+    return jsonify(clean[:500])
 
 @app.get("/api/reports/aging")
 def aging_report():
@@ -682,9 +609,7 @@ def aging_report():
     reqs = read_rows("requisitions")
     now = get_dubai_time()
     out = []
-    
     for r in reqs:
-        # Check unpaid and not cancelled
         paid = r.get("paid") in [1, True, "1", "true"]
         status = (r.get("status") or "").lower()
         if not paid and status != "cancelled":
@@ -693,14 +618,11 @@ def aging_report():
             try:
                 dt = datetime.strptime(str(date_str).split("T")[0], "%Y-%m-%d")
                 delta = (now - dt).days
-            except:
-                delta = 0
-            
+            except: delta = 0
             grp = "< 30 Days"
             if delta > 90: grp = "> 90 Days"
             elif delta > 60: grp = "60-90 Days"
             elif delta > 30: grp = "30-60 Days"
-            
             out.append({
                 "po": r.get("po_number") or r.get("number"),
                 "supplier": r.get("supplier"),
@@ -715,16 +637,11 @@ def aging_report():
 def upload_doc():
     if require_write(): return require_write()
     if "file" not in request.files: return jsonify({"error": "no_file"}), 400
-    
     f = request.files["file"]
     if not f.filename: return jsonify({"error": "empty_filename"}), 400
-    
     fname = secure_filename(f.filename)
-    # Add timestamp to prevent overwrites
     save_name = f"{int(time.time())}_{fname}"
-    
     f.save(os.path.join(UPLOAD_FOLDER, save_name))
-    
     row = {
         "id": next_id("documents"),
         "parent_type": request.form.get("parent_type", "req"),
@@ -740,34 +657,23 @@ def upload_doc():
 def get_docs(ptype, pid):
     if require_login(): return require_login()
     docs = read_rows("documents")
-    # Filter matches
     matches = [d for d in docs if str(d.get("parent_type")) == str(ptype) and str(d.get("parent_id")) == str(pid)]
     return jsonify(matches)
 
-# --- Backups & Restore ---
+# --- Backups ---
 @app.post("/api/upload")
 def upload_restore_db():
     if require_admin(): return require_admin()
     if "file" not in request.files: return jsonify({"error": "no_file"}), 400
     f = request.files["file"]
-    
-    # Save to temp
     tmp_path = os.path.join(BASE_DIR, "temp_restore.xlsx")
     f.save(tmp_path)
-    
-    # Verify it opens
-    try:
-        openpyxl.load_workbook(tmp_path)
-    except:
-        return jsonify({"error": "invalid_excel_file"}), 400
-        
-    # Overwrite DB
+    try: openpyxl.load_workbook(tmp_path)
+    except: return jsonify({"error": "invalid_excel_file"}), 400
     shutil.copy2(tmp_path, DB_FILE)
     os.remove(tmp_path)
-    
-    # Re-run ensure to add missing columns if any
     ensure_db()
-    log_action("Restore DB", details="Overwrote database via upload")
+    log_action("Restore DB", details="Overwrote DB via upload")
     return jsonify({"ok": True})
 
 @app.post("/api/backup/create")
@@ -787,28 +693,20 @@ def list_backups():
             if f.endswith(".xlsx"):
                 p = os.path.join(BACKUP_DIR, f)
                 st = os.stat(p)
-                out.append({
-                    "name": f,
-                    "size": st.st_size,
-                    "created_at": datetime.fromtimestamp(st.st_mtime).isoformat()
-                })
+                out.append({"name": f, "size": st.st_size, "created_at": datetime.fromtimestamp(st.st_mtime).isoformat()})
     return jsonify(out)
 
 @app.get("/api/backups/<name>/download")
 def download_backup(name):
     if require_admin(): return require_admin()
-    safe_name = secure_filename(name)
-    return send_from_directory(BACKUP_DIR, safe_name, as_attachment=True)
+    return send_from_directory(BACKUP_DIR, secure_filename(name), as_attachment=True)
 
 @app.post("/api/backups/<name>/restore")
 def restore_backup_file(name):
     if require_admin(): return require_admin()
-    safe_name = secure_filename(name)
-    src = os.path.join(BACKUP_DIR, safe_name)
+    src = os.path.join(BACKUP_DIR, secure_filename(name))
     if os.path.exists(src):
-        shutil.copy2(src, DB_FILE)
-        ensure_db()
-        return jsonify({"ok": True})
+        shutil.copy2(src, DB_FILE); ensure_db(); return jsonify({"ok": True})
     return jsonify({"error": "not_found"}), 404
 
 # --- Start ---
