@@ -211,6 +211,7 @@
         <div class="flex-row" style="background:var(--bg-body); padding:16px; border-radius:8px; align-items:flex-end;">
           <div style="flex:1"><label>Type</label><select id="ovTypeFilter"><option value="">All</option><option value="req">Orders</option><option value="land">Landings</option></select></div>
           <div style="flex:1"><label>Vessel</label><select id="ovVesselFilter"><option value="">All</option></select></div>
+          <div style="flex:1"><label>Payment Status</label><select id="ovPaidFilter"><option value="">All</option><option value="1">Paid</option><option value="0">Unpaid</option></select></div>
           <div style="flex:1"><label>Month</label><select id="ovMonthFilter"><option value="">All</option></select></div>
           <div style="flex:1"><label>Year</label><select id="ovYearFilter"><option value="">All</option></select></div>
           <div><button id="ovApplyTotalsBtn">Apply Filter</button></div>
@@ -219,8 +220,8 @@
         <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; margin-top:20px;">
            <div class="summary-grid">
              <div class="summary-item"><div class="summary-label">Filtered Total</div><div class="summary-value" id="ovAllTotal">$0.00</div></div>
-             <div class="summary-item"><div class="summary-label">Paid</div><div class="summary-value" id="ovPaidMonthTotal" style="color:var(--success)">$0.00</div></div>
-             <div class="summary-item"><div class="summary-label">Unpaid</div><div class="summary-value" id="ovUnpaidMonthTotal" style="color:var(--danger)">$0.00</div></div>
+             <div class="summary-item"><div class="summary-label">Paid (Filtered)</div><div class="summary-value" id="ovPaidMonthTotal" style="color:var(--success)">$0.00</div></div>
+             <div class="summary-item"><div class="summary-label">Unpaid (Filtered)</div><div class="summary-value" id="ovUnpaidMonthTotal" style="color:var(--danger)">$0.00</div></div>
            </div>
            
            <div style="background:var(--bg-body); padding:16px; border-radius:var(--radius); border:1px solid var(--border);">
@@ -406,7 +407,7 @@
          <div class="flex-row">
              <div style="flex:1"><select id="auditFYear"><option value="">Year</option></select></div>
              <div style="flex:1"><select id="auditFMonth"><option value="">Month</option></select></div>
-             <div style="flex:1"><button id="auditApplyBtn">Filter Logs</button></div>
+             <div style="flex:1"><button id="auditApplyBtn">Filter Logs</button> <button id="auditRefreshBtn" class="secondary">Refresh</button></div>
          </div>
          <div class="table-container" style="max-height: 400px; overflow-y: auto;">
              <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
@@ -658,6 +659,7 @@ function renderReqTable() {
             <div class="drop-content">
                <button onclick="openDocPopup(${r.id}, 'req')">📎 Documents</button>
                <button onclick="editReq(${r.id})">✎ Edit / Remarks</button>
+               <button onclick="duplicateReq(${r.id})">📋 Duplicate</button>
                <button onclick="generatePO(${r.id})">🖨️ Print PO</button>
                <button onclick="showSupplierHistory('${r.supplier}')">📅 Supplier History</button>
                ${!r.paid ? `<button onclick="singleAction(${r.id}, 'req', 'mark_paid')">💲 Mark Paid</button>` : ''}
@@ -725,6 +727,37 @@ async function editReq(id) {
     document.querySelector("[data-tab='requisitions']").click(); document.getElementById("reqAddCard").scrollIntoView({behavior:"smooth"});
 }
 
+// DUPLICATE/COPY FEATURE
+async function duplicateReq(id) {
+    const r = allReqs.find(x => x.id == id); if(!r) return;
+    if(!confirm("Create a copy of this order?")) return;
+    
+    // Create payload stripping unique IDs and resetting status
+    const payload = {
+        number: (r.number || "") + " (Copy)",
+        po_number: "", // clear PO so user/system assigns new
+        description: r.description,
+        vessel: r.vessel,
+        category: r.category,
+        supplier: r.supplier,
+        date_ordered: new Date().toISOString().split('T')[0], // Today
+        expected: "",
+        amount_original: r.amount_original,
+        amount: r.amount_original,
+        currency: r.currency,
+        urgency: r.urgency,
+        remarks: r.remarks,
+        paid: false,
+        delivered: 0
+    };
+
+    try {
+        await apiFetch("/api/requisitions", {method:"POST", body:JSON.stringify(payload)});
+        await afterDataLoad();
+        alert("Order duplicated!");
+    } catch(e) { alert("Error duplicating: " + e.error); }
+}
+
 document.getElementById("saveReqBtn").onclick = async () => {
     const valAmt = document.getElementById("reqTotal").value;
     const payload = {
@@ -761,9 +794,6 @@ function openDirPopup(type, existingId=null) {
     document.getElementById("dirPopupTitle").textContent = existingId ? "Edit Contact" : ("Add " + (type==='supplier'?'Supplier':'Workshop'));
     
     if(existingId) {
-        // Find existing
-        const all = Array.from(document.querySelectorAll("#directoryTable tbody tr")).map(tr=>{/* logic to find from cache would be better but reloading... */});
-        // Simpler: reload data or assume passed data. Let's fetch clean list
         apiFetch("/api/directory").then(dirs => {
             const d = dirs.find(x=>x.id == existingId);
             if(d) {
@@ -838,6 +868,7 @@ document.getElementById("ovApplyTotalsBtn").onclick = calculateOverviewTotals;
 function calculateOverviewTotals() {
     const typeF = document.getElementById("ovTypeFilter").value;
     const vesF = document.getElementById("ovVesselFilter").value;
+    const paidF = document.getElementById("ovPaidFilter").value;
     const monthF = document.getElementById("ovMonthFilter").value;
     const yearF = document.getElementById("ovYearFilter").value;
 
@@ -849,6 +880,7 @@ function calculateOverviewTotals() {
     items = items.filter(i => {
         if((i.status||'open') === 'cancelled') return false;
         if(vesF && i.vessel !== vesF) return false;
+        if(paidF !== "" && (i.paid?1:0) != paidF) return false;
         
         const d = parseDateSafe(i.date_ordered || i.landed_date);
         if(yearF && (!d || d.getFullYear() != yearF)) return false;
@@ -1039,9 +1071,9 @@ async function loadAdminData() {
                 <td><button class="small-action secondary" onclick="window.open('/api/backups/${b.name}/download')">DL</button> <button class="small-action warning" onclick="restoreBackup('${b.name}')">Restore</button></td></tr>`;
             });
             
-            // Audit Logs
+            // Audit Logs - Load initial 100
             allAuditLogs = await apiFetch("/api/audit");
-            renderAuditLog();
+            renderAuditLog(true); // true = show all/recent
         } catch(e) {}
     }
 }
@@ -1063,19 +1095,33 @@ document.getElementById("uploadBackupBtn").onclick = async () => {
 document.getElementById("createBackupBtn").onclick = async () => { await apiFetch("/api/backup/create", {method:"POST"}); await loadAdminData(); };
 document.getElementById("downloadBackupBtn").onclick = () => window.open("/api/backup/download", "_blank");
 
-function renderAuditLog() {
+document.getElementById("auditRefreshBtn").onclick = async () => { allAuditLogs = await apiFetch("/api/audit"); renderAuditLog(true); };
+
+function renderAuditLog(showAll = false) {
     const tbody = document.querySelector("#auditTable tbody"); tbody.innerHTML = "";
     const fY = document.getElementById("auditFYear").value; const fM = document.getElementById("auditFMonth").value;
+    
+    // If showAll is true (initial load) or no filters set, show recent 100
+    // Otherwise filter strictly
     const filtered = allAuditLogs.filter(log => {
+        if(showAll && !fY && !fM) return true;
         if(!log.date) return false;
         const d = new Date(log.date);
         if(fY && d.getFullYear() != fY) return false;
         if(fM && (d.getMonth()+1) != fM) return false;
         return true;
     });
-    filtered.slice(0,100).forEach(log => tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${log.date.replace("T"," ")}</td></tr>`);
+    
+    if(filtered.length === 0) tbody.innerHTML = "<tr><td colspan='4'>No logs found.</td></tr>";
+
+    filtered.slice(0,100).forEach(log => {
+        // Safe date parse
+        let dateStr = log.date || "-";
+        try { dateStr = log.date.replace("T"," "); } catch {}
+        tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target}</td><td>${dateStr}</td></tr>`;
+    });
 }
-document.getElementById("auditApplyBtn").onclick = renderAuditLog;
+document.getElementById("auditApplyBtn").onclick = () => renderAuditLog(false);
 
 /* ================= BULK & SORT ================= */
 function attachBulkListeners(type) {
