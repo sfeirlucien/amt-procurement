@@ -281,13 +281,14 @@
             <tr>
               <th style="width:40px;"><input type="checkbox" id="reqSelectAll" /></th>
               <th onclick="sortTable(this,1)">PO #</th>
-              <th onclick="sortTable(this,2)">Description</th>
-              <th onclick="sortTable(this,3)">Vessel</th>
-              <th onclick="sortTable(this,4)">Supplier</th>
-              <th onclick="sortTable(this,5)">Ordered</th>
-              <th onclick="sortTable(this,6)">Amount ($)</th>
-              <th onclick="sortTable(this,7)">Payment</th>
-              <th onclick="sortTable(this,8)">Delivery</th>
+              <th onclick="sortTable(this,2)">Category</th>
+              <th onclick="sortTable(this,3)">Description</th>
+              <th onclick="sortTable(this,4)">Vessel</th>
+              <th onclick="sortTable(this,5)">Supplier</th>
+              <th onclick="sortTable(this,6)">Ordered</th>
+              <th onclick="sortTable(this,7)">Amount ($)</th>
+              <th onclick="sortTable(this,8)">Payment</th>
+              <th onclick="sortTable(this,9)">Delivery</th>
               <th style="width:50px;"></th>
             </tr>
           </thead>
@@ -516,7 +517,7 @@
     </div>
     <div class="flex-row" id="chartExtraFilters">
        <div class="flex-1"><label>Filter Vessel</label><select id="chartVesselFilter"><option value="">All Vessels</option></select></div>
-       <div class="flex-1"><label>Specific Month</label><input type="month" id="chartSpecificMonth" /></div>
+       <div class="flex-1"><label>Specific Month</label><select id="chartSpecificMonth"><option value="">Select Month</option></select></div>
        <div class="flex-1"><label>Type</label><select id="chartType"><option value="bar">Bar</option><option value="doughnut">Doughnut</option></select></div>
        <div style="flex:0;"><label>&nbsp;</label><button id="refreshChartBtn">Refresh</button></div>
     </div>
@@ -600,6 +601,19 @@ async function loadOptions(){
         document.getElementById("auditFYear").add(new Option(i, i));
     }
 
+    // Chart Month Select (Last 24 Months)
+    const chartM = document.getElementById("chartSpecificMonth");
+    if(chartM) {
+        chartM.innerHTML = '<option value="">Select Month</option>';
+        const d = new Date();
+        for(let i=0; i<24; i++) {
+            const temp = new Date(d.getFullYear(), d.getMonth() - i, 1);
+            const val = temp.toISOString().slice(0, 7); // YYYY-MM
+            const txt = temp.toLocaleString('default', { month: 'long', year: 'numeric' });
+            chartM.add(new Option(txt, val));
+        }
+    }
+
     try { const cats=await apiFetch("/api/categories"); const cSel=document.getElementById("reqCategory"); 
        if(cSel){ cSel.innerHTML='<option value="">Select</option>'; cats.forEach(c=>cSel.add(new Option(c.abbr, c.abbr))); } 
        // Admin Table
@@ -635,12 +649,6 @@ async function updateDashboard() {
    document.getElementById("summaryOpenReqUnpaid").textContent = unpaidReq.length;
    document.getElementById("summaryOpenLandNotDel").textContent = openLand.length;
    document.getElementById("summaryOpenLandUnpaid").textContent = unpaidLand.length;
-   
-   // Overview Table (Top 5 Recent)
-   const t = document.querySelector("#overviewReqTable tbody"); t.innerHTML="";
-   allReqs.sort((a,b)=> new Date(b.date_ordered) - new Date(a.date_ordered)).slice(0,5).forEach(r => {
-      t.innerHTML += `<tr><td>${r.po_number||r.number}</td><td>${r.vessel}</td><td>${r.description}</td><td>${r.supplier}</td><td>${r.date_ordered}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td></tr>`;
-   });
 }
 
 function checkUrgency(r) {
@@ -694,11 +702,13 @@ function renderReqTable() {
         let poDisplay = r.po_number||r.number;
         if(r.urgency === 'high') poDisplay = `<span class="high-icon">🚩</span>` + poDisplay;
 
-        const btnHtml = `<button class="drop-btn" onclick="toggleMenu(this, ${r.id}, 'req')">•••</button>`;
+        // UPDATED: Added event.stopPropagation() so menu opens correctly
+        const btnHtml = `<button class="drop-btn" onclick="event.stopPropagation(); toggleMenu(this, ${r.id}, 'req')">•••</button>`;
 
         tr.innerHTML = `
             <td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td>
             <td><strong>${poDisplay}</strong></td>
+            <td>${r.category||'-'}</td>
             <td>${r.description}</td>
             <td>${r.vessel}</td>
             <td><span class="clickable-link" onclick="showSupplierHistory('${r.supplier}')">${r.supplier}</span></td>
@@ -726,7 +736,8 @@ function renderDeliveredHistory() {
         if(search && !`${r.po_number} ${r.description} ${r.supplier}`.toLowerCase().includes(search)) return;
 
         const tr = document.createElement("tr");
-        const btnHtml = `<button class="drop-btn" onclick="toggleMenu(this, ${r.id}, 'req_del')">•••</button>`;
+        // UPDATED: Added event.stopPropagation()
+        const btnHtml = `<button class="drop-btn" onclick="event.stopPropagation(); toggleMenu(this, ${r.id}, 'req_del')">•••</button>`;
         
         tr.innerHTML = `
             <td><strong>${r.po_number||r.number}</strong></td>
@@ -749,7 +760,8 @@ function renderLandTable() {
         const isChecked = selectedIds.has(r.id) && currentBulkType === 'land';
         let delBadge = r.delivered==1 ? '<span class="tag green">Received</span>' : (r.delivered==2 ? '<span class="tag yellow">Partial</span>':'<span class="tag gray">Pending</span>');
         
-        const btnHtml = `<button class="drop-btn" onclick="toggleMenu(this, ${r.id}, 'land')">•••</button>`;
+        // UPDATED: Added event.stopPropagation()
+        const btnHtml = `<button class="drop-btn" onclick="event.stopPropagation(); toggleMenu(this, ${r.id}, 'land')">•••</button>`;
         
         tr.innerHTML = `<td><input type="checkbox" class="row-select" data-id="${r.id}" ${isChecked?'checked':''}></td><td>${r.vessel}</td><td>${r.item}</td><td>${r.workshop}</td><td>${r.expected||""}</td><td>${formatMoney(r.amount_usd)}</td><td>${r.paid?'<span class="tag green">Paid</span>':'<span class="tag red">Unpaid</span>'}</td><td>${delBadge}</td><td>${btnHtml}</td>`;
         tbody.appendChild(tr);
