@@ -657,6 +657,7 @@ function renderReqTable() {
         const menu = `
           <div class="action-menu"><button class="drop-btn" onclick="toggleMenu(this)">•••</button>
             <div class="drop-content">
+               <button onclick="copyToWhatsApp(${r.id})">📱 Copy for WhatsApp</button>
                <button onclick="openDocPopup(${r.id}, 'req')">📎 Documents</button>
                <button onclick="editReq(${r.id})">✎ Edit / Remarks</button>
                <button onclick="duplicateReq(${r.id})">📋 Duplicate</button>
@@ -756,6 +757,13 @@ async function duplicateReq(id) {
         await afterDataLoad();
         alert("Order duplicated!");
     } catch(e) { alert("Error duplicating: " + e.error); }
+}
+
+function copyToWhatsApp(id) {
+    const r = allReqs.find(x => x.id == id);
+    if (!r) return;
+    const text = `*NEW ORDER*\nPO: ${r.po_number || r.number || 'Pending'}\nVessel: ${r.vessel}\nSupplier: ${r.supplier}\nItem: ${r.description}\nExpected: ${r.expected || 'ASAP'}\nUrgency: ${r.urgency || 'Normal'}`;
+    navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!")).catch(err => alert("Failed to copy"));
 }
 
 document.getElementById("saveReqBtn").onclick = async () => {
