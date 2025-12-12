@@ -1,6 +1,6 @@
 """
 AMT Procurement - Robust Flask Backend
-UPDATED: Fixes for Add buttons, Directory types, Urgency, and Excel Compatibility.
+UPDATED: Fixes for Logs, Filters, CSV Export support, and Permissions.
 """
 
 import os
@@ -282,14 +282,19 @@ def log_action(action: str, target: str = "", details: str = "") -> None:
     try:
         u = current_user()
         username = u["username"] if u else "system"
+        # Ensure values are strings to prevent formatting errors
+        target_str = str(target) if target else "-"
+        details_str = str(details) if details else ""
+        
         append_row("logs", {
             "timestamp": now_iso(),
             "user": username,
             "action": action,
-            "target": target,
-            "details": details
+            "target": target_str,
+            "details": details_str
         })
-    except: pass
+    except Exception as e:
+        print(f"Logging failed: {e}")
 
 def require_login():
     if not current_user(): return jsonify({"error": "login_required"}), 401
@@ -308,8 +313,7 @@ def require_write():
 # FX / Currency
 # -------------------------------------------------
 def fetch_fx_rates(base="USD"):
-    # Simple hardcoded fallback if API fails
-    # Real app would use cache logic (omitted for brevity but kept stable)
+    # Simple hardcoded fallback
     return {"USD": 1.0, "EUR": 0.95, "AED": 3.673, "GBP": 0.79, "SGD": 1.35}
 
 def to_usd(amount, currency):
@@ -431,8 +435,6 @@ def edit_req(rid):
     
     # Recalc amount if changed
     if "amount_original" in d or "amount" in d or "currency" in d:
-        # We need existing row to know currency if not provided, 
-        # but for simplicity assume frontend sends all relevant financial fields on edit
         amt = d.get("amount_original") or d.get("amount") or 0
         curr = d.get("currency", "USD")
         updates["amount_usd"] = round(to_usd(amt, curr), 2)
@@ -460,17 +462,30 @@ def bulk_req():
     action = d.get("action")
     
     updates = {"updated_at": now_iso()}
-    if action == "mark_paid": updates["paid"] = 1
-    elif action == "mark_unpaid": updates["paid"] = 0
-    elif action == "mark_delivered": updates["delivered"] = 1
-    elif action == "mark_partial": updates["delivered"] = 2
+    action_log_name = action
+    
+    if action == "mark_paid": 
+        updates["paid"] = 1
+        action_log_name = "Bulk Pay"
+    elif action == "mark_unpaid": 
+        updates["paid"] = 0
+        action_log_name = "Bulk Unpay"
+    elif action == "mark_delivered": 
+        updates["delivered"] = 1
+        action_log_name = "Bulk Full Delivery"
+    elif action == "mark_partial": 
+        updates["delivered"] = 2
+        action_log_name = "Bulk Partial"
     else: return jsonify({"error": "invalid_action"}), 400
     
     count = 0
     for i in ids:
         if update_row_by_id("requisitions", int(i), updates):
             count += 1
-    log_action("Bulk Req", details=f"{action} on {count} items")
+            
+    if count > 0:
+        log_action(action_log_name, target=f"{count} Items", details=f"IDs: {ids}")
+        
     return jsonify({"ok": True, "updated": count})
 
 # --- Landings ---
@@ -515,12 +530,14 @@ def edit_landing(lid):
     if "paid" in d: updates["paid"] = 1 if d["paid"] else 0
     
     update_row_by_id("landings", lid, updates)
+    log_action("Edit Landing", target=str(lid))
     return jsonify({"ok": True})
 
 @app.delete("/api/landings/<int:lid>")
 def del_landing(lid):
     if require_admin(): return require_admin()
     delete_row_by_id("landings", lid)
+    log_action("Delete Landing", target=str(lid))
     return jsonify({"ok": True})
 
 @app.post("/api/landings/bulk")
@@ -537,7 +554,14 @@ def bulk_land():
     elif action == "mark_partial": updates["delivered"] = 2
     else: return jsonify({"error": "invalid_action"}), 400
     
-    for i in ids: update_row_by_id("landings", int(i), updates)
+    count = 0
+    for i in ids: 
+        if update_row_by_id("landings", int(i), updates):
+            count += 1
+            
+    if count > 0:
+        log_action(f"Landing Bulk {action}", target=f"{count} Items")
+        
     return jsonify({"ok": True})
 
 # --- Directory ---
@@ -638,6 +662,7 @@ def add_user():
         "created_at": now_iso()
     }
     append_row("users", row)
+    log_action("Create User", target=d["username"])
     return jsonify({"ok": True})
 
 @app.delete("/api/users/<username>")
@@ -664,7 +689,9 @@ def del_user(username):
                 break
         if deleted: wb.save(DB_FILE)
     
-    if deleted: return jsonify({"ok": True})
+    if deleted:
+        log_action("Delete User", target=username)
+        return jsonify({"ok": True})
     return jsonify({"error": "not_found"}), 404
 
 # --- Reports & Logs ---
@@ -786,6 +813,7 @@ def create_backup():
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     fname = f"backup_{ts}.xlsx"
     shutil.copy2(DB_FILE, os.path.join(BACKUP_DIR, fname))
+    log_action("Create Backup", target=fname)
     return jsonify({"ok": True})
 
 @app.get("/api/backups")
@@ -828,6 +856,7 @@ def restore_backup_file(name):
     if os.path.exists(src):
         shutil.copy2(src, DB_FILE)
         ensure_db()
+        log_action("Restore Backup", target=safe_name)
         return jsonify({"ok": True})
     return jsonify({"error": "not_found"}), 404
 
