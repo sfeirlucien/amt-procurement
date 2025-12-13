@@ -1,6 +1,6 @@
 """
 AMT Procurement - High Performance SQLite Backend
-UPDATED: Fixed Logging for single items & Restored Backup Table functionality.
+UPDATED: Enabled WAL Mode (Fixes freezing) & added Delete User logging.
 """
 
 import os
@@ -158,13 +158,15 @@ def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 
 # -------------------------------------------------
-# Database Logic (SQLite)
+# Database Logic (SQLite + WAL MODE)
 # -------------------------------------------------
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(DB_FILE)
         db.row_factory = sqlite3.Row
+        # WAL Mode enables concurrent reads/writes (No more freezing!)
+        db.execute("PRAGMA journal_mode=WAL")
     return db
 
 @app.teardown_appcontext
@@ -416,10 +418,9 @@ def bulk_req():
         db.execute(sql, (i,))
     db.commit()
     
-    # IMPROVED LOGGING LOGIC
+    # IMPROVED LOGGING
     readable_action = action.replace("mark_", "").replace("_", " ").title()
     if len(ids) == 1:
-        # Fetch item info for nice log
         row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (ids[0],), one=True)
         target = row["po_number"] or row["number"] if row else str(ids[0])
         log_action(f"Mark {readable_action}", target=target)
@@ -606,6 +607,8 @@ def del_user(username):
     if require_admin(): return require_admin()
     if username == "admin": return jsonify({"error": "cannot_delete_root"}), 400
     modify_db("DELETE FROM users WHERE username=?", (username,))
+    # Added Logging Here
+    log_action("Delete User", target=username)
     return jsonify({"ok": True})
 
 # --- Logs & Reports ---
@@ -718,11 +721,7 @@ def restore_backup_file(name):
     src = os.path.join(BACKUP_DIR, safe_name)
     if not os.path.exists(src): return jsonify({"error": "not_found"}), 404
     
-    # Simulate upload for restoration
     with open(src, "rb") as f:
-        # We reuse the logic, but since `restore_from_excel` expects request.files,
-        # we will just call the internal logic of reading XLSX.
-        # Simpler: just reload WB from path and run restoration logic.
         try:
             wb = openpyxl.load_workbook(src)
         except:
@@ -785,7 +784,7 @@ def restore_from_excel():
     log_action("Restore DB", details="Restored from Excel upload")
     return jsonify({"ok": True})
 
-# --- Start ---
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
