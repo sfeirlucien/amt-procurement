@@ -1,6 +1,6 @@
 """
 AMT Procurement - High Performance SQLite Backend
-Optimized for Speed on Render. Includes Excel Import/Export for Backups.
+UPDATED: Fixed Logging for single items & Restored Backup Table functionality.
 """
 
 import os
@@ -28,7 +28,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "AMT_SECRET_KEY_CHANGE_ME_PLEASE")
 CORS(app, supports_credentials=True, origins=["*"])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, "office_ops.db") # Now a SQLite DB
+DB_FILE = os.path.join(BASE_DIR, "office_ops.db")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 
@@ -142,7 +142,6 @@ SCHEMAS = {
     """
 }
 
-# Default Users
 DEFAULT_ADMIN = {"username": "admin", "password": "admin123", "role": "admin"}
 DEFAULT_FINANCE = {"username": "finance", "password": "finance123", "role": "finance"}
 
@@ -165,7 +164,7 @@ def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(DB_FILE)
-        db.row_factory = sqlite3.Row  # Access columns by name
+        db.row_factory = sqlite3.Row
     return db
 
 @app.teardown_appcontext
@@ -194,7 +193,6 @@ def init_db():
         
         db.commit()
 
-# Generic Query Helper
 def query_db(query, args=(), one=False):
     cur = get_db().execute(query, args)
     rv = cur.fetchall()
@@ -239,7 +237,7 @@ def require_write():
     if u["role"] == "finance": return jsonify({"error": "read_only"}), 403
 
 # -------------------------------------------------
-# FX / Currency
+# FX / Utils
 # -------------------------------------------------
 def fetch_fx_rates():
     return {"USD": 1.0, "EUR": 0.95, "AED": 3.673, "GBP": 0.79, "SGD": 1.35}
@@ -252,6 +250,24 @@ def to_usd(amount, currency):
     rates = fetch_fx_rates()
     rate = rates.get(currency, 1.0)
     return val / rate if rate else val
+
+def save_db_to_excel(filepath):
+    """Dump SQLite to XLSX file at filepath"""
+    wb = Workbook()
+    if "Sheet" in wb.sheetnames: wb.remove(wb["Sheet"])
+    
+    with app.app_context():
+        db = get_db()
+        for tbl in SCHEMAS.keys():
+            ws = wb.create_sheet(tbl)
+            cur = db.execute(f"SELECT * FROM {tbl}")
+            rows = cur.fetchall()
+            if cur.description:
+                headers = [d[0] for d in cur.description]
+                ws.append(headers)
+                for r in rows: ws.append(list(r))
+            cur.close()
+    wb.save(filepath)
 
 # -------------------------------------------------
 # Routes
@@ -342,11 +358,9 @@ def edit_req(rid):
     if require_write(): return require_write()
     d = request.json or {}
     
-    # Build dynamic update query
     fields = []
     values = []
     
-    # Check if amount needs update
     if "amount_original" in d or "amount" in d or "currency" in d:
         amt = d.get("amount_original") or d.get("amount") or 0
         curr = d.get("currency", "USD")
@@ -364,7 +378,7 @@ def edit_req(rid):
             fields.append(f"{k} = ?")
             values.append(v)
             
-    if not fields: return jsonify({"ok": True}) # Nothing to update
+    if not fields: return jsonify({"ok": True})
     
     fields.append("updated_at = ?")
     values.append(now_iso())
@@ -391,8 +405,6 @@ def bulk_req():
     if not ids: return jsonify({"ok": False})
     
     sql = ""
-    args = []
-    
     if action == "mark_paid": sql = "UPDATE requisitions SET paid = 1 WHERE id = ?"
     elif action == "mark_unpaid": sql = "UPDATE requisitions SET paid = 0 WHERE id = ?"
     elif action == "mark_delivered": sql = "UPDATE requisitions SET delivered = 1 WHERE id = ?"
@@ -404,7 +416,16 @@ def bulk_req():
         db.execute(sql, (i,))
     db.commit()
     
-    log_action(f"Bulk {action}", target=f"{len(ids)} Items")
+    # IMPROVED LOGGING LOGIC
+    readable_action = action.replace("mark_", "").replace("_", " ").title()
+    if len(ids) == 1:
+        # Fetch item info for nice log
+        row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (ids[0],), one=True)
+        target = row["po_number"] or row["number"] if row else str(ids[0])
+        log_action(f"Mark {readable_action}", target=target)
+    else:
+        log_action(f"Bulk {readable_action}", target=f"{len(ids)} Items")
+        
     return jsonify({"ok": True})
 
 # --- Landings ---
@@ -486,6 +507,15 @@ def bulk_land():
     db = get_db()
     for i in ids: db.execute(sql, (i,))
     db.commit()
+    
+    # IMPROVED LOGGING
+    readable_action = action.replace("mark_", "").replace("_", " ").title()
+    if len(ids) == 1:
+        row = query_db("SELECT item, vessel FROM landings WHERE id=?", (ids[0],), one=True)
+        target = f"{row['item']} ({row['vessel']})" if row else str(ids[0])
+        log_action(f"Mark {readable_action}", target=target)
+    else:
+        log_action(f"Bulk {readable_action}", target=f"{len(ids)} Items")
     
     return jsonify({"ok": True})
 
@@ -632,108 +662,127 @@ def get_docs(ptype, pid):
     return jsonify([dict(r) for r in rows])
 
 # -------------------------------------------------
-# EXCEL IMPORT / EXPORT (Backup Bridge)
+# EXCEL IMPORT / EXPORT
 # -------------------------------------------------
 
 @app.get("/api/backup/download")
 def download_excel_backup():
-    """Generates an XLSX file from the SQLite DB for user backup."""
+    """Generates an XLSX file and returns it directly (Manual Backup)"""
     if require_admin(): return require_admin()
-    
-    wb = Workbook()
-    if "Sheet" in wb.sheetnames: wb.remove(wb["Sheet"])
-    
-    # Dump all tables to sheets
-    tables = SCHEMAS.keys()
-    with app.app_context():
-        db = get_db()
-        for tbl in tables:
-            ws = wb.create_sheet(tbl)
-            
-            # Get data
-            cur = db.execute(f"SELECT * FROM {tbl}")
-            rows = cur.fetchall()
-            
-            # Write Headers
-            headers = [description[0] for description in cur.description]
-            ws.append(headers)
-            
-            # Write Rows
-            for r in rows:
-                ws.append(list(r))
-            
-            cur.close()
-            
-    # Save to buffer
-    out = io.BytesIO()
-    wb.save(out)
-    out.seek(0)
-    
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return send_file(out, as_attachment=True, download_name=f"backup_{ts}.xlsx")
+    fname = f"backup_{ts}.xlsx"
+    fpath = os.path.join(BACKUP_DIR, fname)
+    save_db_to_excel(fpath)
+    return send_file(fpath, as_attachment=True, download_name=fname)
+
+@app.post("/api/backup/create")
+def create_backup_internal():
+    """Generates an XLSX file and saves it to BACKUP_DIR for the table view."""
+    if require_admin(): return require_admin()
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    fname = f"backup_{ts}.xlsx"
+    fpath = os.path.join(BACKUP_DIR, fname)
+    save_db_to_excel(fpath)
+    log_action("Create Backup", target=fname)
+    return jsonify({"ok": True})
+
+@app.get("/api/backups")
+def list_backups():
+    """Lists files in the backup directory."""
+    if require_admin(): return require_admin()
+    out = []
+    if os.path.exists(BACKUP_DIR):
+        for f in sorted(os.listdir(BACKUP_DIR), reverse=True):
+            if f.endswith(".xlsx"):
+                p = os.path.join(BACKUP_DIR, f)
+                st = os.stat(p)
+                out.append({
+                    "name": f,
+                    "size": st.st_size,
+                    "created_at": datetime.fromtimestamp(st.st_mtime).isoformat()
+                })
+    return jsonify(out)
+
+@app.get("/api/backups/<name>/download")
+def download_specific_backup(name):
+    """Downloads a file from the backup list."""
+    if require_admin(): return require_admin()
+    safe_name = secure_filename(name)
+    return send_from_directory(BACKUP_DIR, safe_name, as_attachment=True)
+
+@app.post("/api/backups/<name>/restore")
+def restore_backup_file(name):
+    """Restores a specific backup file from the list."""
+    if require_admin(): return require_admin()
+    safe_name = secure_filename(name)
+    src = os.path.join(BACKUP_DIR, safe_name)
+    if not os.path.exists(src): return jsonify({"error": "not_found"}), 404
+    
+    # Simulate upload for restoration
+    with open(src, "rb") as f:
+        # We reuse the logic, but since `restore_from_excel` expects request.files,
+        # we will just call the internal logic of reading XLSX.
+        # Simpler: just reload WB from path and run restoration logic.
+        try:
+            wb = openpyxl.load_workbook(src)
+        except:
+            return jsonify({"error": "invalid_excel"}), 400
+            
+        db = get_db()
+        for tbl in SCHEMAS.keys():
+            if tbl in wb.sheetnames:
+                ws = wb[tbl]
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows: continue
+                headers = [h for h in rows[0] if h]
+                data = rows[1:]
+                if not data: continue
+                
+                db.execute(f"DELETE FROM {tbl}")
+                placeholders = ",".join(["?"] * len(headers))
+                cols = ",".join(headers)
+                sql = f"INSERT OR IGNORE INTO {tbl} ({cols}) VALUES ({placeholders})"
+                
+                for r in data:
+                    try: db.execute(sql, r[:len(headers)])
+                    except: pass
+        db.commit()
+    
+    log_action("Restore Backup", target=safe_name)
+    return jsonify({"ok": True})
 
 @app.post("/api/upload")
 def restore_from_excel():
-    """Takes an Excel file, wipes SQLite, and populates it from Excel."""
     if require_admin(): return require_admin()
     if "file" not in request.files: return jsonify({"error": "no_file"}), 400
     
     f = request.files["file"]
-    try:
-        wb = openpyxl.load_workbook(f)
-    except:
-        return jsonify({"error": "invalid_excel"}), 400
+    try: wb = openpyxl.load_workbook(f)
+    except: return jsonify({"error": "invalid_excel"}), 400
         
     db = get_db()
-    
-    # Process each known table
     for tbl in SCHEMAS.keys():
         if tbl in wb.sheetnames:
             ws = wb[tbl]
             rows = list(ws.iter_rows(values_only=True))
             if not rows: continue
             
-            headers = rows[0]
+            headers = [h for h in rows[0] if h]
             data = rows[1:]
             
             if not data: continue
             
-            # Clear Table
             db.execute(f"DELETE FROM {tbl}")
-            
-            # Insert Data (Dynamically mapping headers)
-            # We assume Excel headers match DB columns loosely.
-            # Safe approach: Build INSERT based on headers present.
-            
-            # Clean headers (remove None)
-            headers = [h for h in headers if h]
             placeholders = ",".join(["?"] * len(headers))
             cols = ",".join(headers)
-            
             sql = f"INSERT OR IGNORE INTO {tbl} ({cols}) VALUES ({placeholders})"
             
             for r in data:
-                # Slice row to match header length
-                row_data = r[:len(headers)]
-                try:
-                    db.execute(sql, row_data)
-                except Exception as e:
-                    print(f"Import error on {tbl}: {e}")
+                try: db.execute(sql, r[:len(headers)])
+                except: pass
                     
     db.commit()
     log_action("Restore DB", details="Restored from Excel upload")
-    return jsonify({"ok": True})
-
-# Standard backup list (still works with file system, but serving generated files now)
-@app.get("/api/backups")
-def list_backups():
-    if require_admin(): return require_admin()
-    # List generated backups if any
-    return jsonify([]) # Simplify: encourage using the direct download button for now
-
-@app.post("/api/backup/create")
-def create_backup_internal():
-    # Deprecated in favor of direct download, but kept for compatibility
     return jsonify({"ok": True})
 
 # --- Start ---
