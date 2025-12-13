@@ -859,19 +859,20 @@ function toggleMenu(btn, id, type) {
     menu.innerHTML = html;
     menu.dataset.triggerId = `${type}-${id}`;
     
-    // Calculate Position
+// Calculate Position
     const rect = btn.getBoundingClientRect();
-    const menuHeight = 300; // Estimated max height for safety calculation or we can measure invisible
-    // Simple logic:
+    
     menu.style.display = 'block';
     
-    // Check if it fits below
+    // Check if it fits below (using viewport coordinates)
     if(rect.bottom + menu.offsetHeight > window.innerHeight) {
         // Open upwards
+        // Fixed position uses viewport coordinates, so rect.top is correct as is
         menu.style.top = (rect.top - menu.offsetHeight - 2) + "px";
     } else {
         // Open downwards
-        menu.style.top = (rect.bottom + window.scrollY + 2) + "px";
+        // REMOVED "+ window.scrollY" here because position is fixed
+        menu.style.top = (rect.bottom + 2) + "px"; 
     }
     
     // Check right edge
