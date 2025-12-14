@@ -1,6 +1,6 @@
 """
 AMT Procurement - High Performance SQLite Backend
-UPDATED: Enabled WAL Mode (Fixes freezing) & added Delete User logging.
+UPDATED: Smart Logging, Persistent Disk Support, & Cancellation Logic
 """
 
 import os
@@ -20,17 +20,25 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 # -------------------------------------------------
-# App Init
+# App Init & Configuration
 # -------------------------------------------------
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.secret_key = os.environ.get("SECRET_KEY", "AMT_SECRET_KEY_CHANGE_ME_PLEASE")
 
 CORS(app, supports_credentials=True, origins=["*"])
 
+# === PERSISTENT STORAGE CONFIGURATION ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, "office_ops.db")
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+
+# Check if running on Render with a persistent disk
+if os.path.exists("/var/data"):
+    STORAGE_DIR = "/var/data"
+else:
+    STORAGE_DIR = BASE_DIR
+
+DB_FILE = os.path.join(STORAGE_DIR, "office_ops.db")
+BACKUP_DIR = os.path.join(STORAGE_DIR, "backups")
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads") # Uploads stay in static for web serving
 
 # Ensure dirs exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -165,7 +173,6 @@ def get_db():
     if db is None:
         db = g._database = sqlite3.connect(DB_FILE)
         db.row_factory = sqlite3.Row
-        # WAL Mode enables concurrent reads/writes (No more freezing!)
         db.execute("PRAGMA journal_mode=WAL")
     return db
 
@@ -254,7 +261,6 @@ def to_usd(amount, currency):
     return val / rate if rate else val
 
 def save_db_to_excel(filepath):
-    """Dump SQLite to XLSX file at filepath"""
     wb = Workbook()
     if "Sheet" in wb.sheetnames: wb.remove(wb["Sheet"])
     
@@ -302,7 +308,7 @@ def login():
         
     session["username"] = username
     session["role"] = user["role"]
-    log_action("Login")
+    log_action("Login", details="User logged in")
     return jsonify({"ok": True, "username": username, "role": session["role"]})
 
 @app.post("/api/logout")
@@ -336,6 +342,9 @@ def add_req():
     curr = d.get("currency", "USD")
     amt_usd = round(to_usd(amt, curr), 2)
     
+    po = d.get("po_number")
+    ref = d.get("number")
+    
     sql = """
         INSERT INTO requisitions (number, po_number, description, vessel, category, supplier,
         date_ordered, expected, amount_original, currency, amount_usd, paid, delivered, status, 
@@ -344,7 +353,7 @@ def add_req():
     """
     
     rid = modify_db(sql, (
-        d.get("number"), d.get("po_number"), d.get("description"), d.get("vessel"),
+        ref, po, d.get("description"), d.get("vessel"),
         d.get("category"), d.get("supplier"), d.get("date_ordered"), d.get("expected"),
         amt, curr, amt_usd, 1 if d.get("paid") else 0, int(d.get("delivered", 0)),
         d.get("remarks"), d.get("urgency"), d.get("tracking_url"),
@@ -352,7 +361,7 @@ def add_req():
     ))
     
     new_row = query_db("SELECT * FROM requisitions WHERE id = ?", (rid,), one=True)
-    log_action("Create Req", target=d.get("po_number"))
+    log_action("Create Order", target=po or ref or str(rid), details=f"Created new order for {d.get('vessel')}")
     return jsonify(dict(new_row))
 
 @app.patch("/api/requisitions/<int:rid>")
@@ -360,6 +369,25 @@ def edit_req(rid):
     if require_write(): return require_write()
     d = request.json or {}
     
+    # --- SMART LOGGING LOGIC ---
+    action_log = "Update Order"
+    details_log = "Updated details"
+    
+    # Check specifically for status changes (Cancellation/Recovery)
+    if "status" in d:
+        if d["status"] == "cancelled":
+            action_log = "Cancel Order"
+            details_log = "Order moved to bin"
+        elif d["status"] == "open":
+            action_log = "Recover Order"
+            details_log = "Order recovered from bin"
+            
+    # Check specifically for marking paid via single edit
+    elif "paid" in d:
+        action_log = "Update Payment"
+        details_log = "Marked as Paid" if d["paid"] else "Marked as Unpaid"
+    # ---------------------------
+
     fields = []
     values = []
     
@@ -387,14 +415,24 @@ def edit_req(rid):
     values.append(rid)
     
     modify_db(f"UPDATE requisitions SET {', '.join(fields)} WHERE id = ?", tuple(values))
-    log_action("Edit Req", target=str(rid))
+    
+    # Get PO number for better logging
+    row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (rid,), one=True)
+    target_ref = row['po_number'] or row['number'] or str(rid) if row else str(rid)
+    
+    log_action(action_log, target=target_ref, details=details_log)
     return jsonify({"ok": True})
 
 @app.delete("/api/requisitions/<int:rid>")
 def del_req(rid):
     if require_admin(): return require_admin()
+    
+    # Get info before delete for log
+    row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (rid,), one=True)
+    target_ref = row['po_number'] or row['number'] or str(rid) if row else str(rid)
+    
     modify_db("DELETE FROM requisitions WHERE id = ?", (rid,))
-    log_action("Delete Req", target=str(rid))
+    log_action("Delete Order", target=target_ref, details="Permanently deleted from system")
     return jsonify({"ok": True})
 
 @app.post("/api/requisitions/bulk")
@@ -407,10 +445,20 @@ def bulk_req():
     if not ids: return jsonify({"ok": False})
     
     sql = ""
-    if action == "mark_paid": sql = "UPDATE requisitions SET paid = 1 WHERE id = ?"
-    elif action == "mark_unpaid": sql = "UPDATE requisitions SET paid = 0 WHERE id = ?"
-    elif action == "mark_delivered": sql = "UPDATE requisitions SET delivered = 1 WHERE id = ?"
-    elif action == "mark_partial": sql = "UPDATE requisitions SET delivered = 2 WHERE id = ?"
+    log_action_name = "Bulk Action"
+    
+    if action == "mark_paid": 
+        sql = "UPDATE requisitions SET paid = 1 WHERE id = ?"
+        log_action_name = "Bulk Pay"
+    elif action == "mark_unpaid": 
+        sql = "UPDATE requisitions SET paid = 0 WHERE id = ?"
+        log_action_name = "Bulk Unpay"
+    elif action == "mark_delivered": 
+        sql = "UPDATE requisitions SET delivered = 1 WHERE id = ?"
+        log_action_name = "Bulk Receive"
+    elif action == "mark_partial": 
+        sql = "UPDATE requisitions SET delivered = 2 WHERE id = ?"
+        log_action_name = "Bulk Partial"
     else: return jsonify({"error": "invalid"}), 400
     
     db = get_db()
@@ -418,14 +466,7 @@ def bulk_req():
         db.execute(sql, (i,))
     db.commit()
     
-    # IMPROVED LOGGING
-    readable_action = action.replace("mark_", "").replace("_", " ").title()
-    if len(ids) == 1:
-        row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (ids[0],), one=True)
-        target = row["po_number"] or row["number"] if row else str(ids[0])
-        log_action(f"Mark {readable_action}", target=target)
-    else:
-        log_action(f"Bulk {readable_action}", target=f"{len(ids)} Items")
+    log_action(log_action_name, target=f"{len(ids)} Orders", details=f"Applied {action} to {len(ids)} items")
         
     return jsonify({"ok": True})
 
@@ -451,9 +492,8 @@ def add_landing():
                           d.get("landed_date"), amt, curr, amt_usd, 1 if d.get("paid") else 0,
                           int(d.get("delivered",0)), current_user()["username"], now_iso()))
                           
-    new_row = query_db("SELECT * FROM landings WHERE id = ?", (lid,), one=True)
-    log_action("Create Landing", target=d.get("item"))
-    return jsonify(dict(new_row))
+    log_action("Add Landing", target=d.get("item"), details=f"Added landing for {d.get('vessel')}")
+    return jsonify({"ok": True})
 
 @app.patch("/api/landings/<int:lid>")
 def edit_landing(lid):
@@ -482,13 +522,15 @@ def edit_landing(lid):
         values.append(now_iso())
         values.append(lid)
         modify_db(f"UPDATE landings SET {', '.join(fields)} WHERE id = ?", tuple(values))
-        
+    
+    log_action("Edit Landing", target=str(lid))
     return jsonify({"ok": True})
 
 @app.delete("/api/landings/<int:lid>")
 def del_landing(lid):
     if require_admin(): return require_admin()
     modify_db("DELETE FROM landings WHERE id = ?", (lid,))
+    log_action("Delete Landing", target=str(lid))
     return jsonify({"ok": True})
 
 @app.post("/api/landings/bulk")
@@ -509,15 +551,7 @@ def bulk_land():
     for i in ids: db.execute(sql, (i,))
     db.commit()
     
-    # IMPROVED LOGGING
-    readable_action = action.replace("mark_", "").replace("_", " ").title()
-    if len(ids) == 1:
-        row = query_db("SELECT item, vessel FROM landings WHERE id=?", (ids[0],), one=True)
-        target = f"{row['item']} ({row['vessel']})" if row else str(ids[0])
-        log_action(f"Mark {readable_action}", target=target)
-    else:
-        log_action(f"Bulk {readable_action}", target=f"{len(ids)} Items")
-    
+    log_action("Bulk Landing Action", target=f"{len(ids)} Items", details=action)
     return jsonify({"ok": True})
 
 # --- Directory, Categories, Vessels ---
@@ -532,6 +566,7 @@ def add_dir():
     modify_db("INSERT INTO directory (type, name, email, phone, address, rating, created_by, created_at) VALUES (?,?,?,?,?,?,?,?)",
               (d.get("type"), d.get("name"), d.get("email"), d.get("phone"), d.get("address"), d.get("rating",5),
                current_user()["username"], now_iso()))
+    log_action("Add Contact", target=d.get("name"), details=d.get("type"))
     return jsonify({"ok": True})
 
 @app.patch("/api/directory/<int:did>")
@@ -546,12 +581,14 @@ def edit_dir(did):
     if fields:
         vals.append(did)
         modify_db(f"UPDATE directory SET {','.join(fields)} WHERE id=?", tuple(vals))
+    log_action("Edit Contact", target=str(did))
     return jsonify({"ok": True})
 
 @app.delete("/api/directory/<int:did>")
 def del_dir(did):
     if require_admin(): return require_admin()
     modify_db("DELETE FROM directory WHERE id=?", (did,))
+    log_action("Delete Contact", target=str(did))
     return jsonify({"ok": True})
 
 @app.get("/api/categories")
@@ -562,6 +599,7 @@ def add_cat():
     if require_admin(): return require_admin()
     modify_db("INSERT INTO categories (name, abbr, created_at) VALUES (?,?,?)",
               (request.json.get("name"), request.json.get("abbr"), now_iso()))
+    log_action("Add Category", target=request.json.get("name"))
     return jsonify({"ok": True})
 
 @app.delete("/api/categories/<int:cid>")
@@ -578,6 +616,7 @@ def add_ves():
     if require_admin(): return require_admin()
     modify_db("INSERT INTO vessels (name, created_at) VALUES (?,?)",
               (request.json.get("name"), now_iso()))
+    log_action("Add Vessel", target=request.json.get("name"))
     return jsonify({"ok": True})
 
 @app.delete("/api/vessels/<int:vid>")
@@ -598,6 +637,7 @@ def add_user():
     try:
         modify_db("INSERT INTO users (username, password_hash, role, created_at) VALUES (?,?,?,?)",
                   (d.get("username"), hash_pw(d.get("password")), d.get("role","user"), now_iso()))
+        log_action("Create User", target=d.get("username"), details=f"Role: {d.get('role')}")
         return jsonify({"ok": True})
     except sqlite3.IntegrityError:
         return jsonify({"error": "duplicate_user"}), 409
@@ -607,7 +647,6 @@ def del_user(username):
     if require_admin(): return require_admin()
     if username == "admin": return jsonify({"error": "cannot_delete_root"}), 400
     modify_db("DELETE FROM users WHERE username=?", (username,))
-    # Added Logging Here
     log_action("Delete User", target=username)
     return jsonify({"ok": True})
 
@@ -656,6 +695,7 @@ def upload_doc():
     
     modify_db("INSERT INTO documents (parent_type, parent_id, filename, uploaded_at, uploaded_by) VALUES (?,?,?,?,?)",
               (request.form.get("parent_type"), request.form.get("parent_id"), save_name, now_iso(), current_user()["username"]))
+    log_action("Upload Doc", target=save_name)
     return jsonify({"ok": True})
 
 @app.get("/api/documents/<ptype>/<pid>")
@@ -670,7 +710,6 @@ def get_docs(ptype, pid):
 
 @app.get("/api/backup/download")
 def download_excel_backup():
-    """Generates an XLSX file and returns it directly (Manual Backup)"""
     if require_admin(): return require_admin()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     fname = f"backup_{ts}.xlsx"
@@ -680,7 +719,6 @@ def download_excel_backup():
 
 @app.post("/api/backup/create")
 def create_backup_internal():
-    """Generates an XLSX file and saves it to BACKUP_DIR for the table view."""
     if require_admin(): return require_admin()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     fname = f"backup_{ts}.xlsx"
@@ -691,7 +729,6 @@ def create_backup_internal():
 
 @app.get("/api/backups")
 def list_backups():
-    """Lists files in the backup directory."""
     if require_admin(): return require_admin()
     out = []
     if os.path.exists(BACKUP_DIR):
@@ -708,14 +745,12 @@ def list_backups():
 
 @app.get("/api/backups/<name>/download")
 def download_specific_backup(name):
-    """Downloads a file from the backup list."""
     if require_admin(): return require_admin()
     safe_name = secure_filename(name)
     return send_from_directory(BACKUP_DIR, safe_name, as_attachment=True)
 
 @app.post("/api/backups/<name>/restore")
 def restore_backup_file(name):
-    """Restores a specific backup file from the list."""
     if require_admin(): return require_admin()
     safe_name = secure_filename(name)
     src = os.path.join(BACKUP_DIR, safe_name)
@@ -747,7 +782,7 @@ def restore_backup_file(name):
                     except: pass
         db.commit()
     
-    log_action("Restore Backup", target=safe_name)
+    log_action("Restore Backup", target=safe_name, details="Overwrote DB with backup")
     return jsonify({"ok": True})
 
 @app.post("/api/upload")
