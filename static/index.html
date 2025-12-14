@@ -306,24 +306,6 @@
          <div style="flex:2;"><label>Search</label><input type="text" id="filterDelSearch" placeholder="Search PO, Description..." /></div>
          <div style="display:flex; gap:8px;"><button id="applyDelFilterBtn">Filter</button></div>
       </div>
-      <div class="card" style="border-top: 4px solid var(--danger);">
-      <h2>Cancelled Orders (Bin)</h2>
-      <div class="table-container">
-        <table id="cancelledReqTable">
-          <thead>
-            <tr>
-              <th>PO #</th>
-              <th>Description</th>
-              <th>Vessel</th>
-              <th>Supplier</th>
-              <th>Cancelled Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
       <div class="table-container" style="max-height:500px; overflow-y:auto;">
         <table id="deliveredHistoryTable">
            <thead>
@@ -339,6 +321,25 @@
               </tr>
            </thead>
            <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="border-top: 4px solid var(--danger);">
+      <h2>Cancelled Orders (Bin)</h2>
+      <div class="table-container">
+        <table id="cancelledReqTable">
+          <thead>
+            <tr>
+              <th>PO #</th>
+              <th>Description</th>
+              <th>Vessel</th>
+              <th>Supplier</th>
+              <th>Cancelled Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
         </table>
       </div>
     </div>
@@ -661,7 +662,8 @@ async function loadOptions(){
 async function loadData() {
     try { allReqs = await apiFetch("/api/requisitions"); } catch { allReqs=[]; }
     try { allLandings = await apiFetch("/api/landings"); } catch { allLandings=[]; }
-    renderReqTable(); renderDeliveredHistory(); renderLandTable(); renderDelivered();enderCancelledTable();
+    renderReqTable(); renderDeliveredHistory(); renderLandTable(); renderDelivered();
+    renderCancelledTable(); // <--- NEW RENDER
 }
 
 /* ================= RENDERING ================= */
@@ -708,12 +710,12 @@ function renderReqTable() {
     const paidF = document.getElementById("filterReqPaid").value; 
     const search = document.getElementById("filterReqSearch").value.toLowerCase();
     
-    // Active orders only (Not delivered fully)
+    // Active orders only (Not delivered fully, NOT CANCELLED)
     const activeReqs = allReqs.filter(r => r.delivered != 1);
 
     activeReqs.forEach(r => {
         // Apply Filters
-      if (r.status === 'cancelled') return;
+        if (r.status === 'cancelled') return; // Hide cancelled items
         if(statusF && (r.status||"open") !== statusF) return;
         if(paidF !== "") {
             const isPaid = r.paid ? 1 : 0;
@@ -752,64 +754,7 @@ function renderReqTable() {
     });
     attachBulkListeners('req');
 }
-/* ================= CANCELLED ORDERS LOGIC ================= */
-function renderCancelledTable() {
-    const tbody = document.querySelector("#cancelledReqTable tbody"); 
-    tbody.innerHTML = "";
-    
-    // Filter for cancelled items
-    const cancelled = allReqs.filter(r => r.status === 'cancelled');
 
-    if (cancelled.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:var(--text-muted); padding:20px;'>No cancelled orders.</td></tr>";
-        return;
-    }
-
-    cancelled.forEach(r => {
-        const tr = document.createElement("tr");
-        // Using updated_at as proxy for cancellation date, or just ordered date
-        const dateStr = r.updated_at ? r.updated_at.split('T')[0] : r.date_ordered;
-        
-        tr.innerHTML = `
-            <td><strong>${r.po_number || r.number}</strong></td>
-            <td>${r.description}</td>
-            <td>${r.vessel}</td>
-            <td>${r.supplier}</td>
-            <td>${dateStr}</td>
-            <td>
-                <div style="display:flex; gap:10px;">
-                    <button class="success small-action" onclick="recoverReq(${r.id})">♻ Recover</button>
-                    <button class="danger small-action" onclick="permanentDeleteReq(${r.id})">🗑 Delete Forever</button>
-                </div>
-            </td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-// Action: Recover (Set status back to open)
-async function recoverReq(id) {
-    if(!confirm("Recover this order back to the active list?")) return;
-    try {
-        await apiFetch(`/api/requisitions/${id}`, {
-            method: "PATCH", 
-            body: JSON.stringify({status: "open"})
-        });
-        await afterDataLoad(); // Refresh tables
-    } catch(e) {
-        alert("Error recovering: " + e.error);
-    }
-}
-
-// Action: Delete Forever (Actually delete from Database)
-async function permanentDeleteReq(id) {
-    if(!confirm("Are you sure? This will DELETE the record permanently.")) return;
-    try {
-        await apiFetch(`/api/requisitions/${id}`, { method: "DELETE" });
-        await afterDataLoad(); // Refresh tables
-    } catch(e) {
-        alert("Error deleting: " + e.error);
-    }
-}
 function renderDeliveredHistory() {
     const tbody = document.querySelector("#deliveredHistoryTable tbody"); tbody.innerHTML="";
     
@@ -839,6 +784,55 @@ function renderDeliveredHistory() {
         tbody.appendChild(tr);
     });
 }
+
+// === NEW FUNCTION: RENDER CANCELLED ===
+function renderCancelledTable() {
+    const tbody = document.querySelector("#cancelledReqTable tbody"); 
+    tbody.innerHTML = "";
+    
+    const cancelled = allReqs.filter(r => r.status === 'cancelled');
+
+    if (cancelled.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:var(--text-muted); padding:20px;'>No cancelled orders.</td></tr>";
+        return;
+    }
+
+    cancelled.forEach(r => {
+        const tr = document.createElement("tr");
+        const dateStr = r.updated_at ? r.updated_at.split('T')[0] : r.date_ordered;
+        
+        tr.innerHTML = `
+            <td><strong>${r.po_number || r.number}</strong></td>
+            <td>${r.description}</td>
+            <td>${r.vessel}</td>
+            <td>${r.supplier}</td>
+            <td>${dateStr}</td>
+            <td>
+                <div style="display:flex; gap:10px;">
+                    <button class="success small-action" onclick="recoverReq(${r.id})">♻ Recover</button>
+                    <button class="danger small-action" onclick="permanentDeleteReq(${r.id})">🗑 Delete Forever</button>
+                </div>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+async function recoverReq(id) {
+    if(!confirm("Recover this order back to the active list?")) return;
+    try {
+        await apiFetch(`/api/requisitions/${id}`, {method: "PATCH", body: JSON.stringify({status: "open"})});
+        await afterDataLoad();
+    } catch(e) { alert("Error recovering: " + e.error); }
+}
+
+async function permanentDeleteReq(id) {
+    if(!confirm("Are you sure? This will DELETE the record permanently.")) return;
+    try {
+        await apiFetch(`/api/requisitions/${id}`, { method: "DELETE" });
+        await afterDataLoad();
+    } catch(e) { alert("Error deleting: " + e.error); }
+}
+// ======================================
 
 function renderLandTable() {
     const tbody = document.querySelector("#landingTable tbody"); tbody.innerHTML="";
@@ -1455,5 +1449,3 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{if(
 </script>
 </body>
 </html>
-
-}
