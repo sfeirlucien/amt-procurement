@@ -1,6 +1,6 @@
 """
 AMT Procurement - High Performance SQLite Backend
-UPDATED: Smart Logging, Persistent Disk Support, & Cancellation Logic
+UPDATED: Smart Logging (Fixed Bulk vs Single), Persistent Disk Support & Cancellation Logic
 """
 
 import os
@@ -369,11 +369,10 @@ def edit_req(rid):
     if require_write(): return require_write()
     d = request.json or {}
     
-    # --- SMART LOGGING LOGIC ---
+    # --- SMART LOGGING LOGIC (Single Edits) ---
     action_log = "Update Order"
     details_log = "Updated details"
     
-    # Check specifically for status changes (Cancellation/Recovery)
     if "status" in d:
         if d["status"] == "cancelled":
             action_log = "Cancel Order"
@@ -382,7 +381,6 @@ def edit_req(rid):
             action_log = "Recover Order"
             details_log = "Order recovered from bin"
             
-    # Check specifically for marking paid via single edit
     elif "paid" in d:
         action_log = "Update Payment"
         details_log = "Marked as Paid" if d["paid"] else "Marked as Unpaid"
@@ -416,7 +414,6 @@ def edit_req(rid):
     
     modify_db(f"UPDATE requisitions SET {', '.join(fields)} WHERE id = ?", tuple(values))
     
-    # Get PO number for better logging
     row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (rid,), one=True)
     target_ref = row['po_number'] or row['number'] or str(rid) if row else str(rid)
     
@@ -427,7 +424,6 @@ def edit_req(rid):
 def del_req(rid):
     if require_admin(): return require_admin()
     
-    # Get info before delete for log
     row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (rid,), one=True)
     target_ref = row['po_number'] or row['number'] or str(rid) if row else str(rid)
     
@@ -435,6 +431,7 @@ def del_req(rid):
     log_action("Delete Order", target=target_ref, details="Permanently deleted from system")
     return jsonify({"ok": True})
 
+# --- BULK ACTIONS (Smart Logging Fix) ---
 @app.post("/api/requisitions/bulk")
 def bulk_req():
     if require_write(): return require_write()
@@ -445,20 +442,30 @@ def bulk_req():
     if not ids: return jsonify({"ok": False})
     
     sql = ""
-    log_action_name = "Bulk Action"
+    singular_action = ""
+    bulk_action = ""
+    detail_msg = ""
     
     if action == "mark_paid": 
         sql = "UPDATE requisitions SET paid = 1 WHERE id = ?"
-        log_action_name = "Bulk Pay"
+        singular_action = "Mark Paid"
+        bulk_action = "Bulk Pay"
+        detail_msg = "Payment status set to Paid"
     elif action == "mark_unpaid": 
         sql = "UPDATE requisitions SET paid = 0 WHERE id = ?"
-        log_action_name = "Bulk Unpay"
+        singular_action = "Mark Unpaid"
+        bulk_action = "Bulk Unpay"
+        detail_msg = "Payment status set to Unpaid"
     elif action == "mark_delivered": 
         sql = "UPDATE requisitions SET delivered = 1 WHERE id = ?"
-        log_action_name = "Bulk Receive"
+        singular_action = "Mark Delivered"
+        bulk_action = "Bulk Receive"
+        detail_msg = "Delivery status set to Full"
     elif action == "mark_partial": 
         sql = "UPDATE requisitions SET delivered = 2 WHERE id = ?"
-        log_action_name = "Bulk Partial"
+        singular_action = "Mark Partial"
+        bulk_action = "Bulk Partial"
+        detail_msg = "Delivery status set to Partial"
     else: return jsonify({"error": "invalid"}), 400
     
     db = get_db()
@@ -466,7 +473,15 @@ def bulk_req():
         db.execute(sql, (i,))
     db.commit()
     
-    log_action(log_action_name, target=f"{len(ids)} Orders", details=f"Applied {action} to {len(ids)} items")
+    # --- SMART LOGGING: Check if single or bulk ---
+    if len(ids) == 1:
+        # Fetch Single Item Details
+        row = query_db("SELECT po_number, number FROM requisitions WHERE id=?", (ids[0],), one=True)
+        target = row['po_number'] or row['number'] or str(ids[0]) if row else str(ids[0])
+        log_action(singular_action, target=target, details=detail_msg)
+    else:
+        # Bulk Logging
+        log_action(bulk_action, target=f"{len(ids)} Orders", details=f"Applied {action} to {len(ids)} items")
         
     return jsonify({"ok": True})
 
@@ -541,17 +556,43 @@ def bulk_land():
     action = d.get("action")
     
     sql = ""
-    if action == "mark_paid": sql = "UPDATE landings SET paid = 1 WHERE id = ?"
-    elif action == "mark_unpaid": sql = "UPDATE landings SET paid = 0 WHERE id = ?"
-    elif action == "mark_delivered": sql = "UPDATE landings SET delivered = 1 WHERE id = ?"
-    elif action == "mark_partial": sql = "UPDATE landings SET delivered = 2 WHERE id = ?"
+    singular_action = ""
+    bulk_action = ""
+    detail_msg = ""
+
+    if action == "mark_paid": 
+        sql = "UPDATE landings SET paid = 1 WHERE id = ?"
+        singular_action = "Mark Paid"
+        bulk_action = "Bulk Pay"
+        detail_msg = "Payment status set to Paid"
+    elif action == "mark_unpaid": 
+        sql = "UPDATE landings SET paid = 0 WHERE id = ?"
+        singular_action = "Mark Unpaid"
+        bulk_action = "Bulk Unpay"
+        detail_msg = "Payment status set to Unpaid"
+    elif action == "mark_delivered": 
+        sql = "UPDATE landings SET delivered = 1 WHERE id = ?"
+        singular_action = "Mark Received"
+        bulk_action = "Bulk Receive"
+        detail_msg = "Delivery status set to Received"
+    elif action == "mark_partial": 
+        sql = "UPDATE landings SET delivered = 2 WHERE id = ?"
+        singular_action = "Mark Partial"
+        bulk_action = "Bulk Partial"
+        detail_msg = "Delivery status set to Partial"
     else: return jsonify({"error": "invalid"}), 400
     
     db = get_db()
     for i in ids: db.execute(sql, (i,))
     db.commit()
     
-    log_action("Bulk Landing Action", target=f"{len(ids)} Items", details=action)
+    if len(ids) == 1:
+        row = query_db("SELECT item, vessel FROM landings WHERE id=?", (ids[0],), one=True)
+        target = f"{row['item']} ({row['vessel']})" if row else str(ids[0])
+        log_action(singular_action, target=target, details=detail_msg)
+    else:
+        log_action(bulk_action, target=f"{len(ids)} Items", details=detail_msg)
+    
     return jsonify({"ok": True})
 
 # --- Directory, Categories, Vessels ---
@@ -818,6 +859,17 @@ def restore_from_excel():
     db.commit()
     log_action("Restore DB", details="Restored from Excel upload")
     return jsonify({"ok": True})
+
+# --- FACTORY RESET (Optional) ---
+@app.post("/api/admin/factory-reset")
+def factory_reset():
+    if require_admin(): return require_admin()
+    close_connection(None)
+    if os.path.exists(DB_FILE):
+        os.remove(DB_FILE)
+    init_db()
+    log_action("FACTORY RESET", details="Database deleted and recreated")
+    return jsonify({"ok": True, "message": "System has been wiped."})
 
 if __name__ == "__main__":
     init_db()
