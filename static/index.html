@@ -445,7 +445,7 @@
              <div style="flex:1"><button id="auditApplyBtn">Filter Logs</button> <button id="auditRefreshBtn" class="secondary">Refresh</button></div>
          </div>
          <div class="table-container" style="max-height: 400px; overflow-y: auto;">
-             <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Date</th></tr></thead><tbody></tbody></table>
+             <table id="auditTable"><thead><tr><th>User</th><th>Action</th><th>Target</th><th>Details</th><th>Date</th></tr></thead><tbody></tbody></table>
          </div>
       </div>
 
@@ -1388,12 +1388,12 @@ function renderAuditLog(showAll = false) {
         return true;
     });
     
-    if(filtered.length === 0) tbody.innerHTML = "<tr><td colspan='4'>No logs found.</td></tr>";
+    if(filtered.length === 0) tbody.innerHTML = "<tr><td colspan='5'>No logs found.</td></tr>";
 
     filtered.slice(0,100).forEach(log => {
         let dateStr = log.date || "-";
         try { dateStr = log.date.replace("T"," "); } catch {}
-        tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target||'-'}</td><td>${dateStr}</td></tr>`;
+        tbody.innerHTML += `<tr><td>${log.user}</td><td>${log.action}</td><td>${log.target||'-'}</td><td>${log.details||'-'}</td><td>${dateStr}</td></tr>`;
     });
 }
 document.getElementById("auditApplyBtn").onclick = () => renderAuditLog(false);
