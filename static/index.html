@@ -1184,14 +1184,157 @@ function renderDelivered() {
 }
 
 /* ================= PRINT PO ================= */
+/* ================= PRINT PO (WITH LOGO) ================= */
 function generatePO(id) {
-    const r = allReqs.find(x => x.id == id); if(!r) return;
+    const r = allReqs.find(x => x.id == id); 
+    if(!r) return;
+
+    // --- CONFIG ---
+    const companyName = "AMT Marine Services";
+    const companyAddress = "Sharjah, UAE";
+    const companyPhone = "+971 50 123 4567";
+    const companyEmail = "procurement@amt-marine.com";
+    
+    // Use the exact path from your project structure
+    // We use window.location.origin to make sure the path is absolute and works in the popup
+    const logoSrc = window.location.origin + "/static/ICON.jpg";
+    // --------------
+
     const w = window.open("", "_blank");
-    w.document.write(`<html><head><title>PO ${r.po_number}</title><style>body{font-family:sans-serif;padding:40px;}.h{display:flex;justify-content:space-between;border-bottom:2px solid #000;margin-bottom:20px;}table{width:100%;border-collapse:collapse;margin-top:20px;}th,td{border:1px solid #ccc;padding:8px;}</style></head><body>
-      <div class="h"><div><h1>Purchase Order</h1></div><div><h2>${r.po_number||r.number}</h2><p>Date: ${r.date_ordered}</p></div></div>
-      <p><strong>Vendor:</strong> ${r.supplier}<br><strong>Ship To:</strong> ${r.vessel}</p>
-      <table><thead><tr><th>Description</th><th>Amount (${r.currency})</th></tr></thead><tbody><tr><td>${r.description}</td><td>${r.amount_original}</td></tr></tbody></table>
-      <script>window.print();<\/script></body></html>`);
+    
+    const htmlContent = `
+    <html>
+    <head>
+      <title>PO ${r.po_number || r.number}</title>
+      <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 40px; color: #333; max-width: 900px; margin: 0 auto; }
+        
+        /* HEADER LAYOUT */
+        .header-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+        .logo-section { display: flex; align-items: center; gap: 15px; }
+        .logo-img { height: 80px; width: auto; border-radius: 4px; }
+        .company-details h1 { margin: 0; color: #0f172a; font-size: 24px; text-transform: uppercase; letter-spacing: -0.5px; }
+        .company-details p { margin: 2px 0; font-size: 12px; color: #64748b; }
+        
+        .po-title-box { text-align: right; }
+        .po-title-box h2 { margin: 0; color: #ef4444; font-size: 32px; letter-spacing: -1px; }
+        .po-meta { margin-top: 10px; font-size: 14px; font-weight: bold; }
+        
+        hr.divider { border: none; border-top: 2px solid #0f172a; margin: 20px 0 30px 0; }
+        
+        /* ADDRESS GRID */
+        .info-grid { display: flex; gap: 40px; margin-bottom: 30px; }
+        .info-box { flex: 1; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; background: #f8fafc; }
+        .info-label { font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; margin-bottom: 5px; }
+        .info-content { font-size: 14px; line-height: 1.4; font-weight: 500; }
+        
+        /* TABLE */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background: #0f172a; color: white; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { border-bottom: 1px solid #e2e8f0; padding: 12px; font-size: 14px; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        
+        /* TOTALS */
+        .totals { float: right; width: 300px; }
+        .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .total-row.final { border-bottom: 3px solid #0f172a; font-weight: bold; font-size: 18px; margin-top: 10px; padding-bottom: 5px; }
+        
+        /* FOOTER */
+        .footer { margin-top: 100px; border-top: 1px solid #ccc; padding-top: 20px; font-size: 11px; color: #94a3b8; text-align: center; }
+        .signature-area { display: flex; justify-content: space-between; margin-top: 60px; page-break-inside: avoid; }
+        .sign-box { border-top: 1px solid #000; width: 35%; padding-top: 10px; text-align: center; font-weight: bold; font-size: 13px; }
+      </style>
+    </head>
+    <body>
+    
+      <div class="header-top">
+        <div class="logo-section">
+            <img src="${logoSrc}" class="logo-img" alt="Logo" onerror="this.style.display='none'">
+            <div class="company-details">
+                <h1>${companyName}</h1>
+                <p>${companyAddress}</p>
+                <p>${companyPhone}</p>
+                <p>${companyEmail}</p>
+            </div>
+        </div>
+        
+        <div class="po-title-box">
+            <h2>PURCHASE ORDER</h2>
+            <div class="po-meta">
+                <div>PO #: ${r.po_number || r.number}</div>
+                <div style="margin-top:4px; font-weight:500; font-size:13px;">Date: ${r.date_ordered}</div>
+            </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="info-grid">
+        <div class="info-box">
+          <div class="info-label">Vendor / Supplier</div>
+          <div class="info-content">
+            <strong style="font-size:16px;">${r.supplier}</strong><br>
+            (See Supplier Directory for full details)
+          </div>
+        </div>
+        <div class="info-box">
+          <div class="info-label">Ship To / Vessel</div>
+          <div class="info-content">
+            <strong style="font-size:16px;">Vessel: ${r.vessel}</strong><br>
+            c/o AMT Marine Services<br>
+            Sharjah, United Arab Emirates
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50%;">Description / Item</th>
+            <th style="width: 20%;">Category</th>
+            <th style="width: 15%;">Urgency</th>
+            <th style="width: 15%; text-align:right;">Amount (${r.currency})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+                <strong style="font-size:15px;">${r.description}</strong>
+                <div style="font-size:13px; color:#64748b; margin-top:6px; font-style:italic;">${r.remarks ? 'Note: ' + r.remarks : ''}</div>
+            </td>
+            <td>${r.category || '-'}</td>
+            <td>${r.urgency || 'Normal'}</td>
+            <td style="text-align:right;">${parseFloat(r.amount_original).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div class="total-row final">
+          <span>Total:</span>
+          <span>${r.currency} ${parseFloat(r.amount_original).toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+        </div>
+      </div>
+      <div style="clear:both;"></div>
+
+      <div class="signature-area">
+        <div class="sign-box">Prepared By</div>
+        <div class="sign-box">Authorized Signature</div>
+      </div>
+
+      <div class="footer">
+        <p>This is a computer-generated document. Please confirm receipt within 24 hours.</p>
+        <p>AMT Marine Services | Procurement Division | Sharjah, UAE</p>
+      </div>
+
+      <script>
+        // Wait for image to load before printing
+        window.onload = function() { window.print(); }
+      </script>
+    </body>
+    </html>`;
+
+    w.document.write(htmlContent);
     w.document.close();
 }
 
