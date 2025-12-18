@@ -243,7 +243,7 @@
       </div>
       <div class="flex-row">
          <div class="flex-1"><label>Description</label><input type="text" id="reqDescription" placeholder="Item details..." /></div>
-         <div class="flex-1"><label>Supplier</label><div style="display:flex; gap:8px;"><select id="reqSupplierSelect" style="flex:1;"></select><button id="newSupplierBtn" type="button" class="secondary" title="Add New">+</button></div></div>
+         <div class="flex-1"><label>Supplier / Workshop</label><div style="display:flex; gap:8px;"><select id="reqSupplierSelect" style="flex:1;"></select><button id="newSupplierBtn" type="button" class="secondary" title="Add New">+</button></div></div>
       </div>
       <div class="flex-row">
          <div class="flex-1"><label>Ordered Date</label><input type="date" id="reqDateOrdered" /></div>
@@ -655,28 +655,26 @@ async function loadOptions(){
 try { 
        const dirs = await apiFetch("/api/directory"); 
        
-       // === UPDATED LOGIC HERE ===
+       // 1. Setup 'Supplier' dropdown in Orders (Requisitions)
        const sSel = document.getElementById("reqSupplierSelect"); 
        if(sSel){ 
            sSel.innerHTML = '<option value="">Select</option>'; 
-           // Filter now allows BOTH 'supplier' AND 'workshop'
+           // Allow BOTH Supplier and Workshop
            dirs.filter(d => d.type === 'supplier' || d.type === 'workshop')
-               .sort((a, b) => a.name.localeCompare(b.name)) // Optional: Sorts them alphabetically
-               .forEach(d => {
-                   // Optional: Adds a visible label like "Name (Workshop)" but saves only "Name"
-                   // If you just want the name, use: new Option(d.name, d.name)
-                   let label = d.name;
-                   if (d.type === 'workshop') label += " (Workshop)";
-                   sSel.add(new Option(label, d.name)); 
-               }); 
+               .sort((a, b) => a.name.localeCompare(b.name)) 
+               .forEach(d => sSel.add(new Option(d.name, d.name))); 
        }
-       // ==========================
 
+       // 2. Setup 'Workshop' dropdown in Landings
        const wSel = document.getElementById("landWorkshopSelect"); 
        if(wSel){ 
            wSel.innerHTML = '<option value="">Select</option>'; 
-           dirs.filter(d => d.type === 'workshop').forEach(d => wSel.add(new Option(d.name, d.name))); 
+           // Allow BOTH Supplier and Workshop here too
+           dirs.filter(d => d.type === 'supplier' || d.type === 'workshop')
+               .sort((a, b) => a.name.localeCompare(b.name))
+               .forEach(d => wSel.add(new Option(d.name, d.name))); 
        }
+       
        renderDirectory(dirs);
     } catch {}
 }
