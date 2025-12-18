@@ -652,9 +652,31 @@ async function loadOptions(){
        cats.forEach(c => t.innerHTML += `<tr><td>${c.name}</td><td>${c.abbr}</td><td><button class="small-action danger" onclick="delCat(${c.id})">Del</button></td></tr>`);
     } catch {}
 
-    try { const dirs=await apiFetch("/api/directory"); 
-       const sSel=document.getElementById("reqSupplierSelect"); if(sSel){ sSel.innerHTML='<option value="">Select</option>'; dirs.filter(d=>d.type==='supplier').forEach(d=>sSel.add(new Option(d.name, d.name))); }
-       const wSel=document.getElementById("landWorkshopSelect"); if(wSel){ wSel.innerHTML='<option value="">Select</option>'; dirs.filter(d=>d.type==='workshop').forEach(d=>wSel.add(new Option(d.name, d.name))); }
+try { 
+       const dirs = await apiFetch("/api/directory"); 
+       
+       // === UPDATED LOGIC HERE ===
+       const sSel = document.getElementById("reqSupplierSelect"); 
+       if(sSel){ 
+           sSel.innerHTML = '<option value="">Select</option>'; 
+           // Filter now allows BOTH 'supplier' AND 'workshop'
+           dirs.filter(d => d.type === 'supplier' || d.type === 'workshop')
+               .sort((a, b) => a.name.localeCompare(b.name)) // Optional: Sorts them alphabetically
+               .forEach(d => {
+                   // Optional: Adds a visible label like "Name (Workshop)" but saves only "Name"
+                   // If you just want the name, use: new Option(d.name, d.name)
+                   let label = d.name;
+                   if (d.type === 'workshop') label += " (Workshop)";
+                   sSel.add(new Option(label, d.name)); 
+               }); 
+       }
+       // ==========================
+
+       const wSel = document.getElementById("landWorkshopSelect"); 
+       if(wSel){ 
+           wSel.innerHTML = '<option value="">Select</option>'; 
+           dirs.filter(d => d.type === 'workshop').forEach(d => wSel.add(new Option(d.name, d.name))); 
+       }
        renderDirectory(dirs);
     } catch {}
 }
